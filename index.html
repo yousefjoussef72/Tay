@@ -14,6 +14,12 @@
         .founder-header { position: absolute; top: 0; width: 100%; text-align: center; padding: 10px; background: linear-gradient(90deg, transparent, var(--accent), transparent); font-weight: bold; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 20px var(--accent); z-index: 10; }
         
         /* تقسيم الشاشة */
+        .imperial-grid { display: grid; grid-template-columns: 280px 1fr 300px; height: 100vh; }
+        @media (max-width: 1024px) {
+            .imperial-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; overflow-y: auto; }
+            .side-panel { display: none; }
+            body { overflow-y: auto; }
+                         }
         .side { width: 25%; background: var(--panel); border-left: 1px solid #30363d; padding: 15px; display: flex; flex-direction: column; margin-top: 40px;}
         .main { flex: 1; padding: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 70px;}
         .chat-area { width: 25%; background: var(--panel); border-right: 1px solid #30363d; display: flex; flex-direction: column; margin-top: 40px;}
