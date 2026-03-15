@@ -3,213 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⛩️ ساحة بوكاسا الإمبراطورية | يوسف علاء</title>
-    
-    <script src="//code.tidio.co/zyvkc7ncduxovlbfvlzkafbxwbdxj73y.js" async></script>
+    <title>⛩️ إمبراطورية يوسف علاء | ساحة بوكاسا 2026</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
     <style>
-        :root { --red: #ff003c; --gold: #ffb700; --black: #050505; --white: #ffffff; }
-        body, html { margin: 0; padding: 0; background: var(--black); font-family: 'Cairo', sans-serif; color: var(--white); height: 100vh; overflow: hidden; }
-        
-        .main-container { display: flex; flex-direction: column; height: 100vh; max-width: 500px; margin: 0 auto; border: 3px solid var(--red); background: radial-gradient(circle, #1a0005 0%, #000 100%); position: relative; }
+        :root {
+            --red: #ff003c; --gold: #ffb700; --dark: #050505;
+            --neon-red: 0 0 10px #ff003c, 0 0 20px #ff003c;
+            --neon-gold: 0 0 10px #ffb700, 0 0 20px #ffb700;
+        }
 
-        /* شريط المعلومات */
-        .info-header { display: flex; justify-content: space-around; padding: 15px; background: rgba(0,0,0,0.8); border-bottom: 2px solid var(--gold); box-shadow: 0 5px 15px rgba(255,0,60,0.3); }
-        .stat-box { text-align: center; }
-        .stat-label { font-size: 10px; color: #aaa; text-transform: uppercase; }
-        .stat-value { font-size: 20px; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+        * { box-sizing: border-box; transition: 0.3s; scroll-behavior: smooth; }
+        body, html { margin: 0; padding: 0; background: var(--dark); color: white; font-family: 'Cairo', sans-serif; height: 100vh; overflow: hidden; }
 
-        /* منطقة التحدي */
-        .challenge-zone { padding: 30px 20px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
-        #q-text { font-size: 24px; font-weight: 900; margin-bottom: 30px; line-height: 1.4; transition: 0.3s; }
-        
-        .timer-container { width: 100%; height: 6px; background: #222; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
-        #timer-bar { width: 100%; height: 100%; background: var(--red); transition: width 1s linear; box-shadow: 0 0 10px var(--red); }
+        /* خلفية متحركة */
+        body::before {
+            content: ""; position: fixed; inset: 0;
+            background: radial-gradient(circle at center, #1a0005 0%, #000 100%);
+            z-index: -1;
+        }
 
-        /* أزرار الإجابات */
-        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn-opt { background: rgba(255, 255, 255, 0.05); border: 2px solid var(--red); color: white; padding: 18px 10px; border-radius: 15px; font-family: 'Cairo'; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-opt:hover { background: var(--red); box-shadow: 0 0 20px var(--red); transform: translateY(-3px); }
-        .btn-opt:active { transform: scale(0.95); }
+        /* شاشة الدخول العملاقة */
+        #gate-screen {
+            position: fixed; inset: 0; z-index: 10000;
+            background: #000; display: flex; align-items: center; justify-content: center;
+        }
+        .gate-box {
+            text-align: center; padding: 50px; border: 3px solid var(--red); border-radius: 40px;
+            background: rgba(10,10,10,0.9); box-shadow: var(--neon-red); max-width: 500px; width: 90%;
+        }
+        .gate-box h1 { font-family: 'Orbitron'; font-size: 3rem; color: var(--gold); text-shadow: var(--neon-gold); margin: 0; }
+        .gate-input {
+            width: 100%; padding: 15px; margin: 20px 0; border-radius: 15px; border: 1px solid var(--gold);
+            background: #000; color: white; text-align: center; font-size: 1.2rem;
+        }
 
-        /* الرتبة الحالية */
-        .rank-tag { position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; padding: 2px 10px; border-radius: 5px; font-size: 11px; font-weight: 900; }
+        /* الهيكل الرئيسي */
+        .imperial-grid {
+            display: grid; grid-template-columns: 320px 1fr 320px; height: 100vh;
+        }
 
-        /* تذييل الصفحة */
-        .footer-shatta { padding: 10px; text-align: center; font-size: 12px; color: #444; border-top: 1px solid #222; }
-        .start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn-start { background: var(--gold); color: black; padding: 20px 50px; border-radius: 50px; font-size: 22px; font-weight: 900; border: none; cursor: pointer; animation: pulse 1.5s infinite; }
-        
-        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,183,0,0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255,183,0,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,183,0,0); } }
+        @media (max-width: 1100px) {
+            .imperial-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+            .side-panel { display: none; }
+        }
+
+        .side-panel {
+            background: rgba(10,10,10,0.95); border: 1px solid #222; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px; background: linear-gradient(to bottom, #111, #000);
+            border-bottom: 2px solid var(--red); color: var(--gold); font-weight: 900; text-align: center;
+        }
+
+        /* منطقة اللعب */
+        .arena-center {
+            display: flex; flex-direction: column; border-left: 2px solid #222; border-right: 2px solid #222;
+        }
+
+        .stats-bar {
+            padding: 15px 30px; background: #0a0a0a; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .quiz-zone {
+            flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px; text-align: center; position: relative;
+        }
+
+        #q-text { font-size: 2rem; font-weight: 900; margin-bottom: 30px; color: #fff; text-shadow: 0 0 5px var(--red); }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 700px; }
+        .action-btn {
+            background: #111; border: 1px solid var(--red); color: white; padding: 20px; border-radius: 15px;
+            font-size: 1.1rem; cursor: pointer; font-family: 'Cairo'; font-weight: 700;
+        }
+        .action-btn:hover { background: var(--red); transform: scale(1.05); box-shadow: var(--neon-red); }
+
+        /* شات الأصدقاء المباشر */
+        #chat-flow { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { padding: 12px; border-radius: 15px; background: #1a1a1a; max-width: 85%; font-size: 0.9rem; position: relative; }
+        .bubble.me { align-self: flex-end; background: #300008; border-right: 4px solid var(--red); }
+        .bubble b { color: var(--gold); display: block; font-size: 0.75rem; margin-bottom: 5px; }
+
+        .chat-tools { padding: 15px; background: #111; display: flex; gap: 8px; }
+        .chat-tools input { flex-grow: 1; background: #000; border: 1px solid #333; border-radius: 10px; padding: 10px; color: white; }
+
+        /* لوحة الشرف */
+        .honor-list { padding: 15px; }
+        .honor-item {
+            display: flex; justify-content: space-between; padding: 12px; background: #151515;
+            border-radius: 10px; margin-bottom: 10px; border-right: 3px solid var(--gold);
+        }
+
+        /* تنبيهات المنهج */
+        .curriculum-tag { background: #0066ff; color: white; padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; margin-bottom: 5px; display: inline-block; }
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <div class="start-screen" id="start-screen">
-        <h1 style="color: var(--red); font-size: 35px; margin-bottom: 10px;">⚔️ مبارزة بوكاسا</h1>
-        <p style="margin-bottom: 30px; color: #ccc;">35 سؤالاً تفصلك عن لقب "جنرال المملكة"</p>
-        <button class="btn-start" onclick="beginAdventure()">إبدأ القتال</button>
+<div id="gate-screen">
+    <div class="gate-box">
+        <h1>BOKASA</h1>
+        <p style="color: #666; margin-top: 10px;">إصدار منهج 2026 - الترم الثاني</p>
+        <input type="text" id="p-name" class="gate-input" placeholder="ادخل اسمك القتالي...">
+        <button class="action-btn" style="width: 100%; border-radius: 50px;" onclick="enterArena()">دخول الساحة ⚔️</button>
+    </div>
+</div>
+
+<div class="imperial-grid">
+    <div class="side-panel">
+        <div class="panel-header">🏆 ترتيب العمالقة</div>
+        <div class="honor-list" id="leaderboard-ui">
+            <div style="text-align: center; opacity: 0.5; margin-top: 30px;">جاري استدعاء البيانات...</div>
+        </div>
     </div>
 
-    <div class="rank-tag" id="rank-display">رتبة: مبتدئ</div>
-
-    <div class="info-header">
-        <div class="stat-box"><div class="stat-label">المجموع</div><div class="stat-value" id="score">0</div></div>
-        <div class="stat-box"><div class="stat-label">المرحلة</div><div class="stat-value" id="q-count">1/35</div></div>
-        <div class="stat-box"><div class="stat-label">الوقت</div><div class="stat-value" id="sec">12</div></div>
-    </div>
-
-    <div class="challenge-zone">
-        <div class="timer-container"><div id="timer-bar"></div></div>
-        <h2 id="q-text">هل أنت جاهز لتحدي يوسف علاء؟</h2>
-        
-        <div class="options-grid" id="options-box">
+    <div class="arena-center">
+        <div class="stats-bar">
+            <div>
+                <span id="rank-badge" style="background: var(--gold); color: black; padding: 2px 8px; border-radius: 5px; font-weight: 900;">جندي</span>
+                <span id="ui-name" style="margin-right: 10px; font-weight: 700;">---</span>
             </div>
+            <div style="font-family: 'Orbitron'; color: var(--gold); font-size: 1.4rem;">
+                PTS: <span id="ui-score">0</span>
+            </div>
+        </div>
+
+        <div class="quiz-zone">
+            <div id="q-category" class="curriculum-tag">جاهز للبدء؟</div>
+            <div id="q-text">ساحة الإمبراطور يوسف ترحب بك!</div>
+            <div class="btn-grid" id="opt-container">
+                <button class="action-btn" style="grid-column: span 2;" onclick="startEngine()">بدء التحدي الشامل 🔥</button>
+            </div>
+        </div>
     </div>
 
-    <div class="footer-shatta">تحدث مع يوسف عبر أيقونة الشات بالأسفل 💬</div>
+    <div class="side-panel">
+        <div class="panel-header">💬 رادار المحاربين (LIVE)</div>
+        <div id="chat-flow"></div>
+        <div class="chat-tools">
+            <input type="text" id="chat-in" placeholder="أرسل رسالة للجميع...">
+            <button class="action-btn" style="padding: 5px 15px;" onclick="broadcast()">➤</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    const questions = [
-        { q: "ما هي عاصمة مصر؟", o: ["الاسكندرية", "القاهرة", "الجيزة", "الأقصر"], a: 1 },
-        { q: "من هو 'الدون' في عالم كرة القدم؟", o: ["ميسي", "نيمار", "رونالدو", "مبابي"], a: 2 },
-        { q: "أقوى ضربة في ون بيس؟", o: ["باجورنغ جن", "جاتلينج", "ريد هوك", "سورو"], a: 0 },
-        { q: "ناتج 10 + 20 × 0؟", o: ["0", "30", "10", "20"], a: 2 },
-        { q: "ما هو أسرع كائن حي؟", o: ["الأسد", "الصقر", "الفهد", "السمك"], a: 1 },
-        { q: "كم عدد سور القرآن الكريم؟", o: ["110", "114", "116", "120"], a: 1 },
-        { q: "ما هو أكبر كوكب في المجموعة الشمسية؟", o: ["الأرض", "زحل", "المشتري", "المريخ"], a: 2 },
-        { q: "من هو مؤلف ناروتو؟", o: ["أودا", "كوبو", "كيشيموتو", "تورياما"], a: 2 },
-        { q: "أين تقع الكعبة المشرفة؟", o: ["المدينة", "مكة", "القدس", "الرياض"], a: 1 },
-        { q: "كم عدد ألوان قوس قزح؟", o: ["5", "6", "7", "8"], a: 2 },
-        { q: "ما هو الشيء الذي لا يمشي إلا بالضرب؟", o: ["المسمار", "الباب", "الحذاء", "الطاولة"], a: 0 },
-        { q: "معدن سائل؟", o: ["الحديد", "الزئبق", "النحاس", "القصدير"], a: 1 },
-        { q: "ما هو صوت القطة؟", o: ["صهيل", "نباح", "مواء", "زئير"], a: 2 },
-        { q: "كم عدد قارات العالم؟", o: ["5", "6", "7", "8"], a: 2 },
-        { q: "ما هو الحيوان الذي يلقب بسفينة الصحراء؟", o: ["الحصان", "الجمل", "الفيل", "الحمار"], a: 1 },
-        { q: "من هو مكتشف أمريكا؟", o: ["نيوتن", "كولومبوس", "ماجلان", "إديسون"], a: 1 },
-        { q: "كم شهراً يحتوي على 28 يوماً؟", o: ["شهر واحد", "فبراير فقط", "كل الشهور", "لا يوجد"], a: 2 },
-        { q: "ما هو البحر الذي لا يغرق فيه أحد؟", o: ["البحر الأحمر", "البحر الميت", "البحر الأسود", "المتوسط"], a: 1 },
-        { q: "ملك الغابة هو؟", o: ["الفيل", "الأسد", "النمر", "الذئب"], a: 1 },
-        { q: "أين يوجد تمثال الحرية؟", o: ["لندن", "باريس", "نيويورك", "دبي"], a: 2 },
-        { q: "ما هي عاصمة السعودية؟", o: ["جدة", "مكة", "الرياض", "الدمام"], a: 2 },
-        { q: "أطول نهر في العالم؟", o: ["الأمازون", "النيل", "الفرات", "دجلة"], a: 1 },
-        { q: "من هو هداف ليفربول الحالي؟", o: ["ماني", "صلاح", "نونييز", "دياز"], a: 1 },
-        { q: "ما هو لون دم الكركند؟", o: ["أحمر", "أزرق", "أخضر", "أبيض"], a: 1 },
-        { q: "أصغر دولة في العالم؟", o: ["موناكو", "الفاتيكان", "مالطا", "قطر"], a: 1 },
-        { q: "ما هو العضو المسؤول عن تصفية الدم؟", o: ["القلب", "الكبد", "الرئة", "الكلية"], a: 3 },
-        { q: "من هو بطل أنمي بلاك كلوفر؟", o: ["يونو", "أستا", "يامي", "نويل"], a: 1 },
-        { q: "ما هي عملة اليابان؟", o: ["الدولار", "اليورو", "الين", "الريال"], a: 2 },
-        { q: "كم قلباً للأخطبوط؟", o: ["واحد", "اثنان", "ثلاثة", "أربعة"], a: 2 },
-        { q: "أين تقع الأهرامات؟", o: ["مصر", "السودان", "المكسيك", "الصين"], a: 0 },
-        { q: "ما هو أكبر حيوان في العالم؟", o: ["الفيل", "الحوت الأزرق", "الزرافة", "القرش"], a: 1 },
-        { q: "من هو مخترع الهاتف؟", o: ["إديسون", "جراهام بيل", "تسلا", "دا فينشي"], a: 1 },
-        { q: "ما هو الشيء الذي يقرأ ولا يكتب؟", o: ["الكتاب", "القلم", "المخ", "الساعة"], a: 0 },
-        { q: "ما هو لون الشمس؟", o: ["أصفر", "أبيض", "برتقالي", "أحمر"], a: 1 },
-        { q: "من هو إمبراطور هذه اللعبة؟", o: ["أنا", "الكمبيوتر", "يوسف علاء", "لا أحد"], a: 2 }
-    ];
+    // ⚙️ إعدادات Firebase الحقيقية الخاصة بك (ممنوع التعديل)
+    const firebaseConfig = {
+        apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
+        authDomain: "tay-game.firebaseapp.com",
+        databaseURL: "https://tay-game-default-rtdb.firebaseio.com",
+        projectId: "tay-game",
+        storageBucket: "tay-game.firebasestorage.app",
+        messagingSenderId: "313499272374",
+        appId: "1:313499272374:web:26b693f457239555365217",
+        measurementId: "G-KK7NC8ZS7R"
+    };
 
-    let current = 0;
-    let score = 0;
-    let timer;
-    let sec = 12;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    function beginAdventure() {
-        document.getElementById('start-screen').style.display = 'none';
-        loadQ();
+    // متغيرات اللعبة
+    let myData = { name: "", score: 0, rank: "جندي" };
+    let qIndex = 0;
+    let currentLevel = "beginner";
+
+    // 📚 مجمع الأسئلة الأكبر (منهج 2026 + قديم)
+    const megaBank = {
+        beginner: [
+            {t: "عام", q: "من هو ملك القراصنة المستقبلي؟", o: ["زورو", "لوفي", "سانجي", "تيتش"], a: 1},
+            {t: "أحياء", q: "ما هو السكر المكون للبن؟", o: ["الجلوكوز", "الفركتوز", "اللاكتوز", "المالتوز"], a: 2},
+            {t: "رياضيات", q: "مجموعة حل المعادلة sinθ = 0 في [0, 2π]؟", o: ["{0, π}", "{π, 2π}", "{0, π, 2π}", "{π/2}"], a: 2},
+            {t: "كيمياء", q: "ما هي الرابطة في جزيء الماء؟", o: ["تساهمية قطبية", "أيونية", "فلزية", "هيدروجينية"], a: 0},
+            {t: "عام", q: "ما هو أسرع كائن حي؟", o: ["الفهد", "الصقر", "السمكة الشراعية", "الإنسان"], a: 1}
+        ],
+        warrior: [
+            {t: "أحياء 2026", q: "أي مما يلي يعتبر من الليبيدات المشتقة؟", o: ["الزيوت", "الشموع", "الستيرويدات", "الفوسفوليبيدات"], a: 2},
+            {t: "رياضيات 2026", q: "إذا كان tanθ = 1، فإن θ تساوي؟", o: ["30°", "45°", "60°", "90°"], a: 1},
+            {t: "فيزياء 2026", q: "كمية الحركة تساوي حاصل ضرب الكتلة في؟", o: ["العجلة", "السرعة", "الزمن", "القوة"], a: 1},
+            {t: "أنمي", q: "من هو صاحب 'العين الحمراء' في كورابيكا؟", o: ["أوتشيها", "كورتة", "هيوجا", "ناميك"], a: 1},
+            {t: "تاريخ", q: "من بنى تمثال أبو الهول؟", o: ["خوفو", "خفرع", "منقرع", "رمسيس"], a: 1}
+        ],
+        imperial: [
+            {t: "أحياء (متقدم)", q: "ما هي أهمية الكربوهيدرات كما ذكر في الكتاب؟", o: ["بناء العضلات فقط", "المصدر السريع للطاقة", "نقل الصفات الوراثية", "تخزين الماء"], a: 1},
+            {t: "رياضيات (تحدي)", q: "القيمة العددية للمقدار sin²θ + cos²θ تساوي؟", o: ["0", "1", "2", "-1"], a: 1},
+            {t: "كيمياء 2026", q: "المونومر المكون للبروتينات هو؟", o: ["الحمض الدهني", "الحمض الأميني", "النيوكليتيدة", "الجلوكوز"], a: 1},
+            {t: "ذكاء", q: "رقم إذا ضرب في نفسه وأضفنا له 5 أصبح 30؟", o: ["4", "5", "6", "7"], a: 1},
+            {t: "أنمي (أسطوري)", q: "ما هو اسم سيف ميهوك 'عين الصقر'؟", o: ["يورو", "شوسوي", "إينما", "وادو إيتشيمونجي"], a: 0}
+        ]
+    };
+
+    function enterArena() {
+        const input = document.getElementById('p-name').value;
+        if(input.length < 2) return Swal.fire('تنبيه', 'يجب أن يكون لك اسم مهاب في الساحة!', 'warning');
+        myData.name = input;
+        document.getElementById('ui-name').innerText = myData.name;
+        document.getElementById('gate-screen').style.display = 'none';
+        
+        // ربط السيرفر
+        syncChat();
+        syncLeaderboard();
+        notify(`وصل المحارب ${myData.name} لغزو الساحة! 🛡️`);
     }
 
-    function loadQ() {
-        if(current >= questions.length) {
-            winGame();
+    function startEngine() {
+        qIndex = 0;
+        myData.score = 0;
+        currentLevel = "beginner";
+        nextChallenge();
+    }
+
+    function nextChallenge() {
+        const pool = megaBank[currentLevel];
+        if(qIndex >= pool.length) {
+            levelUp();
             return;
         }
-        sec = 12;
-        updateUI();
-        const data = questions[current];
-        document.getElementById('q-text').innerText = data.q;
-        const box = document.getElementById('options-box');
-        box.innerHTML = '';
-        data.o.forEach((opt, i) => {
+
+        const qData = pool[qIndex];
+        document.getElementById('q-category').innerText = `المادة: ${qData.t} | المستوى: ${currentLevel.toUpperCase()}`;
+        document.getElementById('q-text').innerText = qData.q;
+        
+        const container = document.getElementById('opt-container');
+        container.innerHTML = '';
+        
+        qData.o.forEach((opt, i) => {
             const btn = document.createElement('button');
-            btn.className = 'btn-opt';
+            btn.className = 'action-btn';
             btn.innerText = opt;
-            btn.onclick = () => check(i);
-            box.appendChild(btn);
+            btn.onclick = () => verify(i);
+            container.appendChild(btn);
         });
-        startTimer();
     }
 
-    function startTimer() {
-        clearInterval(timer);
-        const bar = document.getElementById('timer-bar');
-        bar.style.width = "100%";
-        timer = setInterval(() => {
-            sec--;
-            document.getElementById('sec').innerText = sec;
-            bar.style.width = (sec/12 * 100) + "%";
-            if(sec <= 0) {
-                clearInterval(timer);
-                check(-1);
-            }
-        }, 1000);
-    }
-
-    function check(i) {
-        clearInterval(timer);
-        if(i === questions[current].a) {
-            score += 100;
-            showFeedback("عاش يا وحش! 🔥", "success");
+    function verify(choice) {
+        const pool = megaBank[currentLevel];
+        if(choice === pool[qIndex].a) {
+            let pts = currentLevel === "beginner" ? 100 : currentLevel === "warrior" ? 250 : 500;
+            myData.score += pts;
+            qIndex++;
+            document.getElementById('ui-score').innerText = myData.score;
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            Swal.fire({ title: 'إصابة دقيقة! 🔥', text: `+${pts} نقطة إمبراطورية`, icon: 'success', timer: 800, showConfirmButton: false });
+            pushScore();
+            nextChallenge();
         } else {
-            showFeedback("ركز شوية يا بطل! 💀", "error");
+            Swal.fire('خطأ! 💀', 'المحاربون الحقيقيون يدرسون جيداً.. حاول مرة أخرى!', 'error');
         }
-        current++;
         updateRank();
-        setTimeout(loadQ, 1200);
     }
 
-    function showFeedback(msg, icon) {
-        Swal.fire({
-            title: msg,
-            icon: icon,
-            toast: true,
-            position: 'top',
-            showConfirmButton: false,
-            timer: 1000,
-            background: '#111',
-            color: '#fff'
-        });
+    function levelUp() {
+        qIndex = 0;
+        if(currentLevel === "beginner") currentLevel = "warrior";
+        else if(currentLevel === "warrior") currentLevel = "imperial";
+        else {
+            Swal.fire('أنت الإمبراطور!', 'لقد هزمت جميع الأسئلة يا يوسف علاء!', 'success');
+            return;
+        }
+        Swal.fire('ارتقاء!', `لقد دخلت مستوى الـ ${currentLevel.toUpperCase()}`, 'info');
+        nextChallenge();
     }
 
     function updateRank() {
-        const rank = document.getElementById('rank-display');
-        if(score > 3000) rank.innerText = "رتبة: صديق يوسف الإمبراطور 👑";
-        else if(score > 2000) rank.innerText = "رتبة: جنرال المملكة 🎖️";
-        else if(score > 1000) rank.innerText = "رتبة: مقاتل محترف ⚔️";
+        const r = document.getElementById('rank-badge');
+        if(myData.score > 5000) myData.rank = "إمبراطور";
+        else if(myData.score > 2000) myData.rank = "جنرال";
+        else if(myData.score > 1000) myData.rank = "فارس";
+        r.innerText = myData.rank;
     }
 
-    function updateUI() {
-        document.getElementById('score').innerText = score;
-        document.getElementById('q-count').innerText = `${current + 1}/35`;
+    // 🔥 عمليات Firebase (الشات والترتيب)
+    function pushScore() {
+        db.ref('leaderboard/' + myData.name).set({
+            score: myData.score,
+            rank: myData.rank,
+            time: Date.now()
+        });
     }
 
-    function winGame() {
-        Swal.fire({
-            title: 'انتهت المعركة!',
-            text: `نقاطك: ${score} - راسل يوسف الآن لتوثيق رتبتك!`,
-            icon: 'info',
-            confirmButtonText: 'إرسال النتيجة ليوسف ⚔️',
-            background: '#000',
-            color: '#ffb700'
-        }).then(() => {
-            // فتح تيديو تلقائياً عند النهاية
-            if(window.tidioChatApi) window.tidioChatApi.show();
+    function broadcast() {
+        const input = document.getElementById('chat-in');
+        if(!input.value.trim()) return;
+        db.ref('globalChat').push({
+            user: myData.name,
+            msg: input.value.trim(),
+            time: Date.now()
+        });
+        input.value = '';
+    }
+
+    function notify(text) {
+        db.ref('globalChat').push({ user: "⛩️ إشعار", msg: text, system: true });
+    }
+
+    function syncChat() {
+        db.ref('globalChat').limitToLast(25).on('child_added', (snap) => {
+            const data = snap.val();
+            const flow = document.getElementById('chat-flow');
+            const div = document.createElement('div');
+            div.className = `bubble ${data.user === myData.name ? 'me' : ''}`;
+            if(data.system) div.style.color = 'var(--gold)';
+            div.innerHTML = `<b>${data.user}</b> ${data.msg}`;
+            flow.appendChild(div);
+            flow.scrollTop = flow.scrollHeight;
+        });
+    }
+
+    function syncLeaderboard() {
+        db.ref('leaderboard').orderByChild('score').limitToLast(10).on('value', (snap) => {
+            const ui = document.getElementById('leaderboard-ui');
+            ui.innerHTML = '';
+            let list = [];
+            snap.forEach(c => { list.push({name: c.key, ...c.val()}); });
+            list.reverse().forEach((p, i) => {
+                ui.innerHTML += `
+                    <div class="honor-item">
+                        <span>#${i+1} ${p.name} <small>(${p.rank})</small></span>
+                        <span style="color:var(--gold)">${p.score}</span>
+                    </div>
+                `;
+            });
         });
     }
 </script>
-
 </body>
 </html>
