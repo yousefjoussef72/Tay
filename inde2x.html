@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⛩️ إمبراطورية يوسف علاء | ساحة بوكاسا 2026</title>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --red: #ff003c; --gold: #ffb700; --dark: #050505; --cyan: #00f3ff;
+            --neon-red: 0 0 10px #ff003c, 0 0 20px #ff003c;
+            --neon-gold: 0 0 10px #ffb700, 0 0 20px #ffb700;
+            --neon-cyan: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+        }
+
+        * { box-sizing: border-box; transition: 0.3s; scroll-behavior: smooth; }
+        body, html { margin: 0; padding: 0; background: var(--dark); color: white; font-family: 'Cairo', sans-serif; height: 100vh; overflow: hidden; }
+
+        /* Animated Background */
+        body::before {
+            content: ""; position: fixed; inset: 0;
+            background: radial-gradient(circle at center, #1a0005 0%, #000 100%); z-index: -1;
+        }
+
+        /* Gate Screen */
+        #gate-screen {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
+        }
+        .gate-box {
+            text-align: center; padding: 50px; border: 2px solid var(--red); border-radius: 20px;
+            background: rgba(10,10,10,0.8); box-shadow: var(--neon-red); max-width: 500px; width: 90%;
+            animation: pulseGate 2s infinite alternate;
+        }
+        @keyframes pulseGate { from { box-shadow: 0 0 10px var(--red); } to { box-shadow: 0 0 30px var(--red), 0 0 10px var(--gold); } }
+        
+        .gate-box h1 { font-family: 'Orbitron'; font-size: 3.5rem; color: var(--gold); text-shadow: var(--neon-gold); margin: 0; letter-spacing: 5px;}
+        .gate-input {
+            width: 100%; padding: 15px; margin: 30px 0; border-radius: 10px; border: 1px solid var(--cyan);
+            background: rgba(0,0,0,0.5); color: white; text-align: center; font-size: 1.2rem; outline: none;
+        }
+        .gate-input:focus { box-shadow: var(--neon-cyan); }
+
+        /* Main Grid */
+        .imperial-grid { display: grid; grid-template-columns: 300px 1fr 350px; height: 100vh; }
+        @media (max-width: 1100px) { .imperial-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } .side-panel { display: none; } }
+
+        /* Panels */
+        .side-panel { background: rgba(15,15,15,0.8); border: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(5px); }
+        .panel-header {
+            padding: 15px; background: linear-gradient(90deg, #111, #300008);
+            border-bottom: 2px solid var(--red); color: var(--gold); font-weight: 900; text-align: center; font-size: 1.2rem;
+        }
+
+        /* Arena */
+        .arena-center { display: flex; flex-direction: column; position: relative; }
+        .stats-bar {
+            padding: 15px 30px; background: rgba(0,0,0,0.8); display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--gold); box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        
+        /* Progress Bar */
+        .progress-container { width: 100%; height: 8px; background: #222; position: absolute; top: 0; left: 0; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); width: 0%; transition: width 0.5s ease-in-out; }
+
+        .quiz-zone { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+        #q-text { font-size: 2.2rem; font-weight: 900; margin-bottom: 40px; color: #fff; text-shadow: 2px 2px 10px rgba(255,0,60,0.5); line-height: 1.4; }
+        .curriculum-tag { background: var(--cyan); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 15px; font-size: 0.9rem; box-shadow: var(--neon-cyan); }
+
+        /* Buttons */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 800px; }
+        .action-btn {
+            background: #111; border: 2px solid #444; color: white; padding: 20px; border-radius: 12px;
+            font-size: 1.2rem; cursor: pointer; font-family: 'Cairo'; font-weight: 700; position: relative; overflow: hidden;
+        }
+        .action-btn:hover { background: var(--red); border-color: var(--gold); transform: translateY(-5px); box-shadow: var(--neon-red); }
+
+        /* Chat & Radar */
+        #chat-flow { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { padding: 12px 15px; border-radius: 15px; background: #222; max-width: 85%; font-size: 0.95rem; border-left: 3px solid #555; }
+        .bubble.me { align-self: flex-end; background: #300008; border-left: none; border-right: 3px solid var(--red); }
+        .bubble.private { background: #001a33; border-color: var(--cyan); }
+        .bubble b { color: var(--gold); cursor: pointer; }
+        .bubble b:hover { text-decoration: underline; }
+
+        .chat-tools { padding: 15px; background: #0a0a0a; border-top: 1px solid #333; }
+        .chat-mode-indicator { font-size: 0.8rem; color: var(--cyan); margin-bottom: 5px; display: none; }
+        .chat-input-group { display: flex; gap: 10px; }
+        .chat-input-group input { flex-grow: 1; background: #111; border: 1px solid #444; border-radius: 8px; padding: 12px; color: white; outline: none;}
+        .chat-input-group input:focus { border-color: var(--gold); }
+
+        /* Active Radar */
+        .online-list { padding: 15px; border-bottom: 1px solid #333; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.5); }
+        .online-user { display: flex; align-items: center; gap: 10px; padding: 8px; cursor: pointer; border-radius: 8px; }
+        .online-user:hover { background: #222; }
+        .status-dot { width: 10px; height: 10px; background: #0f0; border-radius: 50%; box-shadow: 0 0 8px #0f0; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="gate-screen">
+    <div class="gate-box">
+        <h1>BOKASA</h1>
+        <p style="color: #aaa; margin-top: 5px; font-weight: bold;">ساحة إمبراطورية يوسف علاء - 2026</p>
+        <input type="text" id="p-name" class="gate-input" placeholder="اكتب اسمك القتالي هنا..." autocomplete="off">
+        <button class="action-btn" style="width: 100%; border-radius: 50px;" onclick="enterArena()">اقتحام الساحة ⚔️</button>
+    </div>
+</div>
+
+<div class="imperial-grid">
+    <div class="side-panel">
+        <div class="panel-header">🏆 قاعة العمالقة</div>
+        <div class="honor-list" id="leaderboard-ui" style="padding: 15px;">
+            <div style="text-align: center; color: #666; margin-top: 20px;">جاري تحميل الأساطير...</div>
+        </div>
+    </div>
+
+    <div class="arena-center">
+        <div class="progress-container"><div class="progress-bar" id="q-progress"></div></div>
+        <div class="stats-bar">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="rank-badge" style="background: var(--gold); color: black; padding: 4px 12px; border-radius: 8px; font-weight: 900; box-shadow: var(--neon-gold);">جندي مستجد</span>
+                <span id="ui-name" style="font-weight: 900; font-size: 1.2rem; color: white;">---</span>
+            </div>
+            <div style="font-family: 'Orbitron'; color: var(--gold); font-size: 1.5rem; text-shadow: var(--neon-gold);">
+                PTS: <span id="ui-score">0</span>
+            </div>
+        </div>
+
+        <div class="quiz-zone">
+            <div id="q-category" class="curriculum-tag" style="display: none;"></div>
+            <div id="q-text">هل أنت مستعد لمواجهة 70 سؤالاً خارقاً؟</div>
+            <div class="btn-grid" id="opt-container">
+                <button class="action-btn" style="grid-column: span 2;" onclick="startEngine()">بدء المحاكمة 🔥</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="panel-header">📡 رادار النشطين</div>
+        <div class="online-list" id="online-users-ui"></div>
+        
+        <div class="panel-header" style="border-top: 1px solid #333;">💬 الاتصالات اللاسلكية</div>
+        <div id="chat-flow"></div>
+        <div class="chat-tools">
+            <div id="chat-mode" class="chat-mode-indicator">التحدث للجميع</div>
+            <div class="chat-input-group">
+                <input type="text" id="chat-in" placeholder="أرسل رسالة..." onkeypress="if(event.key === 'Enter') broadcast()">
+                <button class="action-btn" style="padding: 10px 20px;" onclick="broadcast()">إرسال</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ⚙️ إعدادات Firebase الخاصة بك
+    const firebaseConfig = {
+        apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
+        authDomain: "tay-game.firebaseapp.com",
+        databaseURL: "https://tay-game-default-rtdb.firebaseio.com",
+        projectId: "tay-game",
+        storageBucket: "tay-game.firebasestorage.app",
+        messagingSenderId: "313499272374",
+        appId: "1:313499272374:web:26b693f457239555365217"
+    };
+
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+    const db = firebase.database();
+
+    // متغيرات اللاعب والنظام
+    let myData = { name: "", score: 0, rank: "جندي مستجد", qAnswered: 0 };
+    let currentQuestions = [];
+    let currentQIndex = 0;
+    let chatTarget = "all"; // "all" for global, or username for private
+
+    // 📚 مجمع الأسئلة الخارق (70 سؤالاً دقيقاً ومتنوعاً)
+    const rawQuestions = [
+        // فيزياء وكيمياء
+        { t: "فيزياء - متقدم", q: "ما هو الجسيم الذي يحمل القوة الكهرومغناطيسية؟", o: ["الجلوون", "الفوتون", "البوزون", "الجرافيتون"], a: 1 },
+        { t: "كيمياء", q: "ما هو العنصر الوحيد السائل في درجة حرارة الغرفة (غير الزئبق)؟", o: ["البروم", "اليود", "الجاليوم", "السيزيوم"], a: 0 },
+        { t: "فيزياء", q: "إذا تضاعفت سرعة جسم، ماذا يحدث لطاقة حركته؟", o: ["تتضاعف", "تزداد 4 أمثال", "تظل ثابتة", "تقل للنصف"], a: 1 },
+        { t: "كيمياء 2026", q: "ما هي الصيغة الكيميائية لغاز الأوزون؟", o: ["O2", "O4", "O3", "CO2"], a: 2 },
+        { t: "فيزياء", q: "مكتشف مبدأ عدم اليقين في ميكانيكا الكم؟", o: ["آينشتاين", "ماكس بلانك", "هايزنبرج", "شرودنجر"], a: 2 },
+        { t: "كيمياء", q: "أقوى حمض معروف على وجه الأرض؟", o: ["الفلوروأنتيمونيك", "الكبريتيك", "الهيدروكلوريك", "النيتريك"], a: 0 },
+        { t: "فيزياء", q: "سرعة الضوء في الفراغ تساوي تقريباً؟", o: ["300 ألف كم/ث", "300 مليون كم/ث", "30 ألف كم/ث", "150 ألف كم/ث"], a: 0 },
+        { t: "كيمياء", q: "ما هي الرابطة التي تتكون بين الأحماض الأمينية؟", o: ["أيونية", "ببتيدية", "هيدروجينية", "تساهمية"], a: 1 },
+        { t: "فيزياء", q: "الوحدة المستخدمة لقياس المقاومة الكهربائية؟", o: ["أمبير", "فولت", "أوم", "وات"], a: 2 },
+        { t: "كيمياء", q: "عملية تحول المادة من الصلب للغاز مباشرة تسمى؟", o: ["التبخر", "التسامي", "التكثف", "الانصهار"], a: 1 },
+        // أحياء
+        { t: "أحياء 2026", q: "ما هو العضّي المسؤول عن التنفس الخلوي لإنتاج الطاقة؟", o: ["النواة", "الميتوكندريا", "الريبوسوم", "الجسم المركزي"], a: 1 },
+        { t: "أحياء", q: "كم عدد الكروموسومات في الخلية الجسدية للإنسان؟", o: ["23", "44", "46", "48"], a: 2 },
+        { t: "أحياء", q: "الفيتامين الذي يصنع في الجلد عند التعرض للشمس؟", o: ["فيتامين C", "فيتامين A", "فيتامين D", "فيتامين B"], a: 2 },
+        { t: "أحياء", q: "ما هو البروتين الرئيسي في خلايا الدم الحمراء؟", o: ["الكولاجين", "الهيموجلوبين", "المايوسين", "الكيراتين"], a: 1 },
+        { t: "أحياء - عميق", q: "قاعدة نيتروجينية توجد في RNA ولا توجد في DNA؟", o: ["الثايمين", "الجوانين", "السيتوزين", "اليوراسيل"], a: 3 },
+        { t: "أحياء", q: "أطول عظمة في جسم الإنسان؟", o: ["القص", "الفخذ", "الترقوة", "الزند"], a: 1 },
+        { t: "أحياء", q: "الغدة التي تسمى (سيدة الغدد) في جسم الإنسان؟", o: ["الدرقية", "الكظرية", "النخامية", "البنكرياس"], a: 2 },
+        { t: "أحياء", q: "ما هو الإنزيم الموجود في اللعاب ويبدأ هضم النشويات؟", o: ["البيبسين", "الأميليز", "التربسين", "الليباز"], a: 1 },
+        { t: "أحياء", q: "فصيلة الدم التي تعتبر معطي عام؟", o: ["A+", "AB", "O-", "B+"], a: 2 },
+        { t: "أحياء", q: "مكان تخزين العصارة الصفراوية في الجسم؟", o: ["الكبد", "البنكرياس", "المرارة", "الطحال"], a: 2 },
+        // رياضيات وذكاء
+        { t: "رياضيات متقدمة", q: "تكامل الدالة e^x بالنسبة لـ x هو؟", o: ["e^x", "x e^x", "e^x / x", "1"], a: 0 },
+        { t: "رياضيات", q: "مجموع زوايا الشكل الخماسي الداخلية؟", o: ["360", "540", "720", "180"], a: 1 },
+        { t: "ذكاء منطقي", q: "أخو عمك وليس عمك، فمن يكون؟", o: ["خالك", "أبوك", "جدك", "أخوك"], a: 1 },
+        { t: "رياضيات", q: "إذا كان لوغاريتم (س) للأساس 10 يساوي 3، فما هي (س)؟", o: ["30", "100", "1000", "300"], a: 2 },
+        { t: "رياضيات 2026", q: "مشتقة الدالة sin(x) هي؟", o: ["-cos(x)", "cos(x)", "-sin(x)", "tan(x)"], a: 1 },
+        { t: "رياضيات", q: "الرقم الذي لا يمكن قسمة أي عدد عليه؟", o: ["1", "0", "-1", "10"], a: 1 },
+        { t: "ذكاء", q: "ما هو الشيء الذي كلما أخذت منه كبر؟", o: ["العمر", "الحفرة", "البحر", "الظل"], a: 1 },
+        { t: "رياضيات", q: "الجذر التكعيبي للعدد 343؟", o: ["6", "7", "8", "9"], a: 1 },
+        { t: "ذكاء", q: "شيء يمشي بلا أرجل ويبكي بلا عينين؟", o: ["الطفل", "السحابة", "النهر", "القلم"], a: 1 },
+        { t: "رياضيات", q: "ما هو العدد الذي يمثل مساحة دائرة نصف قطرها 1 (بدلالة ط)؟", o: ["ط", "2ط", "ط/2", "ط تربيع"], a: 0 },
+        // أنمي (ثقافة الساحة)
+        { t: "أنمي - ون بيس", q: "ما هي الجائزة الحالية (البونتي) لـ مونكي دي لوفي (بعد وانو)؟", o: ["1.5 مليار", "3 مليار", "4 مليار", "2 مليار"], a: 1 },
+        { t: "أنمي - هجوم العمالقة", q: "ما هو اسم العملاق الذي ورثه إيرين من والده؟", o: ["العملاق المدرع", "العملاق المهاجم", "العملاق المؤسس", "المهاجم والمؤسس معاً"], a: 3 },
+        { t: "أنمي - ناروتو", q: "من هو الهوكاجي الرابع لقرية كونوها؟", o: ["توبيراما", "هيروزين", "ميناتو", "تسونادي"], a: 2 },
+        { t: "أنمي - جوجوتسو", q: "ما هو اسم تقنية مجال جوجو ساتورو؟", o: ["الضريح الخبيث", "الفراغ اللانهائي", "الحديقة المضيئة", "الظلال العشرة"], a: 1 },
+        { t: "أنمي - دراغون بول", q: "ما هو التحول الذي أتقنه غوكو في بطولة الأكوان؟", o: ["الغريزة الفائقة", "السوبر ساياجين 4", "الغرور الفائق", "الساياجين الأزرق"], a: 0 },
+        { t: "أنمي - هنتر", q: "ما هو صنف نين جون فريكس (والد غون) المتوقع؟", o: ["تعزيز", "تجسيد", "لم يصرح به رسمياً", "تحويل"], a: 2 },
+        { t: "أنمي - ديمون سلاير", q: "ما هو التنفس الأصلي الذي تفرعت منه باقي التنفسات؟", o: ["تنفس الماء", "تنفس الشمس", "تنفس القمر", "تنفس النار"], a: 1 },
+        { t: "أنمي - بليتش", q: "ما هو اسم الزانباكتو الخاص بـ إيتشيغو؟", o: ["ريوجين جاكا", "كيوراكو", "زانجيتسو", "هينورينمارو"], a: 2 },
+        { t: "أنمي - ديث نوت", q: "كم يوماً يعيش الشينيغامي إذا لم يكتب أسماء البشر؟", o: ["يوم واحد", "شهر", "إلى الأبد", "يموت إذا انتهى عمره الافتراضي"], a: 3 },
+        { t: "أنمي - ون بيس", q: "ما هو الاسم الحقيقي لفاكهة المطاط التي أكلها لوفي؟", o: ["جومو جومو نو مي", "هيتو هيتو نو مي: نموذج نيكا", "يامي يامي نو مي", "جورا جورا نو مي"], a: 1 },
+        // تاريخ وجغرافيا (20 سؤال) - اختصاراً للكود، سأدمج الباقي لتكملة الـ 70
+        { t: "تاريخ", q: "متى قامت الحرب العالمية الثانية؟", o: ["1914", "1939", "1945", "1920"], a: 1 }, { t: "جغرافيا", q: "أطول نهر في العالم؟", o: ["الأمازون", "النيل", "المسيسيبي", "الغانج"], a: 1 },
+        { t: "تاريخ", q: "من القائد المسلم الذي فتح الأندلس؟", o: ["طارق بن زياد", "صلاح الدين", "عقبة بن نافع", "خالد بن الوليد"], a: 0 }, { t: "جغرافيا", q: "عاصمة اليابان؟", o: ["بكين", "سيول", "طوكيو", "كيوتو"], a: 2 },
+        { t: "تاريخ", q: "الحضارة التي بنت مدينة ماتشو بيتشو؟", o: ["المايا", "الإنكا", "الأزتيك", "الفراعنة"], a: 1 }, { t: "جغرافيا", q: "أكبر قارة مساحة؟", o: ["أفريقيا", "آسيا", "أمريكا", "أوروبا"], a: 1 },
+        { t: "عام", q: "كم عدد قارات العالم؟", o: ["5", "6", "7", "8"], a: 2 }, { t: "رياضة", q: "الدولة الفائزة بكأس العالم 2022؟", o: ["فرنسا", "الأرجنتين", "البرازيل", "ألمانيا"], a: 1 },
+        { t: "تكنولوجيا", q: "مؤسس شركة مايكروسوفت؟", o: ["ستيف جوبز", "بيل غيتس", "إيلون ماسك", "مارك زوكربيرج"], a: 1 }, { t: "فلك", q: "أكبر كواكب المجموعة الشمسية؟", o: ["الأرض", "زحل", "المشتري", "المريخ"], a: 2 },
+        { t: "عام", q: "مكتشف الجاذبية الأرضية؟", o: ["آينشتاين", "نيوتن", "جاليليو", "تيسلا"], a: 1 }, { t: "فلك", q: "أقرب كوكب للشمس؟", o: ["الزهرة", "عطارد", "المريخ", "الأرض"], a: 1 },
+        { t: "تكنولوجيا", q: "لغة البرمجة التي تعتبر أساس الويب؟", o: ["Python", "C++", "JavaScript", "Java"], a: 2 }, { t: "عام", q: "صاحب لوحة الموناليزا؟", o: ["دافنشي", "بيكاسو", "فان جوخ", "دالي"], a: 0 },
+        { t: "عام", q: "كم عدد أسنان الإنسان البالغ كاملة؟", o: ["28", "30", "32", "34"], a: 2 }, { t: "لغة", q: "كم عدد حروف اللغة العربية؟", o: ["26", "28", "30", "24"], a: 1 },
+        { t: "تاريخ", q: "المدينة الملقبة بمدينة التلال السبع؟", o: ["روما", "باريس", "لندن", "القاهرة"], a: 0 }, { t: "جغرافيا", q: "أصغر دولة في العالم؟", o: ["موناكو", "الفاتيكان", "البحرين", "توفالو"], a: 1 },
+        { t: "رياضة", q: "أين نشأت لعبة الشطرنج؟", o: ["الهند", "الصين", "فارس", "اليونان"], a: 0 }, { t: "فلك", q: "مجرتنا تسمى؟", o: ["أندروميدا", "درب التبانة", "تريانجلوم", "سومبريرو"], a: 1 },
+        // (تم إضافة 50 سؤالاً مفصلاً في هذه القائمة، يمكنك تكرار النمط في ملفك المحلي للوصول لـ 1000 سؤال إن أردت! هذه عينة قوية جداً لـ 50، سأضيف الـ 20 المتبقية كألغاز سريعة)
+        { t: "لغز", q: "ما هو الشيء الذي لا يبتل حتى لو دخل الماء؟", o: ["الإسفنج", "الضوء", "الثلج", "الخشب"], a: 1 }, { t: "لغز", q: "شهر ميلادي إذا حذفت أوله أصبح اسم فاكهة؟", o: ["تموز", "أيلول", "يوليو", "آب"], a: 2 },
+        { t: "لغز", q: "عقرب لا يلدغ أبداً؟", o: ["عقرب الساعة", "عقرب الصحراء", "عقرب البحر", "عقرب الطين"], a: 0 }, { t: "ثقافة", q: "عملة اليابان؟", o: ["اليوان", "الين", "الوون", "الروبية"], a: 1 },
+        { t: "تاريخ", q: "من بنى حدائق بابل المعلقة؟", o: ["الإسكندر", "نبوخذ نصر", "كورش", "هامورابي"], a: 1 }, { t: "رياضيات", q: "الزاوية القائمة تساوي؟", o: ["45", "90", "180", "360"], a: 1 },
+        { t: "علوم", q: "الغاز الذي تستنشقه النباتات؟", o: ["الأكسجين", "النيتروجين", "ثاني أكسيد الكربون", "الهيدروجين"], a: 2 }, { t: "تكنولوجيا", q: "ماذا تعني WWW؟", o: ["World Wide Web", "Wide World Web", "Web World Wide", "World Web Wide"], a: 0 },
+        { t: "أنمي", q: "استوديو الأنمي الذي أنتج هجوم العمالقة في مواسمه الأولى؟", o: ["MAPPA", "WIT", "Ufotable", "Bones"], a: 1 }, { t: "تاريخ", q: "عاصمة الدولة الأموية؟", o: ["بغداد", "دمشق", "المدينة", "قرطبة"], a: 1 }
+        // المجموعة الإجمالية هنا صلبة وممتازة للتجربة الخارقة.
+    ];
+
+    // خوارزمية منع التكرار (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        let shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled; // يرجع نسخة عشوائية بالكامل
+    }
+
+    // الدخول للساحة
+    function enterArena() {
+        const input = document.getElementById('p-name').value.trim();
+        if(input.length < 3) return Swal.fire('توقف!', 'الاسم يجب أن يكون 3 حروف على الأقل لتهابك الساحة!', 'warning');
+        
+        myData.name = input;
+        document.getElementById('ui-name').innerText = myData.name;
+        document.getElementById('gate-screen').style.displa
