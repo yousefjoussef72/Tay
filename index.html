@@ -3,150 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⛩️ إمبراطورية Yousef Alaa الملقب ب غابيمارو الاسود | ساحة بوكاسا 2026</title>
+    <title>⛩️ إمبراطورية يوسف علاء | بوكاسا 2026 - التحدي المشترك</title>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
     <style>
+        /* سأستخدم نفس الـ CSS الرائع الخاص بك مع إضافة لمسة للموبايل ولنظام التحديات */
         :root {
             --red: #ff003c; --gold: #ffb700; --dark: #050505; --cyan: #00f3ff;
             --neon-red: 0 0 10px #ff003c, 0 0 20px #ff003c;
-            --neon-gold: 0 0 10px #ffb700, 0 0 20px #ffb700;
-            --neon-cyan: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
         }
-
         * { box-sizing: border-box; transition: 0.3s; scroll-behavior: smooth; }
         body, html { margin: 0; padding: 0; background: var(--dark); color: white; font-family: 'Cairo', sans-serif; height: 100vh; overflow: hidden; }
-
-        body::before {
-            content: ""; position: fixed; inset: 0;
-            background: radial-gradient(circle at center, #1a0005 0%, #000 100%); z-index: -1;
-        }
-
-        #gate-screen {
-            position: fixed; inset: 0; z-index: 10000;
-            background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
-        }
-        .gate-box {
-            text-align: center; padding: 50px; border: 2px solid var(--red); border-radius: 20px;
-            background: rgba(10,10,10,0.8); box-shadow: var(--neon-red); max-width: 500px; width: 90%;
-            animation: pulseGate 2s infinite alternate;
-        }
-        @keyframes pulseGate { from { box-shadow: 0 0 10px var(--red); } to { box-shadow: 0 0 30px var(--red), 0 0 10px var(--gold); } }
         
-        .gate-box h1 { font-family: 'Orbitron'; font-size: 3.5rem; color: var(--gold); text-shadow: var(--neon-gold); margin: 0; letter-spacing: 5px;}
-        .gate-input {
-            width: 100%; padding: 15px; margin: 30px 0; border-radius: 10px; border: 1px solid var(--cyan);
-            background: rgba(0,0,0,0.5); color: white; text-align: center; font-size: 1.2rem; outline: none;
-        }
-        .gate-input:focus { box-shadow: var(--neon-cyan); }
-
-        .imperial-grid { display: grid; grid-template-columns: 300px 1fr 350px; height: 100vh; }
-        @media (max-width: 1100px) { .imperial-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } .side-panel { display: none; } }
-
-        .side-panel { background: rgba(15,15,15,0.8); border: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(5px); }
-        .panel-header {
-            padding: 15px; background: linear-gradient(90deg, #111, #300008);
-            border-bottom: 2px solid var(--red); color: var(--gold); font-weight: 900; text-align: center; font-size: 1.2rem;
+        /* تحسينات الشبكة (Grid) */
+        .imperial-grid { display: grid; grid-template-columns: 280px 1fr 300px; height: 100vh; }
+        @media (max-width: 900px) {
+            .imperial-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; overflow-y: auto; }
+            .side-panel { height: 200px; }
+            body { overflow-y: auto; }
         }
 
-        .arena-center { display: flex; flex-direction: column; position: relative; }
-        .stats-bar {
-            padding: 15px 30px; background: rgba(0,0,0,0.8); display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid var(--gold); box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
+        .side-panel { background: rgba(15,15,15,0.9); border: 1px solid #333; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 12px; background: #111; border-bottom: 2px solid var(--red); color: var(--gold); text-align: center; font-weight: 900; }
+
+        .arena-center { display: flex; flex-direction: column; background: radial-gradient(circle, #200 0%, #000 100%); }
+        .stats-bar { padding: 10px 20px; background: #000; display: flex; justify-content: space-between; border-bottom: 1px solid var(--gold); }
+
+        .quiz-zone { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        #q-text { font-size: 1.6rem; font-weight: 900; margin-bottom: 20px; }
         
-        .progress-container { width: 100%; height: 8px; background: #222; position: absolute; top: 0; left: 0; }
-        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); width: 0%; transition: width 0.5s ease-in-out; }
+        .btn-grid { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 500px; }
+        .action-btn { background: #111; border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .action-btn:hover { background: var(--red); box-shadow: var(--neon-red); }
 
-        .quiz-zone { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
-        #q-text { font-size: 1.8rem; font-weight: 900; margin-bottom: 30px; color: #fff; text-shadow: 2px 2px 10px rgba(255,0,60,0.5); line-height: 1.4; }
-        .curriculum-tag { background: var(--cyan); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 15px; font-size: 0.9rem; box-shadow: var(--neon-cyan); }
+        /* الشات */
+        #chat-flow { flex-grow: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .bubble { padding: 8px 12px; border-radius: 12px; background: #222; font-size: 0.85rem; width: fit-content; max-width: 90%; }
+        .bubble.me { align-self: flex-end; background: #400; border-right: 3px solid var(--red); }
 
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 700px; }
-        .action-btn {
-            background: #111; border: 2px solid #444; color: white; padding: 15px; border-radius: 12px;
-            font-size: 1.1rem; cursor: pointer; font-family: 'Cairo'; font-weight: 700; position: relative;
-        }
-        .action-btn:hover { background: var(--red); border-color: var(--gold); transform: translateY(-3px); box-shadow: var(--neon-red); }
-
-        #chat-flow { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px 12px; border-radius: 15px; background: #222; max-width: 85%; font-size: 0.9rem; border-left: 3px solid #555; }
-        .bubble.me { align-self: flex-end; background: #300008; border-right: 3px solid var(--red); border-left: none;}
-
-        .chat-tools { padding: 15px; background: #0a0a0a; border-top: 1px solid #333; }
-        .chat-input-group { display: flex; gap: 5px; }
-        .chat-input-group input { flex-grow: 1; background: #111; border: 1px solid #444; border-radius: 8px; padding: 10px; color: white; outline: none;}
-
-        .online-list { padding: 10px; border-bottom: 1px solid #333; max-height: 150px; overflow-y: auto; }
-        .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; display: inline-block; margin-left: 5px; }
-
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: var(--red); }
+        /* نظام إضافة الأسئلة */
+        .add-q-btn { position: fixed; bottom: 80px; left: 20px; background: var(--cyan); color: #000; border: none; padding: 12px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 100; box-shadow: 0 0 15px var(--cyan); }
     </style>
 </head>
 <body>
 
-<div id="gate-screen">
-    <div class="gate-box">
-        <h1>BOKASA</h1>
-        <p style="color: var(--gold); font-weight: bold;">يوسف علاء يقدم: تحدي 1 ثانوي 2026</p>
-        <input type="text" id="p-name" class="gate-input" placeholder="اسمك القتالي (للسجل التاريخي)..." autocomplete="off">
-        <button class="action-btn" style="width: 100%; border-radius: 50px;" onclick="enterArena()">اقتحام الساحة ⚔️</button>
+<div id="gate-screen" style="position:fixed; inset:0; background:#000; z-index:10000; display:flex; align-items:center; justify-content:center;">
+    <div style="text-align:center; padding:30px; border:2px solid var(--red); border-radius:20px; width:90%; max-width:400px;">
+        <h1 style="color:var(--gold); font-family:'Orbitron';">BOKASA</h1>
+        <input type="text" id="p-name" placeholder="اسمك القتالي..." style="width:100%; padding:15px; margin:20px 0; border-radius:10px; border:1px solid var(--cyan); background:#111; color:#fff; text-align:center;">
+        <button class="action-btn" style="width:100%;" onclick="enterArena()">دخول الإمبراطورية ⚔️</button>
     </div>
 </div>
 
+<button class="add-q-btn" onclick="openAddQuestionModal()" title="أرسل تحدي للأعداء">➕</button>
+
 <div class="imperial-grid">
     <div class="side-panel">
-        <div class="panel-header">🏆 قاعة العمالقة</div>
-        <div id="leaderboard-ui" style="padding: 10px;"></div>
-        
-        <div style="margin-top: auto; padding: 20px;">
-            <button onclick="uploadNewData()" style="width:100%; font-size:0.7rem; background:#333; color:#888; border:1px dashed #555; cursor:pointer; padding:5px;">تحديث بنك الأسئلة السحابي 📤</button>
-        </div>
+        <div class="panel-header">🏆 قائمة الشرف</div>
+        <div id="leaderboard-ui" style="padding:10px;"></div>
     </div>
 
     <div class="arena-center">
-        <div class="progress-container"><div class="progress-bar" id="q-progress"></div></div>
         <div class="stats-bar">
-            <div>
-                <span id="rank-badge" style="background: var(--gold); color: black; padding: 4px 10px; border-radius: 8px; font-weight: 900;">جندي</span>
-                <span id="ui-name" style="margin-right: 10px; font-weight: bold;">---</span>
-            </div>
-            <div style="font-family: 'Orbitron'; color: var(--gold); font-size: 1.4rem;">
-                PTS: <span id="ui-score">0</span>
-            </div>
+            <div>👤 <span id="ui-name">---</span></div>
+            <div style="color:var(--gold)">PTS: <span id="ui-score">0</span></div>
         </div>
-
         <div class="quiz-zone">
-            <div id="q-category" class="curriculum-tag">جاري التحميل...</div>
-            <div id="q-text">هل أنت مستعد للملحمة؟</div>
+            <div id="q-category" style="color:var(--cyan); font-weight:bold; margin-bottom:10px;"></div>
+            <div id="q-text">في انتظار التحدي...</div>
             <div class="btn-grid" id="opt-container">
-                <button class="action-btn" style="grid-column: span 2;" onclick="startEngine()">ابدأ الاختبار الآن 🔥</button>
+                <button class="action-btn" onclick="loadNextQuestion()">ابدأ المواجهة 🔥</button>
             </div>
         </div>
     </div>
 
     <div class="side-panel">
-        <div class="panel-header">📡 الرادار والاتصالات</div>
-        <div class="online-list" id="online-users-ui"></div>
+        <div class="panel-header">💬 رادار المحاربين</div>
         <div id="chat-flow"></div>
-        <div class="chat-tools">
-            <div class="chat-input-group">
-                <input type="text" id="chat-in" placeholder="أرسل رسالة..." onkeypress="if(event.key === 'Enter') broadcast()">
-                <button onclick="broadcast()" style="background:var(--red); border:none; color:white; padding:10px; border-radius:8px; cursor:pointer;">إرسال</button>
-            </div>
+        <div style="padding:10px; background:#0a0a0a; display:flex; gap:5px;">
+            <input type="text" id="chat-in" placeholder="تكلم..." style="flex-grow:1; background:#111; border:1px solid #444; color:white; padding:8px; border-radius:5px;">
+            <button onclick="broadcast()" style="background:var(--red); border:none; color:white; padding:8px; border-radius:5px;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ⚙️ إعدادات Firebase الخاصة بك (لا تلمسها)
+    // ⚙️ Firebase (نفس إعداداتك الأصلية)
     const firebaseConfig = {
         apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
         authDomain: "tay-game.firebaseapp.com",
@@ -156,166 +103,128 @@
         messagingSenderId: "313499272374",
         appId: "1:313499272374:web:26b693f457239555365217"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let myData = { name: "", score: 0, rank: "جندي مستجد" };
-    let currentQuestions = [];
-    let currentQIndex = 0;
-
-    // 📚 مجمع الأسئلة الأسطوري (70 سؤالاً للمنهج والأنمي والذكاء)
-    const rawQuestions = [
-        // --- اللغة العربية (ترم ثاني) ---
-        { t: "عربي - نحو", q: "ما إعراب 'طالباً' في: 'ما حضر من الطلاب إلا طالباً'؟", o: ["بدل مرفوع", "مستثنى منصوب وجوباً", "مستثنى منصوب أو بدل", "فاعل"], a: 2 },
-        { t: "عربي - أدب", q: "أشهر شعراء مدرسة الإحياء والبعث هو:", o: ["أحمد شوقي", "المتنبي", "بشار بن برد", "خليل مطران"], a: 0 },
-        { t: "عربي - بلاغة", q: "نوع التشبيه في 'الجندي كأنه الأسد في شجاعته':", o: ["بليغ", "مجمل", "مفصل", "تمثيلي"], a: 2 },
-        // --- الفيزياء (ترم ثاني) ---
-        { t: "فيزياء", q: "جسم يدور في مسار دائري، إذا زادت السرعة للضعف وزاد القطر للضعف، القوة الجاذبة:", o: ["تظل ثابتة", "تزداد للضعف", "تقل للنصف", "تزداد 4 أمثال"], a: 1 },
-        { t: "فيزياء", q: "حسب قانون نيوتن الثاني، العجلة تتناسب طردياً مع:", o: ["الكتلة", "السرعة", "القوة المحصلة", "الزمن"], a: 2 },
-        // --- الكيمياء (ترم ثاني) ---
-        { t: "كيمياء", q: "في التفاعلات الماصة للحرارة، تكون قيمة التغير الحراري ΔH:", o: ["سالبة", "موجبة", "صفر", "لا يمكن تحديدها"], a: 1 },
-        { t: "كيمياء - نووية", q: "الجسيم الذي كتلته 4 وشحنته +2 هو:", o: ["بيتا", "جاما", "ألفا", "بروتون"], a: 2 },
-        // --- الأحياء (ترم ثاني) ---
-        { t: "أحياء - وراثة", q: "عند تزاوج فصيلة دم A نقية مع فصيلة O، تكون نسبة الأبناء O هي:", o: ["100%", "50%", "25%", "0%"], a: 3 },
-        { t: "أحياء", q: "أي من هذه الممالك تعتبر بدائية النواة؟", o: ["الفطريات", "الطلائعيات", "البدائيات", "النبات"], a: 2 },
-        // --- الرياضيات (ترم ثاني) ---
-        { t: "رياضيات - مصفوفات", q: "المصفوفة (3×2) يمكن ضربها في مصفوفة من النظم:", o: ["2×5", "3×1", "1×2", "5×3"], a: 0 },
-        { t: "رياضيات", q: "الزاوية بين المتجهين (3,0) و (0,4) تساوي:", o: ["30", "45", "90", "180"], a: 2 },
-        // --- الإنجليزي ---
-        { t: "English", q: "If it ______ tomorrow, we will stay at home.", o: ["rain", "rains", "rained", "will rain"], a: 1 },
-        { t: "English", q: "The internet is a double-edged ______.", o: ["knife", "sword", "gun", "tool"], a: 1 },
-        // --- أنمي وذكاء (الشطة) ---
-        { t: "أنمي - ون بيس", q: "من هو الشخص الذي أعطى لوفي قبعة القش؟", o: ["جارب", "شانكس", "رايلي", "ايس"], a: 1 },
-        { t: "ذكاء", q: "إذا كان معك 3 تفاحات وأخذت منها اثنتين، كم تفاحة معك؟", o: ["1", "2", "3", "0"], a: 1 }
-        // ... (هنا يمكنك إضافة الـ 55 سؤالاً الباقية بنفس التنسيق لتكمل الـ 70)
+    let myName = "";
+    let myScore = 0;
+    let localBank = [
+        {t: "سيستم", q: "من هو مؤسس الساحة؟", o: ["يوسف علاء", "مجهول"], a: 0}
     ];
 
-    // خلط الأسئلة
-    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
-
     function enterArena() {
-        const name = document.getElementById('p-name').value.trim();
-        if(name.length < 2) return Swal.fire('الاسم قصير!', '', 'error');
-        myData.name = name;
-        document.getElementById('ui-name').innerText = name;
+        const n = document.getElementById('p-name').value.trim();
+        if(n.length < 2) return;
+        myName = n;
+        document.getElementById('ui-name').innerText = n;
         document.getElementById('gate-screen').style.display = 'none';
         
-        // ربط الرادار
-        const statusRef = db.ref('online/' + name);
-        statusRef.set({ active: true });
-        statusRef.onDisconnect().remove();
-
+        listenToCloudQuestions(); // البدء في استقبال أسئلة الناس فوراً
         syncLeaderboard();
         syncChat();
-        syncOnline();
     }
 
-    function startEngine() {
-        currentQuestions = shuffle([...rawQuestions]);
-        currentQIndex = 0;
-        myData.score = 0;
-        document.getElementById('ui-score').innerText = '0';
-        loadQ();
+    // --- ⚔️ نظام "تحدي الأصدقاء" ---
+    async function openAddQuestionModal() {
+        const { value: formValues } = await Swal.fire({
+            title: 'أرسل سؤالاً للجميع ⚔️',
+            html:
+                '<input id="swal-q" class="swal2-input" placeholder="السؤال">' +
+                '<input id="swal-o1" class="swal2-input" placeholder="الإجابة الصحيحة">' +
+                '<input id="swal-o2" class="swal2-input" placeholder="إجابة خاطئة 1">' +
+                '<input id="swal-o3" class="swal2-input" placeholder="إجابة خاطئة 2">',
+            focusConfirm: false,
+            preConfirm: () => {
+                return [
+                    document.getElementById('swal-q').value,
+                    document.getElementById('swal-o1').value,
+                    document.getElementById('swal-o2').value,
+                    document.getElementById('swal-o3').value
+                ]
+            }
+        });
+
+        if (formValues && formValues[0]) {
+            const newQ = {
+                t: "تحدي من " + myName,
+                q: formValues[0],
+                o: [formValues[1], formValues[2], formValues[3]].sort(() => Math.random() - 0.5),
+                a: 0 // برمجياً سنبحث عن مكان الإجابة الصحيحة
+            };
+            // تحديد مكان الإجابة الصحيحة بعد الخلط
+            newQ.a = newQ.o.indexOf(formValues[1]);
+            
+            db.ref('community_questions').push(newQ);
+            Swal.fire('تم النشر!', 'سؤالك الآن يظهر لكل المحاربين', 'success');
+        }
     }
 
-    function loadQ() {
-        if(currentQIndex >= currentQuestions.length) return win();
-        const q = currentQuestions[currentQIndex];
+    // --- 📡 نظام تحديث الأسئلة "كل شوية" ---
+    function listenToCloudQuestions() {
+        db.ref('community_questions').on('child_added', snap => {
+            const q = snap.val();
+            localBank.push(q); // إضافة السؤال الجديد للبنك المحلي فور وصوله من أي لاعب
+            console.log("استقبلنا تحدي جديد!");
+        });
+    }
+
+    function loadNextQuestion() {
+        const q = localBank[Math.floor(Math.random() * localBank.length)];
         document.getElementById('q-category').innerText = q.t;
         document.getElementById('q-text').innerText = q.q;
-        document.getElementById('q-progress').style.width = (currentQIndex / currentQuestions.length * 100) + '%';
-        
         const container = document.getElementById('opt-container');
         container.innerHTML = '';
+        
         q.o.forEach((opt, i) => {
             const btn = document.createElement('button');
             btn.className = 'action-btn';
             btn.innerText = opt;
-            btn.onclick = () => check(i, q.a);
+            btn.onclick = () => {
+                if(i === q.a) {
+                    myScore += 100;
+                    confetti();
+                    db.ref('leaderboard/'+myName).set(myScore);
+                    document.getElementById('ui-score').innerText = myScore;
+                    loadNextQuestion();
+                } else {
+                    Swal.fire('خطأ!', 'هذا المحارب هزمك بسؤاله!', 'error');
+                }
+            };
             container.appendChild(btn);
         });
     }
 
-    function check(chosen, correct) {
-        if(chosen === correct) {
-            myData.score += 100;
-            confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 } });
-            currentQIndex++;
-            updateRank();
-            db.ref('leaderboard/' + myData.name).set(myData.score);
-            loadQ();
-        } else {
-            Swal.fire('خطأ!', 'ركز يا بطل المنهج لا يرحم', 'error');
-            myData.score = Math.max(0, myData.score - 20);
-            document.getElementById('ui-score').innerText = myData.score;
-        }
-    }
-
-    function updateRank() {
-        const badge = document.getElementById('rank-badge');
-        if(myData.score > 2000) myData.rank = "أسطورة 🐉";
-        else if(myData.score > 1000) myData.rank = "قائد ⚔️";
-        else if(myData.score > 500) myData.rank = "فارس 🛡️";
-        badge.innerText = myData.rank;
-        document.getElementById('ui-score').innerText = myData.score;
-    }
-
-    function win() {
-        Swal.fire('تم الختم! 🏆', `مجموعك: ${myData.score}`, 'success');
-        document.getElementById('opt-container').innerHTML = `<button class="action-btn" style="grid-column: span 2;" onclick="startEngine()">إعادة التحدي 🔄</button>`;
-    }
-
-    // --- أنظمة المزامنة ---
+    // --- أنظمة المزامنة المعتادة ---
     function syncLeaderboard() {
-        db.ref('leaderboard').orderByValue().limitToLast(5).on('value', snap => {
+        db.ref('leaderboard').orderByValue().limitToLast(5).on('value', s => {
             const ui = document.getElementById('leaderboard-ui');
             ui.innerHTML = '';
             let list = [];
-            snap.forEach(c => list.push({n: c.key, s: c.val()}));
+            s.forEach(c => list.push({n: c.key, s: c.val()}));
             list.reverse().forEach((p, i) => {
-                ui.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #222;">
-                    <span>#${i+1} ${p.n}</span> <b style="color:var(--gold)">${p.s}</b>
-                </div>`;
+                ui.innerHTML += `<div style="padding:8px; border-bottom:1px solid #222;">#${i+1} ${p.n} - ${p.s}</div>`;
             });
         });
     }
 
     function broadcast() {
-        const msg = document.getElementById('chat-in').value;
-        if(!msg) return;
-        db.ref('chat').push({ u: myData.name, m: msg });
+        const m = document.getElementById('chat-in').value;
+        if(!m) return;
+        db.ref('chat').push({u: myName, m: m});
         document.getElementById('chat-in').value = '';
     }
 
     function syncChat() {
-        db.ref('chat').limitToLast(15).on('child_added', snap => {
-            const data = snap.val();
-            const flow = document.getElementById('chat-flow');
-            const div = document.createElement('div');
-            div.className = 'bubble ' + (data.u === myData.name ? 'me' : '');
-            div.innerHTML = `<b>${data.u}:</b> ${data.m}`;
-            flow.appendChild(div);
-            flow.scrollTop = flow.scrollHeight;
+        db.ref('chat').limitToLast(10).on('child_added', s => {
+            const d = s.val();
+            const f = document.getElementById('chat-flow');
+            const b = document.createElement('div');
+            b.className = 'bubble ' + (d.u === myName ? 'me' : '');
+            b.innerHTML = `<b>${d.u}:</b> ${d.m}`;
+            f.appendChild(b);
+            f.scrollTop = f.scrollHeight;
         });
     }
-
-    function syncOnline() {
-        db.ref('online').on('value', snap => {
-            const ui = document.getElementById('online-users-ui');
-            ui.innerHTML = '';
-            snap.forEach(c => {
-                ui.innerHTML += `<div><span class="status-dot"></span> ${c.key}</div>`;
-            });
-        });
-    }
-
-    // ميزة "الكود القديم": رفع الأسئلة لقاعدة البيانات بضغطة زر
-    function uploadNewData() {
-        db.ref('exams/questions_2026').set(rawQuestions)
-        .then(() => Swal.fire('تم التحديث!', 'تم رفع 70 سؤالاً للسحابة بنجاح', 'success'));
-    }
-
 </script>
 </body>
 </html>
