@@ -11,22 +11,24 @@
         body { font-family: 'Cairo', sans-serif; background: var(--bg); color: white; margin: 0; display: flex; height: 100vh; }
         
         /* تأثيرات زخرفة المؤسس يوسف علاء */
-        .founder-header { position: absolute; width: 100%; text-align: center; padding: 10px; background: linear-gradient(90deg, transparent, var(--accent), transparent); font-weight: bold; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 20px var(--accent); z-index: 10; }
+        .founder-header { position: absolute; top: 0; width: 100%; text-align: center; padding: 10px; background: linear-gradient(90deg, transparent, var(--accent), transparent); font-weight: bold; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 20px var(--accent); z-index: 10; }
         
         /* تقسيم الشاشة */
-        .side { width: 20%; background: var(--panel); border-left: 1px solid #30363d; padding: 15px; display: flex; flex-direction: column; }
-        .main { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .chat-area { width: 25%; background: var(--panel); border-right: 1px solid #30363d; display: flex; flex-direction: column; }
+        .side { width: 25%; background: var(--panel); border-left: 1px solid #30363d; padding: 15px; display: flex; flex-direction: column; margin-top: 40px;}
+        .main { flex: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 40px;}
+        .chat-area { width: 25%; background: var(--panel); border-right: 1px solid #30363d; display: flex; flex-direction: column; margin-top: 40px;}
 
         /* اللعبة */
-        .card { background: #0d1117; border: 1px solid var(--main); padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 500px; box-shadow: 0 0 30px rgba(0, 210, 255, 0.2); }
-        .btn-opt { display: block; width: 100%; margin: 10px 0; padding: 12px; background: transparent; border: 1px solid var(--main); color: white; border-radius: 10px; cursor: pointer; transition: 0.3s; }
-        .btn-opt:hover { background: var(--main); color: black; }
+        .card { background: #0d1117; border: 1px solid var(--main); padding: 30px; border-radius: 20px; text-align: center; width: 90%; max-width: 600px; box-shadow: 0 0 30px rgba(0, 210, 255, 0.2); }
+        .btn-opt { display: block; width: 100%; margin: 10px 0; padding: 12px; background: transparent; border: 1px solid var(--main); color: white; border-radius: 10px; cursor: pointer; transition: 0.3s; font-size: 1rem; font-family: inherit;}
+        .btn-opt:hover { background: var(--main); color: black; font-weight: bold;}
         
         /* الدردشة */
         #chat-content { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.9rem; }
-        .msg-in { background: #21262d; padding: 5px 10px; border-radius: 10px; margin-bottom: 5px; }
-        .online-user { color: #3fb950; font-size: 0.8rem; margin-bottom: 5px; }
+        .msg-in { background: #21262d; padding: 8px 10px; border-radius: 10px; margin-bottom: 8px; border-right: 3px solid var(--main);}
+        .online-user { color: #3fb950; font-size: 0.9rem; margin-bottom: 8px; padding: 5px; background: rgba(63, 185, 80, 0.1); border-radius: 5px;}
+        
+        input, button { font-family: inherit; }
     </style>
 </head>
 <body>
@@ -34,36 +36,58 @@
 <div class="founder-header">◈ مـطـور الـلـعـبـة: يـوسـف عـلاء ◈</div>
 
 <div class="side">
-    <h3>🏆 المتصدرين</h3>
-    <div id="leaderboard"></div>
-    <hr>
-    <h3>🟢 المتصلون</h3>
-    <div id="online-list"></div>
+    <h3 style="color: var(--main);">🏆 المتصدرين و 🟢 المتصلون</h3>
+    <div id="online-list" style="overflow-y: auto; flex: 1;"></div>
 </div>
 
 <div class="main">
     <div class="card">
-        <div id="lvl-tag" style="color: var(--accent); font-size: 0.8rem;">المستوى: سهل</div>
-        <h2 id="q-text">جاري تحميل التحدي...</h2>
+        <div id="lvl-tag" style="color: var(--accent); font-size: 1rem; font-weight: bold; margin-bottom: 10px;">المستوى: جاري التحميل...</div>
+        <h2 id="q-text" style="line-height: 1.5; margin-bottom: 20px;">جاري تحميل التحدي...</h2>
         <div id="opts"></div>
-        <div style="margin-top: 20px;">
-            نقاطك: <span id="score">0</span> | الرتبة: <span id="rank">مستجد</span>
+        <div style="margin-top: 25px; font-size: 1.1rem; border-top: 1px solid #30363d; padding-top: 15px;">
+            نقاطك: <span id="score" style="color: var(--main); font-weight: bold;">0</span> | الرتبة: <span id="rank" style="color: #3fb950; font-weight: bold;">مستجد</span>
         </div>
     </div>
-    <button onclick="addQuestion()" style="margin-top:20px; background:none; color:gray; border:none; cursor:pointer;">+ اقترح سؤالاً</button>
+    <button onclick="addQuestion()" style="margin-top:20px; background:none; color:#8b949e; border:1px dashed #8b949e; padding: 10px 20px; border-radius: 10px; cursor:pointer; transition: 0.3s;">+ اقترح سؤالاً جديداً ليوسف</button>
 </div>
 
 <div class="chat-area">
-    <h4 style="text-align:center;">💬 شات الطلاب</h4>
+    <h3 style="text-align:center; color: var(--main); padding-bottom: 10px; border-bottom: 1px solid #30363d;">💬 شات الأبطال</h3>
     <div id="chat-content"></div>
-    <div style="display:flex; padding:10px;">
-        <input type="text" id="chat-msg" style="flex:1; padding:5px;" placeholder="اكتب هنا...">
-        <button onclick="sendMsg()">➤</button>
+    <div style="display:flex; padding:10px; border-top: 1px solid #30363d;">
+        <input type="text" id="chat-msg" style="flex:1; padding:8px; border-radius: 5px; border: none; outline: none; background: #21262d; color: white;" placeholder="اكتب رسالتك...">
+        <button onclick="sendMsg()" style="margin-right: 5px; padding: 8px 15px; background: var(--main); border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">إرسال</button>
     </div>
 </div>
 
 <script>
-    // إعداداتك الخاصة
+    // قاعدة بيانات الأسئلة المدمجة (Local DB)
+    const localQuestions = {
+        "hard": {
+            "h14": { "text": "كيمياء: الانبعاث البوزيتروني من النواة يؤدي إلى...؟", "options": ["زيادة العدد الذري بمقدار 1", "نقص العدد الذري بمقدار 1", "نقص العدد الكتلي بمقدار 4", "عدم تغير العدد الذري أو الكتلي"], "answer": "نقص العدد الذري بمقدار 1" },
+            "h15": { "text": "أحياء: الكائنات في مملكة البدائيات (Monera) تتميز بأن نواتها...؟", "options": ["حقيقية", "أولية (غير محاطة بغشاء)", "متعددة", "لا تحتوي على مادة وراثية"], "answer": "أولية (غير محاطة بغشاء)" }
+        },
+        "impossible": {
+            "i1": { "text": "فيزياء: إذا كان الشغل المبذول على جسم يساوي التغير في طاقة حركته، فإن هذا يُعرف بـ...؟", "options": ["قانون حفظ الطاقة الميكانيكية", "مبرهنة الشغل والطاقة (Work-Energy Theorem)", "قانون نيوتن الثالث", "قانون بقاء كمية التحرك"], "answer": "مبرهنة الشغل والطاقة (Work-Energy Theorem)" },
+            "i2": { "text": "كيمياء: ما هو الجسيم الذي يتكون من كوارك علوي (Up) واثنين كوارك سفلي (Down)؟", "options": ["البروتون", "النيوترون", "الإلكترون", "البوزيترون"], "answer": "النيوترون" },
+            "i3": { "text": "أحياء: أي من الفصائل التالية يمكن أن ينجبها أبوان فصيلة دمهما AB؟", "options": ["O فقط", "A و B و AB", "A و B فقط", "جميع الفصائل"], "answer": "A و B و AB" },
+            "i4": { "text": "أنمي: في مانغا بيرسيرك (Berserk)، في أي عام صدر الفصل الأول بالضبط؟", "options": ["1989", "1992", "1997", "1985"], "answer": "1989" },
+            "i5": { "text": "فيزياء: سرعة الإفلات (Escape Velocity) من جاذبية كوكب تتناسب طردياً مع...؟", "options": ["كتلة الكوكب", "الجذر التربيعي لكتلة الكوكب", "نصف قطر الكوكب", "كتلة الجسم المنطلق"], "answer": "الجذر التربيعي لكتلة الكوكب" },
+            "i6": { "text": "كيمياء: في التفاعل النووي الانشطاري لليورانيوم-235، ما هو الجسيم الذي يستخدم كـ 'قذيفة' لبدء الانشطار؟", "options": ["بروتون سريع", "نيوترون بطيء (حراري)", "جسيم ألفا", "أشعة جاما"], "answer": "نيوترون بطيء (حراري)" },
+            "i7": { "text": "أحياء: متلازمة داون تحدث نتيجة شذوذ كروموسومي جسمي، حيث يوجد 3 نسخ من الكروموسوم رقم...؟", "options": ["13", "18", "21", "23"], "answer": "21" },
+            "i8": { "text": "أنمي: في عالم 'فول ميتال الخيميائي'، ما هي المادة الأساسية المكونة لـ حجر الفلاسفة؟", "options": ["أرواح البشر", "الذهب الخالص", "دموع التنانين", "الزئبق الأحمر"], "answer": "أرواح البشر" },
+            "i9": { "text": "فيزياء: جسم يسقط سقوطاً حراً، النسبة بين المسافة المقطوعة في الثانية الأولى والثانية والثالثة على الترتيب هي...؟", "options": ["1:2:3", "1:3:5", "1:4:9", "1:8:27"], "answer": "1:3:5" },
+            "i10": { "text": "كيمياء: حرارة التكوين القياسية لأي عنصر في حالته القياسية تساوي...؟", "options": ["100 كيلوجول/مول", "صفر", "سالبة دائماً", "تعتمد على درجة الحرارة"], "answer": "صفر" },
+            "i11": { "text": "أحياء: إذا حدث عبور وراثي (Crossing over)، فإنه يحدث بين الكروماتيدات...؟", "options": ["الشقيقة في الكروموسوم الواحد", "غير الشقيقة في الكروموسومين المتماثلين", "الكروموسومات الجنسية فقط", "غير المتماثلة"], "answer": "غير الشقيقة في الكروموسومين المتماثلين" },
+            "i12": { "text": "أنمي: ما هو الباونتي (المكافأة) الأولى التي وضعت على رأس مونكي دي لوفي في ون بيس؟", "options": ["16 مليون بيلي", "30 مليون بيلي", "100 مليون بيلي", "15 مليون بيلي"], "answer": "30 مليون بيلي" },
+            "i13": { "text": "فيزياء: في الحركة الدائرية غير المنتظمة، العجلة الكلية للجسم هي المحصلة الاتجاهية لـ...؟", "options": ["العجلة المركزية والجاذبية الأرضية", "العجلة المركزية والعجلة المماسية", "السرعة والزمن", "القوة والكتلة"], "answer": "العجلة المركزية والعجلة المماسية" },
+            "i14": { "text": "كيمياء: عند ذوبان نترات الأمونيوم في الماء، تنخفض درجة حرارة المحلول. هذا يعني أن طاقة الشبكة البلورية (فصل الجزيئات)...؟", "options": ["أكبر من طاقة الإماهة", "أقل من طاقة الإماهة", "تساوي طاقة الإماهة", "لا علاقة لها بالذوبان"], "answer": "أكبر من طاقة الإماهة" },
+            "i15": { "text": "أحياء: العالم الذي أثبت أن الـ DNA هو المادة الوراثية باستخدام البكتيريوفاج (فيروس البكتيريا) هو/هم...؟", "options": ["واطسون وكريك", "هيرشي وتشيس", "جريفيث", "فرانكلين"], "answer": "هيرشي وتشيس" }
+        }
+    };
+
+    // إعدادات Firebase الخاصة بك
     const firebaseConfig = {
         apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
         authDomain: "tay-game.firebaseapp.com",
@@ -76,14 +100,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let myName = prompt("أدخل اسمك يا بطل:") || "طالب";
+    let myName = prompt("أدخل اسمك يا بطل:") || "طالب مجهول";
     let score = 0;
 
     // نظام الرتب
     function getRank(s) {
-        if(s > 500) return "إمبراطور يوسف علاء 👑";
-        if(s > 300) return "دحيح الدفعة 📚";
-        if(s > 100) return "مقاتل أنمي 🔥";
+        if(s >= 150) return "إمبراطور يوسف علاء 👑";
+        if(s >= 100) return "دحيح الدفعة 📚";
+        if(s >= 50) return "مقاتل أنمي 🔥";
         return "طالب مستجد";
     }
 
@@ -92,72 +116,100 @@
     userRef.set({ name: myName, score: 0, rank: "مستجد" });
     userRef.onDisconnect().remove();
 
-    // تحديث القوائم
+    // تحديث قائمة المتصلين والمتصدرين
     db.ref('status').on('value', snap => {
-        let html = '';
+        let users = [];
         snap.forEach(child => {
-            html += `<div class="online-user">● ${child.val().name} (${child.val().score})</div>`;
+            users.push(child.val());
+        });
+        // ترتيب تنازلي حسب النقاط
+        users.sort((a, b) => b.score - a.score);
+        
+        let html = '';
+        users.forEach(u => {
+            html += `<div class="online-user"><b>${u.name}</b> <br> <span style="color:#8b949e; font-size:0.8rem;">${u.rank} | ${u.score} نقطة</span></div>`;
         });
         document.getElementById('online-list').innerHTML = html;
     });
 
-    // سحب الأسئلة (صعوبة تدريجية وعشوائية)
+    // سحب الأسئلة من المكتبة المدمجة
     function loadQ() {
-        let difficulty = "easy";
-        if (score > 50) difficulty = "medium";
-        if (score > 150) difficulty = "hard";
+        let difficulty = "hard"; // البداية مع الأسئلة الصعبة
+        if (score >= 50) difficulty = "impossible"; // الانتقال للمستحيل بعد 50 نقطة
 
-        document.getElementById('lvl-tag').innerText = "المستوى: " + difficulty;
+        let levelName = difficulty === "hard" ? "صعب 🟠" : "مستحيل 🔴";
+        document.getElementById('lvl-tag').innerText = "المستوى: " + levelName;
 
-        db.ref('questions/' + difficulty).once('value').then(snap => {
-            const data = snap.val();
-            const keys = Object.keys(data);
-            const randomKey = keys[Math.floor(Math.random() * keys.length)];
-            const q = data[randomKey];
+        const data = localQuestions[difficulty];
+        const keys = Object.keys(data);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        const q = data[randomKey];
 
-            document.getElementById('q-text').innerText = q.text;
-            const optDiv = document.getElementById('opts');
-            optDiv.innerHTML = '';
-            q.options.forEach(o => {
-                let b = document.createElement('button');
-                b.className = 'btn-opt';
-                b.innerText = o;
-                b.onclick = () => {
-                    if(o === q.answer) {
-                        score += 10;
-                        alert("صح! استمر");
-                    } else {
-                        alert("خطأ! حاول تاني");
-                    }
-                    userRef.update({ score: score, rank: getRank(score) });
-                    document.getElementById('score').innerText = score;
-                    document.getElementById('rank').innerText = getRank(score);
-                    loadQ();
-                };
-                optDiv.appendChild(b);
-            });
+        document.getElementById('q-text').innerText = q.text;
+        const optDiv = document.getElementById('opts');
+        optDiv.innerHTML = '';
+        
+        // خلط الخيارات عشوائياً
+        let shuffledOptions = q.options.sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(o => {
+            let b = document.createElement('button');
+            b.className = 'btn-opt';
+            b.innerText = o;
+            b.onclick = () => {
+                if(o === q.answer) {
+                    score += 10;
+                    b.style.background = "#3fb950"; // لون أخضر عند الإجابة الصحيحة
+                } else {
+                    b.style.background = "#f85149"; // لون أحمر عند الإجابة الخاطئة
+                    score = Math.max(0, score - 5); // خصم 5 نقاط للخطأ
+                }
+                
+                // تحديث البيانات في Firebase
+                userRef.update({ score: score, rank: getRank(score) });
+                document.getElementById('score').innerText = score;
+                document.getElementById('rank').innerText = getRank(score);
+                
+                // الانتظار نصف ثانية ثم تحميل السؤال التالي
+                setTimeout(loadQ, 800);
+            };
+            optDiv.appendChild(b);
         });
     }
 
     // الشات
     function sendMsg() {
         let m = document.getElementById('chat-msg').value;
-        if(m) {
+        if(m.trim() !== "") {
             db.ref('chat').push({ name: myName, text: m });
             document.getElementById('chat-msg').value = '';
         }
     }
+    
+    // إرسال الرسالة عند الضغط على Enter
+    document.getElementById("chat-msg").addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMsg();
+      }
+    });
+
     db.ref('chat').limitToLast(20).on('child_added', snap => {
-        document.getElementById('chat-content').innerHTML += `<div class="msg-in"><b>${snap.val().name}:</b> ${snap.val().text}</div>`;
+        document.getElementById('chat-content').innerHTML += `<div class="msg-in"><b style="color: var(--main);">${snap.val().name}:</b> ${snap.val().text}</div>`;
         document.getElementById('chat-content').scrollTop = 9999;
     });
 
+    // اقتراح سؤال
     function addQuestion() {
         let q = prompt("اكتب السؤال:");
         let a = prompt("اكتب الإجابة الصحيحة:");
-        if(q && a) db.ref('suggestions').push({ q, a, by: myName });
+        if(q && a) {
+            db.ref('suggestions').push({ q, a, by: myName });
+            alert("تم إرسال اقتراحك ليوسف علاء بنجاح!");
+        }
     }
 
+    // بدء اللعبة
     loadQ();
 </script>
 </body>
