@@ -3,278 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تحدي الأبطال - الإصدار الجبار 2026</title>
+    <title>تحدي الأبطال - الإصدار القابل للتعديل</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-        
-        :root { 
-            --main: #00d2ff; 
-            --main-glow: rgba(0, 210, 255, 0.5);
-            --bg: #0a0a0c; 
-            --panel: rgba(22, 27, 34, 0.85); 
-            --accent: #ff007a;
-            --success: #3fb950;
-            --danger: #ff4b4b;
-        }
-        
+        :root { --main: #00d2ff; --bg: #0a0a0c; --accent: #ff007a; --success: #3fb950; --danger: #ff4b4b; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
         body { 
             font-family: 'Cairo', sans-serif; 
             background: var(--bg) url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); 
-            color: white; 
-            margin: 0; 
-            height: 100dvh;
-            display: flex; 
-            flex-direction: column;
-            overflow: hidden;
+            color: white; margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
         }
-
-        .founder-header { 
-            text-align: center; 
-            padding: 15px; 
-            background: linear-gradient(90deg, transparent, rgba(255,0,122,0.8), transparent); 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            box-shadow: 0 0 15px var(--accent); 
-            z-index: 10; 
-            font-size: 1.2rem;
-            text-shadow: 0 0 10px white;
-        }
-        
-        .app-container { flex: 1; position: relative; overflow: hidden; }
-
-        .tab-content {
-            display: none; height: 100%; overflow-y: auto; padding: 20px; padding-bottom: 80px; animation: fadeIn 0.3s ease;
-        }
+        .header { text-align: center; padding: 15px; background: linear-gradient(90deg, transparent, var(--accent), transparent); font-weight: 900; box-shadow: 0 0 15px var(--accent); z-index: 10; font-size: 1.1rem; }
+        .score-bar { display: flex; justify-content: space-around; padding: 10px; background: #161b22; border-bottom: 2px solid var(--main); font-weight: bold; }
+        .container { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .bottom-nav {
-            position: fixed; bottom: 0; width: 100%; background: #10141a; border-top: 2px solid #30363d;
-            display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; backdrop-filter: blur(10px);
-        }
-
-        .nav-item {
-            color: #8b949e; background: none; border: none; font-family: inherit; font-size: 0.9rem; font-weight: bold;
-            display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.3s; width: 25%;
-        }
-        .nav-item.active { color: var(--main); text-shadow: 0 0 10px var(--main-glow); }
-        .nav-icon { font-size: 1.5rem; }
-
-        .card { 
-            background: rgba(13, 17, 23, 0.9); border: 2px solid var(--main); padding: 25px; 
-            border-radius: 20px; text-align: center; box-shadow: 0 0 20px var(--main-glow); backdrop-filter: blur(5px);
-        }
-        
-        .btn-opt { 
-            display: block; width: 100%; margin: 12px 0; padding: 15px; background: rgba(255,255,255,0.05); 
-            border: 1px solid var(--main); color: white; border-radius: 12px; cursor: pointer; 
-            transition: all 0.2s; font-size: 1.1rem; font-family: inherit; font-weight: bold;
-        }
-        .btn-opt:active { transform: scale(0.95); }
-        
-        .correct-ans { background: var(--success) !important; color: white !important; border-color: var(--success); box-shadow: 0 0 15px var(--success); }
-        .wrong-ans { background: var(--danger) !important; color: white !important; border-color: var(--danger); animation: shake 0.4s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
-
-        .chat-container { display: flex; flex-direction: column; height: 100%; }
-        #chat-content { flex: 1; overflow-y: auto; padding-right: 5px; }
-        .msg-in { background: #21262d; padding: 12px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid var(--main); font-size: 0.95rem; word-wrap: break-word;}
-        .chat-input-area { display: flex; gap: 10px; margin-top: 15px; }
-        .chat-input-area input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #30363d; background: #161b22; color: white; font-family: inherit; font-size: 1rem; }
-        .chat-input-area button { padding: 0 20px; background: var(--main); border: none; border-radius: 10px; color: #000; font-weight: bold; font-family: inherit; cursor: pointer; }
-
-        .online-user { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(63, 185, 80, 0.1); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(63, 185, 80, 0.3); }
-
-        .syllabus-header { text-align: center; color: #58a6ff; border-bottom: 2px solid #30363d; padding-bottom: 15px; margin-bottom: 30px; margin-top:0; font-size: 1.5rem;}
-        .subject-title, .category { margin-top: 40px; padding: 12px; background: #161b22; font-size: 1.2em; font-weight: bold; color: #ffffff; border-radius: 4px; }
-        .subject-title { border-right: 5px solid #58a6ff; }
-        .category { border-right: 5px solid #ff4b2b; }
-        
-        ol.q-list { counter-reset: custom-counter; list-style: none; padding: 0; }
-        ol.q-list li { background: #21262d; margin: 12px 0; padding: 15px 20px; border-radius: 6px; border: 1px solid #30363d; position: relative; line-height: 1.8; font-size: 0.95rem;}
-        ol.q-list li::before { counter-increment: custom-counter; content: counter(custom-counter) "- "; color: #58a6ff; font-weight: bold; margin-left: 5px; }
-        
-        .hard { border-right: 4px solid #d2a8ff !important; }
-        .very-hard { border-right: 4px solid #ff7b72 !important; }
-        .impossible { border-right: 4px solid #ff0000 !important; background: #2d1114 !important; }
-        
-        .tag { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; margin-right: 10px; float: left; }
-        .tag-hard { background: #d2a8ff; color: #000; }
-        .tag-very-hard { background: #ff7b72; color: #000; }
-        .tag-impossible { background: #ff0000; color: #fff; font-weight: bold; }
-
-        .mcq-box { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .mcq-box label { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #30363d; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .mcq-box label:hover { background: rgba(0, 210, 255, 0.1); border-color: var(--main); }
-        .mcq-box input[type="radio"] { accent-color: var(--main); }
+        .card { background: rgba(22, 27, 34, 0.9); border: 2px solid var(--main); padding: 25px; border-radius: 20px; text-align: center; margin-bottom: 20px; }
+        .btn-opt { display: block; width: 100%; margin: 12px 0; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--main); color: white; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; font-weight: bold; font-family: inherit; }
+        .correct { background: var(--success) !important; box-shadow: 0 0 15px var(--success); }
+        .wrong { background: var(--danger) !important; animation: shake 0.4s; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
+        .nav { position: fixed; bottom: 0; width: 100%; background: #10141a; display: flex; justify-content: space-around; padding: 10px 0; border-top: 2px solid #30363d; }
+        .nav-btn { color: #8b949e; background: none; border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer; flex: 1; }
+        .nav-btn.active { color: var(--main); text-shadow: 0 0 10px var(--main); }
     </style>
 </head>
 <body>
 
-<div class="founder-header">المؤسس الأول : Yousef = غابيمارو 🔥</div>
+<div class="header">المؤسس الأول : Yousef = غابيمارو 🔥</div>
+<div class="score-bar">
+    <div>النقاط: <span id="pts" style="color: var(--main);">0</span></div>
+    <div>الرتبة: <span id="rnk" style="color: var(--success);">مستجد</span></div>
+</div>
 
-<div class="app-container">
-    
+<div class="container">
     <div id="game-tab" class="tab-content active">
         <div class="card">
-            <div id="lvl-tag" style="color: var(--accent); font-size: 1rem; font-weight: bold; margin-bottom: 10px;">المستوى: جاري التحميل...</div>
-            <h2 id="q-text" style="line-height: 1.5; margin-bottom: 25px; font-size: 1.3rem;">جاري تجهيز التحدي...</h2>
-            <div id="opts"></div>
-            
-            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #30363d; display: flex; justify-content: space-between; font-size: 1.1rem;">
-                <div>نقاطك: <span id="score" style="color: var(--main); font-weight: 900; font-size: 1.3rem;">0</span></div>
-                <div id="rank" style="color: var(--success); font-weight: bold;">مستجد</div>
-            </div>
+            <h2 id="q-text" style="line-height: 1.5;">جاري التجهيز...</h2>
+            <div id="options"></div>
         </div>
-        <button onclick="addQuestion()" style="display:block; width:100%; margin-top:20px; background:none; color:#8b949e; border:2px dashed #8b949e; padding: 15px; border-radius: 12px; font-weight:bold;">+ اقترح سؤالاً جديداً للعبة</button>
-    </div>
-
-    <div id="chat-tab" class="tab-content">
-        <div class="chat-container">
-            <h3 style="text-align:center; color: var(--main); margin-top:0;">💬 شات الأبطال</h3>
-            <div id="chat-content"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-msg" placeholder="اكتب رسالتك هنا...">
-                <button onclick="sendMsg()">إرسال</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="leaderboard-tab" class="tab-content">
-        <h3 style="color: var(--main); text-align: center; margin-top:0;">🏆 المتصدرين و 🟢 المتصلون</h3>
-        <div id="online-list"></div>
     </div>
 
     <div id="syllabus-tab" class="tab-content">
-        <h1 class="syllabus-header">100 سؤال نواتج تعلم: الصف الأول الثانوي (الترم الثاني 2026)</h1>
+        <h1 style="text-align:center; color: var(--main);">📚 بنك المنهج الدراسي</h1>
+        <div id="syllabus-list"></div>
+    </div>
 
-        <div class="subject-title">أولاً: الفيزياء (الحركة الدائرية، الجاذبية الكونية، الشغل والطاقة)</div>
-        <ol class="q-list">
-            <li class="hard">جسم يتحرك في مسار دائري بسرعة ثابتة، إذا زادت القوة الجاذبة المركزية للضعف وقل نصف القطر للنصف، ماذا يحدث للسرعة المماسية؟<span class="tag tag-hard">صعب</span></li>
-            <li class="hard">قمران صناعيان A و B يدوران حول الأرض، نصف قطر مدار A ضعف مدار B، احسب النسبة بين الزمن الدوري لهما.</li>
-            <li class="hard">سيارة تتحرك في منحنى دائري يميل على الأفقي بزاوية (θ)، استنتج رياضياً أقصى سرعة آمنة مع إهمال قوة الاحتكاك.</li>
-            <li class="hard">سقط جسم سقوطاً حراً من ارتفاع (h)، عند أي ارتفاع تكون طاقة حركته ضعف طاقة وضعه؟</li>
-            <li class="hard">إذا كانت قوة التجاذب بين كتلتين هي (F)، كم يجب أن تتغير المسافة بينهما لتصبح القوة (F/9)؟</li>
-            <li class="hard">رجل يدفع عربة بقوة تصنع زاوية 60 مع الأفقي، إذا بذل شغلاً (W)، فكم تكون القوة اللازمة لبذل نفس الشغل إذا دفعها أفقياً؟</li>
-            <li class="hard">جسم كتلته 2 كجم مربوط في خيط ويدور في مستوى رأسي، احسب الفرق بين الشد في أعلى نقطة وأسفل نقطة.</li>
-            <li class="hard">احسب النسبة بين عجلة الجاذبية على سطح الأرض وعجلة الجاذبية على ارتفاع يساوي ضعف نصف قطر الأرض.</li>
-            <li class="hard">إذا تضاعفت كمية تحرك جسم، فما هو مقدار التغير النسبي في طاقة حركته؟</li>
-            <li class="hard">منحنى السرعة المدارية للقمر الصناعي مع مقلوب الجذر التربيعي لنصف القطر يمثل خطاً مستقيماً، ماذا يمثل الميل؟</li>
-            <li class="very-hard">جسم ينزلق على مسار دائري أملس كروي من أعلى نقطة، عند أي زاوية سيترك الجسم سطح الكرة؟<span class="tag tag-very-hard">صعب جداً</span></li>
-            <li class="very-hard">كيف يمكن لقمر صناعي أن يدور في مدار متزامن مع الأرض وما هي الشروط الدقيقة لكتلته وسرعته؟</li>
-            <li class="very-hard">في البندول البسيط، ارسم العلاقة البيانية بين مربع السرعة والإزاحة الرأسية، واستنتج قيمة الميل.</li>
-            <li class="very-hard">إذا كان الشغل المبذول لزيادة سرعة سيارة من 10 إلى 20 م/ث هو W، فما الشغل لزيادتها من 20 إلى 30 م/ث؟</li>
-            <li class="very-hard">قمر صناعي يدور حول كوكب كتلته مجهولة، إذا علمنا فقط سرعته المدارية ومحيط مداره، استنتج كتلة الكوكب.</li>
-            <li class="impossible">إذا تم حفر نفق مستقيم عبر مركز الأرض بالكامل، وأسقطنا جسماً فيه، أثبت رياضياً أن حركته توافقية بسيطة.<span class="tag tag-impossible">مستحيل</span></li>
-            <li class="impossible">احسب سرعة الهروب لجسم من جاذبية الأرض إذا تم إطلاقه من قمة جبل ارتفاعه يوازي نصف قطر الأرض.</li>
-            <li class="impossible">هل يمكن لقوة الجاذبية المركزية أن تبذل شغلاً في مسار إهليجي (بيضاوي) وليس دائري؟ فسر رياضياً.</li>
-            <li class="impossible">أثبت أن الطاقة الميكانيكية الكلية لقمر صناعي تساوي القيمة السالبة لطاقة حركته.</li>
-            <li class="impossible">تخيل كوكباً كثافته تتغير تدريجياً من المركز للسطح، كيف ستحسب عجلة الجاذبية عند نقطة داخله؟</li>
-        </ol>
-
-        <div class="subject-title">ثانياً: الكيمياء (الكيمياء الحرارية، الكيمياء النووية)</div>
-        <ol class="q-list" start="21">
-            <li class="hard">تفاعل طارد للحرارة، إذا كانت طاقة المتفاعلات 500kJ وطاقة التنشيط 100kJ، و ΔH=-200kJ، احسب طاقة النواتج.</li>
-            <li class="hard">احسب حرارة التكوين القياسية لغاز الميثان باستخدام قانون هس.</li>
-            <li class="hard">عينة مشعة تحتوي على 1000 نواة، فترة عمر النصف 5 أيام. كم نواة تتبقى بعد 20 يوماً؟</li>
-            <li class="hard">قارن بين قوة الترابط النووي لنواة الحديد-56 ونواة اليورانيوم-235 بناءً على منحنى الاستقرار.</li>
-            <li class="hard">احسب كمية الحرارة المنطلقة عند ذوبان 10 جم من هيدروكسيد الصوديوم في الماء.</li>
-            <li class="hard">لماذا لا يمكن قياس المحتوى الحراري لمادة معينة بشكل مباشر، بل نقيس التغير فيه (ΔH)؟</li>
-            <li class="hard">نواة عنصر (X) فقدت 2 جسيم ألفا و 3 بيتا لتتحول إلى رصاص (Pb-206, 82)، ما هو العنصر X؟</li>
-            <li class="hard">احسب طاقة الترابط النووي لكل نيوكليون في نواة الهيليوم.</li>
-            <li class="hard">ما هو الفرق الجوهري بين الانشطار النووي في المفاعل والانشطار في القنبلة الذرية من حيث الكتلة الحرجة؟</li>
-            <li class="hard">ارسم مخطط طاقة لتفاعل ماص للحرارة موضحاً عليه أثر إضافة عامل حفاز.</li>
-            <li class="very-hard">إذا كان تفاعل احتراق الجرافيت يمر بخطوتين، لماذا يفضل استخدام قانون هس؟</li>
-            <li class="very-hard">اشرح كيف يمكن لنظير مستقر أن يتحول إلى نظير مشع عن طريق القذف بالنيوترونات.</li>
-            <li class="very-hard">في مسعر القنبلة، إذا لم نقم بخصم السعة الحرارية للمسعر، كيف سيؤثر ذلك على قيمة حرارة الاحتراق؟</li>
-            <li class="very-hard">تفسير ظاهرة "نقص الكتلة" عند تكوين النواة ولماذا لا نلاحظها في التفاعلات العادية؟</li>
-            <li class="very-hard">عينة مشعة نشاطها 800 إشعاع/ث، وبعد ساعتين أصبح 50. احسب ثابت الانحلال.</li>
-            <li class="impossible">إذا استطعنا عكس الانشطار النووي لليورانيوم، هل سيكون طارداً أم ماصاً للحرارة ولماذا؟</li>
-            <li class="impossible">أثبت رياضياً أن فترة عمر النصف لا تعتمد على الكمية الابتدائية للمادة المشعة.</li>
-            <li class="impossible">في الاندماج النووي بالشمس، احسب بدقة نسبة الكتلة المتحولة لطاقة.</li>
-            <li class="impossible">تخيل تفاعلاً كيميائياً تكون فيه إنثالبي النواتج يساوي المتفاعلات عند الصفر المطلق، هل يحدث؟</li>
-            <li class="impossible">احسب الطاقة الناتجة من فناء 1 جرام من المادة والمادة المضادة معاً.</li>
-        </ol>
-
-        <div class="subject-title">ثالثاً: الأحياء (الوراثة وتداخل فعل الجينات، التصنيف)</div>
-        <ol class="q-list" start="41">
-            <li class="hard">تزاوج فردان كلاهما يحمل فصيلة دم (A)، فظهر في الأبناء فصيلة (O)، ما هو التركيب الجيني للآباء؟</li>
-            <li class="hard">اشرح حالة الجينات المتكاملة في نبات بسلة الزهور.</li>
-            <li class="hard">لماذا يعتبر مرض عمى الألوان أكثر انتشاراً في الذكور عن الإناث؟</li>
-            <li class="hard">قارن بين البدائيات والطلائعيات من حيث تركيب النواة.</li>
-            <li class="hard">ما هو الأساس العلمي الذي بنى عليه "كارل لينيوس" التسمية الثنائية؟</li>
-            <li class="hard">كيف تفرق بين ذكر وأنثى حشرة الدروسوفيلا من حيث لون العين؟</li>
-            <li class="hard">تزاوجت فئران صفراء معاً، ما نسبة الفاقد في النسل الناتج ولماذا؟</li>
-            <li class="hard">فصيلة الدم (AB) مستقبل عام، بينما (O) معطي عام، فسر ذلك مناعياً.</li>
-            <li class="hard">صنف فطر المشروم موضحاً المملكة والشعبة.</li>
-            <li class="hard">كيف يمكن استخدام البصمة الوراثية لإثبات البنوة؟</li>
-            <li class="very-hard">ما هو تفسير ظهور فصيلة دم (O) لأبوين فصيلة دمهما (AB)؟ (ظاهرة بومباي).</li>
-            <li class="very-hard">كيف تفسر وراثياً ولادة طفل مصاب بمتلازمة داون يحمل فصيلة دم غير متوافقة؟</li>
-            <li class="very-hard">إذا حدث عبور وراثي بين جينين مرتبطين، كيف يؤثر ذلك على النسب المندلية المتوقعة؟</li>
-            <li class="very-hard">لماذا لا يمكن تصنيف الفيروسات ضمن الممالك الخمس الكلاسيكية؟</li>
-            <li class="very-hard">اشرح كيف تورث صفة الصلع المبكر في الإنسان.</li>
-            <li class="impossible">هل يمكن أن تتواجد مورثات الميتوكوندريا في الحيوان المنوي وتنتقل للجنين؟</li>
-            <li class="impossible">في كائن افتراضي، تم اكتشاف نظام تحديد جنس خماسي الأليلات، صمم مربع بانيت.</li>
-            <li class="impossible">كيف تقوم بتصنيف كائن يمتلك جداراً خلوياً كيتينياً ويقوم بالبناء الضوئي في الينابيع الحارة؟</li>
-            <li class="impossible">إذا كانت صفة لون الريش محكومة بـ 4 أزواج من الجينات المتراكمة، كم عدد الفينوتيبات؟</li>
-            <li class="impossible">صمم خريطة وراثية لجين افتراضي يسبب مناعة ضد الإشعاع.</li>
-        </ol>
-
-        <div class="subject-title">رابعاً: الرياضيات والفلسفة والتحديات الفكرية (أهم 40 سؤال)</div>
-        <ol class="q-list" start="61">
-            <li class="hard">إذا كانت أ مصفوفة متماثلة وشبه متماثلة، أثبت أنها مصفوفة صفرية.</li>
-            <li class="hard">حل نظام المعادلات 2س - ص = 3، وس + 3ص = 5 باستخدام المعكوس الضربي.</li>
-            <li class="hard">أوجد معادلة الخط المستقيم المار بالنقطة (2، -1) وعمودي على المتجه (3، 4).</li>
-            <li class="hard">أثبت صحة المتطابقة: (جتا س / 1 - جا س) + (1 - جا س / جتا س) = 2 قا س.</li>
-            <li class="hard">أ ب جـ مثلث، أثبت بالمتجهات أن القطعة الواصلة بين منتصفي ضلعين توازي الثالث.</li>
-            <li class="hard">من قمة برج ارتفاعه 50م، قيست زاوية انخفاض مبنى 30 و 45 درجة، أوجد الارتفاع.</li>
-            <li class="very-hard">إذا كانت المصفوفة أ على النظم 3×3 ومحددها = 5، أوجد قيمة محدد (2 أ^مرفقة).</li>
-            <li class="very-hard">أثبت باستخدام المتجهات أن منصفات زوايا المثلث تتقاطع في نقطة واحدة.</li>
-            <li class="impossible">أثبت أن المعكوس الضربي لمصفوفة موجود فقط إذا كان محددها لا يساوي صفراً.</li>
-            <li class="impossible">حل المعادلة المثلثية: جا^6(س) + جتا^6(س) = 1/4.</li>
-            <li class="hard">"العلم لا يعطي حقائق نهائية". ناقش في ضوء خصائص المعرفة العلمية.</li>
-            <li class="hard">كيف يمكن تطبيق خطوة "فرض الفروض" لحل مشكلة الازدحام المروري؟</li>
-            <li class="very-hard">إذا كان العلم يعتمد على الحواس وهي خادعة، كيف نطمئن للقوانين؟</li>
-            <li class="impossible">هل الذكاء الاصطناعي قادر على ممارسة "التفكير الإبداعي" أم إعادة تدوير المعرفة؟</li>
-            <li class="impossible">حلل معضلة "السببية" لديفيد هيوم.</li>
-            <li class="very-hard">مفارقة فيرمي: أين الكائنات الفضائية؟</li>
-            <li class="very-hard">الفرق الجوهري بين ميكانيكا الكم والنسبية العامة.</li>
-            <li class="impossible">تأثير المراقب في تجربة الشق المزدوج.</li>
-            <li class="impossible">مصير المعلومات داخل الثقب الأسود.</li>
-            <li class="impossible">مفارقة الجد في السفر عبر الزمن.</li>
-            <li class="impossible">هل نحن نعيش في محاكاة حاسوبية فائقة؟</li>
-            <li class="impossible">هل الوعي يخلق الواقع أم الواقع يخلق الوعي؟</li>
-            <li class="impossible">مفارقة سفينة ثيسيوس.</li>
-            <li class="impossible">فرضية ريمان المتعلقة بتوزيع الأعداد الأولية.</li>
-            <li class="impossible">هل هناك نهاية للمعرفة أم الأسئلة تتوالد للأبد؟</li>
-        </ol>
-
+    <div id="leader-tab" class="tab-content">
+        <h3 style="text-align:center;">🏆 الأبطال المتصلون</h3>
+        <div id="leaderboard"></div>
     </div>
 </div>
 
-<div class="bottom-nav">
-    <button class="nav-item active" onclick="switchTab('game-tab', this)">
-        <span class="nav-icon">🎮</span>اللعبة
-    </button>
-    <button class="nav-item" onclick="switchTab('chat-tab', this)">
-        <span class="nav-icon">💬</span>الشات
-    </button>
-    <button class="nav-item" onclick="switchTab('leaderboard-tab', this)">
-        <span class="nav-icon">🏆</span>الأبطال
-    </button>
-    <button class="nav-item" onclick="switchTab('syllabus-tab', this)">
-        <span class="nav-icon">📚</span>المنهج
-    </button>
+<div class="nav">
+    <button class="nav-btn active" onclick="switchTab('game-tab', this)">🎮 اللعبة</button>
+    <button class="nav-btn" onclick="switchTab('syllabus-tab', this)">📚 المنهج</button>
+    <button class="nav-btn" onclick="switchTab('leader-tab', this)">🏆 الأبطال</button>
 </div>
 
 <script>
+    // --- إعدادات Firebase (نفس بياناتك الأصلية) ---
     const firebaseConfig = {
         apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
         authDomain: "tay-game.firebaseapp.com",
@@ -284,233 +77,151 @@
         messagingSenderId: "313499272374",
         appId: "1:313499272374:web:26b693f457239555365217"
     };
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // إضافة الخيارات (أ ب ج د) لجميع أسئلة المنهج تلقائياً
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('ol.q-list li').forEach((li, index) => {
-            const mcqHtml = `
-            <div class="mcq-box">
-                <label><input type="radio" name="q${index}"> أ</label>
-                <label><input type="radio" name="q${index}"> ب</label>
-                <label><input type="radio" name="q${index}"> ج</label>
-                <label><input type="radio" name="q${index}"> د</label>
-            </div>`;
-            li.innerHTML += mcqHtml;
-        });
-    });
+    let myName = prompt("أدخل اسمك يا بطل:") || "مقاتل";
+    let score = 0;
+    const userRef = db.ref('status/' + myName);
 
-    // --- بنك أسئلة اللعبة الجبار (100 سؤال) ---
-    const gameQuestions = [
-        { q: "فيزياء: ما هي وحدة قياس القوة الجاذبة المركزية؟", a: "النيوتن", o: ["النيوتن", "الجول", "الوات", "المتر/ثانية"] },
-        { q: "كيمياء: ما هو رمز غاز الميثان؟", a: "CH4", o: ["CH4", "CO2", "H2O", "NH3"] },
-        { q: "أحياء: أين يتم تخزين الجليكوجين في جسم الإنسان؟", a: "الكبد والعضلات", o: ["الكبد والعضلات", "المعدة", "الرئتين", "العظام"] },
-        { q: "رياضيات: مصفوفة 2x3 ضرب مصفوفة 3x2 تعطي مصفوفة نظمها؟", a: "2x2", o: ["2x2", "3x3", "2x3", "5x5"] },
-        { q: "أنمي: من هو 'الخالي من المشاعر'؟", a: "غابيمارو", o: ["غابيمارو", "ناروتو", "لوفي", "إيرين"] },
-        { q: "فيزياء: تزداد عجلة الجاذبية كلما...", a: "اقتربنا من مركز الأرض", o: ["اقتربنا من مركز الأرض", "ابتعدنا عن الأرض", "زاد الارتفاع", "قلت الكتلة"] },
-        { q: "كيمياء: تفاعل طارد للحرارة تكون فيه دلتا H...", a: "سالبة", o: ["سالبة", "موجبة", "صفر", "لا نهائية"] },
-        { q: "أحياء: فصيلة الدم التي تعتبر معطياً عاماً هي؟", a: "O", o: ["O", "A", "B", "AB"] },
-        { q: "رياضيات: جا تربيع س + جتا تربيع س تساوي؟", a: "1", o: ["1", "صفر", "2", "0.5"] },
-        { q: "ذكاء: ما هو الشيء الذي يكسى الناس وهو عارٍ؟", a: "الإبرة", o: ["الإبرة", "الشجر", "البحر", "الطريق"] },
-        { q: "فيزياء: السرعة المدارية للقمر الصناعي تعتمد على...", a: "نصف قطر المدار", o: ["نصف قطر المدار", "كتلة القمر", "لون القمر", "طول القمر"] },
-        { q: "كيمياء: الرابطة في جزيء الهيدروجين هي؟", a: "تساهمية نقية", o: ["تساهمية نقية", "أيونية", "فلزية", "تناسقية"] },
-        { q: "أحياء: عدد الكروموسومات في الخلية الجسدية للإنسان؟", a: "46", o: ["46", "23", "92", "12"] },
-        { q: "فلسفة: المعرفة العلمية معرفة...", a: "احتمالية", o: ["احتمالية", "يقينية مطلقة", "خرافية", "ثابتة"] },
-        { q: "رياضيات: ميل الخط المستقيم الموازي لمحور السينات؟", a: "صفر", o: ["صفر", "1", "غير معرف", "-1"] },
-        { q: "فيزياء: الشغل المبذول يساوي القوة في...", a: "الإزاحة", o: ["الإزاحة", "الزمن", "الكتلة", "السرعة"] },
-        { q: "كيمياء: المحتوى الحراري للعنصر في حالته القياسية؟", a: "صفر", o: ["صفر", "100", "1", "50"] },
-        { q: "أحياء: جين صفة الصلع في الرجال هو جين...", a: "متأثر بالجنس", o: ["متأثر بالجنس", "مرتبط بالجنس", "مميت", "متنحي دائماً"] },
-        { q: "رياضيات: محدد المصفوفة الصفرية دائماً...", a: "صفر", o: ["صفر", "1", "لا يمكن حسابه", "مالانهاية"] },
-        { q: "عام: ما هو الكوكب الأحمر؟", a: "المريخ", o: ["المريخ", "المشتري", "زحل", "الزهرة"] },
-        { q: "فيزياء: إذا تضاعفت المسافة بين كتلتين، القوة تقل إلى...", a: "الربع", o: ["الربع", "النصف", "الثمن", "تظل ثابتة"] },
-        { q: "كيمياء: الحرارة النوعية للماء هي...", a: "4.18", o: ["4.18", "1", "2.5", "0.9"] },
-        { q: "أحياء: مملكة تضم كائنات تعيش في الينابيع الحارة؟", a: "البدائيات", o: ["البدائيات", "الفطريات", "النبات", "الحيوان"] },
-        { q: "رياضيات: الزاوية 180 درجة تسمى زاوية...", a: "مستقيمة", o: ["مستقيمة", "قائمة", "حادة", "منفرجة"] },
-        { q: "ذكاء: ما هو الذي يكون أمامك دائماً ولا تراه؟", a: "المستقبل", o: ["المستقبل", "الهواء", "الشمس", "القمر"] },
-        { q: "فيزياء: طاقة الوضع تعتمد على الكتلة والارتفاع و...", a: "عجلة الجاذبية", o: ["عجلة الجاذبية", "السرعة", "الحجم", "الكثافة"] },
-        { q: "كيمياء: جسيم ألفا عبارة عن نواة ذرة...", a: "الهيليوم", o: ["الهيليوم", "الهيدروجين", "الليثيوم", "الكربون"] },
-        { q: "أحياء: النيوكليوتيدة هي وحدة بناء...", a: "الحمض النووي", o: ["الحمض النووي", "البروتين", "الدهون", "النشا"] },
-        { q: "رياضيات: قياس الزاوية الخارجية للمثلث المتساوي الأضلاع؟", a: "120", o: ["120", "60", "90", "180"] },
-        { q: "فيزياء: الحركة الاهتزازية مثال للحركة...", a: "الدورية", o: ["الدورية", "الموجية", "الانتقالية", "الدائرية"] },
-        { q: "كيمياء: قانون هس يتعامل مع التفاعلات كأنها معادلات...", a: "جبرية", o: ["جبرية", "كيميائية فقط", "فيزيائية", "نووية"] },
-        { q: "أحياء: مؤسس علم التصنيف الحديث هو...", a: "كارل لينيوس", o: ["كارل لينيوس", "مندل", "داروين", "ارسطو"] },
-        { q: "رياضيات: المعكوس الضربي للمصفوفة يكون موجوداً إذا كان المحدد...", a: "لا يساوي صفر", o: ["لا يساوي صفر", "يساوي صفر", "يساوي واحد", "سالب"] },
-        { q: "ذكاء: يسير بلا رجلين ولا يدخل إلا بالأذنين، ما هو؟", a: "الصوت", o: ["الصوت", "الماء", "النور", "الريح"] },
-        { q: "فيزياء: وحدة قياس التردد هي؟", a: "الهرتز", o: ["الهرتز", "المتر", "الثانية", "النيوتن"] },
-        { q: "كيمياء: النظائر هي ذرات لها نفس العدد الذري وتختلف في...", a: "الكتلي", o: ["الكتلي", "الإلكترونات", "البروتونات", "الكيميائي"] },
-        { q: "أحياء: الطور الذي تختفي فيه النوية والغشاء النووي؟", a: "التمهيدي", o: ["التمهيدي", "الاستوائي", "الانفصالي", "النهائي"] },
-        { q: "رياضيات: طول القوس الذي يقابل زاوية مركزية 1 راديان في دائرة نق=5؟", a: "5", o: ["5", "1", "10", "3.14"] },
-        { q: "أنمي: ما هي عين الشارينغان؟", a: "قدرة بصرية", o: ["قدرة بصرية", "سيف", "طاقة ريح", "وحش"] },
-        { q: "فيزياء: الضغط يقاس بوحدة؟", a: "الباسكال", o: ["الباسكال", "النيوتن", "الجول", "الكيلوجرام"] },
-        { q: "كيمياء: الاندماج النووي يحدث غالباً في...", a: "النجوم", o: ["النجوم", "المفاعلات الأرضية", "البطاريات", "الاحتراق"] },
-        { q: "أحياء: فطر عفن الخبز يتكاثر عن طريق...", a: "الجراثيم", o: ["الجراثيم", "التبرعم", "الانشطار", "التجدد"] },
-        { q: "رياضيات: عدد أقطار الشكل الخماسي؟", a: "5", o: ["5", "2", "10", "0"] },
-        { q: "ذكاء: ما هو الشيء الذي يزداد كلما أخذت منه؟", a: "الحفرة", o: ["الحفرة", "العمر", "المال", "العلم"] },
-        { q: "فيزياء: الموجات الصوتية موجات...", a: "طولية", o: ["طولية", "مستعرضة", "كهرومغناطيسية", "فراغية"] },
-        { q: "كيمياء: أشعة بيتا عبارة عن...", a: "إلكترونات", o: ["إلكترونات", "بروتونات", "فوتونات", "نيوترونات"] },
-        { q: "أحياء: الغدة النخامية تسمى غدة...", a: "المايسترو", o: ["المايسترو", "الادرينالين", "النمو", "اللعاب"] },
-        { q: "رياضيات: مساحة الدائرة تساوي؟", a: "ط نق تربيع", o: ["ط نق تربيع", "2 ط نق", "ط نق", "4 ط نق"] },
-        { q: "عام: كم عدد قارات العالم؟", a: "7", o: ["7", "6", "5", "8"] },
-        { q: "فيزياء: سرعة الضوء في الفراغ تقريباً...", a: "300 ألف كم/ث", o: ["300 ألف كم/ث", "300 م/ث", "1000 كم/ث", "مليون كم/ث"] },
-        { q: "كيمياء: الرقم الهيدروجيني pH للماء النقي هو؟", a: "7", o: ["7", "1", "14", "0"] },
-        { q: "أحياء: الوحدة البنائية للكلية هي...", a: "النيفرون", o: ["النيفرون", "العصبون", "الحويصلة", "المعدة"] },
-        { q: "رياضيات: قيمة جا 30 تساوي؟", a: "0.5", o: ["0.5", "1", "0", "0.866"] },
-        { q: "فلسفة: من القائل 'أنا أفكر، إذن أنا موجود'؟", a: "ديكارت", o: ["ديكارت", "سقراط", "أفلاطون", "أرسطو"] },
-        { q: "ذكاء: شيء له أسنان ولا يعض، ما هو؟", a: "المشط", o: ["المشط", "المسمار", "المفتاح", "الكتاب"] },
-        { q: "فيزياء: ما هو الجهاز المستخدم لقياس التيار الكهربائي؟", a: "الأميتر", o: ["الأميتر", "الفولتميتر", "الأوميتر", "البارومتر"] },
-        { q: "كيمياء: الغاز الذي يشتعل بفرقعة هو...", a: "الهيدروجين", o: ["الهيدروجين", "الأكسجين", "النيتروجين", "الهيليوم"] },
-        { q: "أحياء: أي الفصائل التالية لا تحتوي على أجسام مضادة؟", a: "AB", o: ["AB", "O", "A", "B"] },
-        { q: "رياضيات: مجموع قياسات زوايا المثلث الداخلية؟", a: "180", o: ["180", "360", "90", "270"] },
-        { q: "أنمي: ما هو حلم مونكي دي لوفي؟", a: "ملك القراصنة", o: ["ملك القراصنة", "الهوكاجي", "صائد شياطين", "بطل خارق"] },
-        { q: "فيزياء: طاقة الحركة لجسم ساكن تساوي...", a: "صفر", o: ["صفر", "10", "مالانهاية", "سالبة"] },
-        { q: "كيمياء: الصيغة الكيميائية لملح الطعام؟", a: "NaCl", o: ["NaCl", "H2O", "CO2", "HCl"] },
-        { q: "أحياء: مرض عمى الألوان محمول على الكروموسوم...", a: "X", o: ["X", "Y", "21", "22"] },
-        { q: "رياضيات: جتا 60 تساوي...", a: "0.5", o: ["0.5", "1", "0.866", "صفر"] },
-        { q: "عام: ما هو أطول نهر في العالم؟", a: "النيل", o: ["النيل", "الأمازون", "الفرات", "الميسيسيبي"] },
-        { q: "فيزياء: القوة التي تعيق الحركة تسمى قوة...", a: "الاحتكاك", o: ["الاحتكاك", "الجاذبية", "الدفع", "الشد"] },
-        { q: "كيمياء: المادة التي تغير لون ورقة عباد الشمس للأحمر؟", a: "حمض", o: ["حمض", "قاعدة", "ملح متعادل", "ماء نقي"] },
-        { q: "أحياء: الجزء المسؤول عن حفظ التوازن في الدماغ؟", a: "المخيخ", o: ["المخيخ", "النخاع", "المخ", "القنطرة"] },
-        { q: "رياضيات: مشتقة الثابت تساوي...", a: "صفر", o: ["صفر", "1", "س", "مالانهاية"] },
-        { q: "ذكاء: ما هو الشيء الذي كلما كثر غلا وكلما قل رخص؟", a: "العقل", o: ["العقل", "الذهب", "الماء", "التراب"] },
-        { q: "فيزياء: من مكتشف قوانين الحركة؟", a: "نيوتن", o: ["نيوتن", "أينشتاين", "جاليليو", "باسكال"] },
-        { q: "كيمياء: التوزيع الإلكتروني للصوديوم Na11 هو...", a: "2, 8, 1", o: ["2, 8, 1", "2, 8, 2", "2, 8", "2, 8, 8"] },
-        { q: "أحياء: الغاز الذي تأخذه النباتات في البناء الضوئي؟", a: "ثاني أكسيد الكربون", o: ["ثاني أكسيد الكربون", "الأكسجين", "النيتروجين", "الهيدروجين"] },
-        { q: "رياضيات: العدد الأولي الزوجي الوحيد هو...", a: "2", o: ["2", "4", "6", "8"] },
-        { q: "فلسفة: مؤسس علم المنطق هو...", a: "أرسطو", o: ["أرسطو", "أفلاطون", "سقراط", "كانط"] },
-        { q: "ذكاء: ما هو القفص الذي لا يحبس فيه أي حيوان؟", a: "القفص الصدري", o: ["القفص الصدري", "قفص الاتهام", "قفص العصافير", "القفص الحديدي"] },
-        { q: "فيزياء: البندول البسيط مثال على حركة...", a: "توافقية بسيطة", o: ["توافقية بسيطة", "دائرية", "مستقيمة", "عشوائية"] },
-        { q: "كيمياء: عدد أفوجادرو يساوي تقريباً...", a: "6.02 x 10^23", o: ["6.02 x 10^23", "3.14", "9.8", "1000"] },
-        { q: "أحياء: فقر الدم ينتج عن نقص...", a: "الحديد", o: ["الحديد", "الكالسيوم", "الصوديوم", "البوتاسيوم"] },
-        { q: "رياضيات: الجذر التربيعي للعدد 144 هو...", a: "12", o: ["12", "14", "16", "10"] },
-        { q: "أنمي: اسم السيف الملعون في ون بيس؟", a: "إنما", o: ["إنما", "يورو", "سوسانو", "إكسكاليبر"] },
-        { q: "فيزياء: الإزاحة كمية...", a: "متجهة", o: ["متجهة", "قياسية", "أساسية", "عددية"] },
-        { q: "كيمياء: الألكانات مركبات هيدروكربونية...", a: "مشبعة", o: ["مشبعة", "غير مشبعة", "حلقية", "أروماتية"] },
-        { q: "أحياء: الكروموسوم المسؤول عن تحديد الذكورة؟", a: "Y", o: ["Y", "X", "O", "A"] },
-        { q: "رياضيات: حجم المكعب الذي طول حرفه 3؟", a: "27", o: ["27", "9", "18", "6"] },
-        { q: "عام: ما هو المعدن السائل في درجة الحرارة العادية؟", a: "الزئبق", o: ["الزئبق", "الحديد", "النحاس", "الألمنيوم"] },
-        { q: "فيزياء: وحدة قياس كمية التحرك؟", a: "كجم.م/ث", o: ["كجم.م/ث", "نيوتن", "جول", "وات"] },
-        { q: "كيمياء: عدد الكم الرئيسي n يحدد...", a: "مستوى الطاقة", o: ["مستوى الطاقة", "شكل المدار", "اتجاه المدار", "دوران الإلكترون"] },
-        { q: "أحياء: من مكتشف الدورة الدموية الكبرى؟", a: "ابن النفيس", o: ["ابن النفيس", "ابن سينا", "هارفي", "مندل"] },
-        { q: "رياضيات: 5 مضروب (5!) يساوي...", a: "120", o: ["120", "25", "100", "50"] },
-        { q: "ذكاء: له عين واحدة ولا يرى، ما هو؟", a: "الإبرة", o: ["الإبرة", "الإعصار", "الخيط", "المفتاح"] },
-        { q: "فيزياء: تحولات الطاقة في المولد الكهربائي من...", a: "ميكانيكية لكهربية", o: ["ميكانيكية لكهربية", "كهربية لميكانيكية", "حرارية لكهربية", "كيميائية لكهربية"] },
-        { q: "كيمياء: حمض الكبريتيك صيغته...", a: "H2SO4", o: ["H2SO4", "HCl", "HNO3", "H3PO4"] },
-        { q: "أحياء: العضية المسؤولة عن إنتاج الطاقة في الخلية؟", a: "الميتوكوندريا", o: ["الميتوكوندريا", "النواة", "الريبوسوم", "الجولجي"] },
-        { q: "رياضيات: log(1) للأساس 10 يساوي...", a: "0", o: ["0", "1", "10", "غير معرف"] },
-        { q: "عام: ما هي عاصمة اليابان؟", a: "طوكيو", o: ["طوكيو", "بكين", "سول", "أوساكا"] },
-        { q: "فيزياء: قوة الطفو تتبع قاعدة...", a: "أرخميدس", o: ["أرخميدس", "باسكال", "نيوتن", "برنولي"] },
-        { q: "كيمياء: تفاعل الحمض مع القاعدة يعطي...", a: "ملح وماء", o: ["ملح وماء", "غاز", "راسب", "طاقة فقط"] },
-        { q: "أحياء: ما هو أكبر عضو في جسم الإنسان؟", a: "الجلد", o: ["الجلد", "الكبد", "القلب", "الرئة"] },
-        { q: "تحدي: من هو مؤسس هذا الموقع؟", a: "يوسف غابيمارو", o: ["يوسف غابيمارو", "مدرس الفيزياء", "شركة جوجل", "أحمد"] }
+    function updatePoints(val) {
+        score += val;
+        document.getElementById('pts').innerText = score;
+        let rank = score > 500 ? "نينجا أسطوري" : "دحيح";
+        document.getElementById('rnk').innerText = rank;
+        userRef.update({ name: myName, score, rank });
+    }
+
+    // --- مصفوفة الأسئلة (أهم جزء) ---
+    const allQuestions = [
+        // 50 سؤال متنوع للعبة
+        {q:"ما هو أسرع حيوان في العالم؟", a:"الفهد", o:["الفهد","الأسد","النعامة","الغزال"], type:"game"},
+        {q:"عاصمة مصر هي؟", a:"القاهرة", o:["القاهرة","لندن","باريس","مكة"], type:"game"},
+        {q:"من هو بطل أنمي ون بيس؟", a:"لوفي", o:["لوفي","ناروتو","إيتاتشي","غوكو"], type:"game"},
+        {q:"كم عدد قارات العالم؟", a:"7", o:["7","5","6","8"], type:"game"},
+        {q:"ما هو لون كوكب المريخ؟", a:"الأحمر", o:["الأحمر","الأزرق","الأصفر","الأخضر"], type:"game"},
+        {q:"أكبر محيط في العالم؟", a:"الهادئ", o:["الهادئ","الأطلسي","الهندي","المتجمد"], type:"game"},
+        {q:"معدن سائل في درجة حرارة الغرفة؟", a:"الزئبق", o:["الزئبق","الحديد","النحاس","الذهب"], type:"game"},
+        {q:"من اخترع المصباح الكهربائي؟", a:"إديسون", o:["إديسون","نيوتن","تسلا","بيل"], type:"game"},
+        {q:"أطول نهر في العالم؟", a:"النيل", o:["النيل","الأمازون","الكونغو","دجلة"], type:"game"},
+        {q:"كم عدد أضلاع المثلث؟", a:"3", o:["3","4","5","6"], type:"game"},
+        {q:"ما هي عاصمة السعودية؟", a:"الرياض", o:["الرياض","جدة","الدمام","المدينة"], type:"game"},
+        {q:"ما هو الغاز الذي نتنفسه؟", a:"الأكسجين", o:["الأكسجين","النيتروجين","الهيدروجين","الميثان"], type:"game"},
+        {q:"أين تقع الأهرامات؟", a:"الجيزة", o:["الجيزة","الأقصر","أسوان","الفيوم"], type:"game"},
+        {q:"ما هو الشيء الذي يغرق في الماء ولا يبتل؟", a:"الضوء", o:["الضوء","السفينة","الحجر","الخشب"], type:"game"},
+        {q:"من هو مؤسس تطبيق فيسبوك؟", a:"مارك زوكربيرج", o:["مارك زوكربيرج","بيل غيتس","ستيف جوبز","إيلون ماسك"], type:"game"},
+        {q:"ما هو الحيوان الذي يسمى سفينة الصحراء؟", a:"الجمل", o:["الجمل","الحصان","الفيل","الحمار"], type:"game"},
+        {q:"ما هو أصغر كوكب في المجموعة الشمسية؟", a:"عطارد", o:["عطارد","بلوتو","المريخ","الزهرة"], type:"game"},
+        {q:"ما هو الطائر الذي يضع أكبر بيضة؟", a:"النعامة", o:["النعامة","الصقر","النسر","البطريق"], type:"game"},
+        {q:"من سجل 'يد الله' في كأس العالم؟", a:"مارادونا", o:["مارادونا","بيليه","ميسي","زيدان"], type:"game"},
+        {q:"كم عدد أسنان الإنسان البالغ؟", a:"32", o:["32","28","30","34"], type:"game"},
+        {q:"ما هي لغة البرازيل؟", a:"البرتغالية", o:["البرتغالية","الإسبانية","الإنجليزية","الفرنسية"], type:"game"},
+        {q:"أكبر حيوان في العالم؟", a:"الحوت الأزرق", o:["الحوت الأزرق","الفيل","الديناصور","القرش"], type:"game"},
+        {q:"ما هو الكوكب الملقب بالكوكب الأزرق؟", a:"الأرض", o:["الأرض","نيبتون","أورانوس","المشتري"], type:"game"},
+        {q:"من هو مكتشف الجاذبية؟", a:"نيوتن", o:["نيوتن","أينشتاين","دالتون","بواسون"], type:"game"},
+        {q:"ما هو العضو المسؤول عن ضخ الدم؟", a:"القلب", o:["القلب","الرئة","الكبد","الدماغ"], type:"game"},
+        {q:"كم عدد ألوان قوس قزح؟", a:"7", o:["7","6","8","5"], type:"game"},
+        {q:"ما هو أثقل كوكب؟", a:"المشتري", o:["المشتري","زحل","الأرض","نيبتون"], type:"game"},
+        {q:"ما هو أذكى حيوان بحري؟", a:"الدلفين", o:["الدلفين","القرش","الأخطبوط","الحوت"], type:"game"},
+        {q:"من هو بطل أنمي ناروتو؟", a:"ناروتو", o:["ناروتو","ساسكي","كاكاشي","مادارا"], type:"game"},
+        {q:"كم عدد صمامات القلب؟", a:"4", o:["4","2","3","5"], type:"game"},
+        {q:"ما هو الرمز الكيميائي للذهب؟", a:"Au", o:["Au","Ag","Fe","Cu"], type:"game"},
+        {q:"كم عدد السجدات في القرآن الكريم؟", a:"15", o:["15","10","12","14"], type:"game"},
+        {q:"ما هي عاصمة اليابان؟", a:"طوكيو", o:["طوكيو","سيول","بكين","أوساكا"], type:"game"},
+        {q:"أكبر دولة في العالم من حيث المساحة؟", a:"روسيا", o:["روسيا","كندا","الصين","أمريكا"], type:"game"},
+        {q:"من هو بطل سلسلة أفلام هاري بوتر؟", a:"دانيال رادكليف", o:["دانيال رادكليف","توم هولاند","براد بيت","جوني ديب"], type:"game"},
+        {q:"ما هي أصغر دولة في العالم؟", a:"الفاتيكان", o:["الفاتيكان","موناكو","مالطا","البحرين"], type:"game"},
+        {q:"ما هو الطائر الذي لا يطير؟", a:"البطريق", o:["البطريق","العصفور","الحمام","الببغاء"], type:"game"},
+        {q:"من الذي بنى تمثال أبو الهول؟", a:"خفرع", o:["خفرع","خوفو","منقرع","رمسيس"], type:"game"},
+        {q:"ما هو لون دم الأخطبوط؟", a:"أزرق", o:["أزرق","أحمر","أخضر","أبيض"], type:"game"},
+        {q:"كم عدد أيام السنة الكبيسة؟", a:"366", o:["366","365","364","360"], type:"game"},
+        {q:"من هو مخترع الهاتف؟", a:"جراهام بيل", o:["جراهام بيل","إديسون","نيوتن","فاراداي"], type:"game"},
+        {q:"ما هو أصل كلمة أطلس؟", a:"يوناني", o:["يوناني","روماني","عربي","فارسي"], type:"game"},
+        {q:"ما هي العملة المستخدمة في أوروبا؟", a:"اليورو", o:["اليورو","الدولار","الجنيه","الين"], type:"game"},
+        {q:"كم عدد الكواكب في المجموعة الشمسية؟", a:"8", o:["8","9","7","10"], type:"game"},
+        {q:"ما هو الحيوان الذي لا ينام؟", a:"القرش", o:["القرش","النملة","الدلفين","الفيل"], type:"game"},
+        {q:"ما هي القارة القطبية الجنوبية؟", a:"أنتاركتيكا", o:["أنتاركتيكا","أستراليا","آسيا","أوروبا"], type:"game"},
+        {q:"ما هو العضو الذي ينمو طوال حياة الإنسان؟", a:"الأنف والأذن", o:["الأنف والأذن","العين","اليد","القدم"], type:"game"},
+        {q:"ما هو أبطأ حيوان في العالم؟", a:"الكسلان", o:["الكسلان","السلحفاة","الحلزون","الكوالا"], type:"game"},
+        {q:"كم عدد العضلات في جسم الإنسان تقريباً؟", a:"600", o:["600","200","400","800"], type:"game"},
+        {q:"ما هو الشيء الذي يحترق ليضيء للآخرين؟", a:"الشمعة", o:["الشمعة","المصباح","الشمس","النار"], type:"game"}
+        
+        // --- هنا ستضيف أسئلة المنهج لاحقاً بنفس الطريقة ---        // --- 50 سؤال "مستويات عليا" للمنهج (ترم ثاني 2026) ---
+        {q: "فيزياء: جسمان (أ، ب) كتلة أ ضعف ب، إذا أثرت عليهما نفس القوة، فإن النسبة بين عجلتيهما (أ : ب)؟", a: "1 : 2", o: ["1 : 2", "2 : 1", "1 : 4", "4 : 1"], type: "syllabus"},
+        {q: "فيزياء: قمر صناعي يدور حول كوكب، إذا زاد نصف قطر المدار لـ 4 أمثاله، فإن سرعته المدارية؟", a: "تقل للنصف", o: ["تقل للنصف", "تزداد للضعف", "تقل للربع", "تظل ثابتة"], type: "syllabus"},
+        {q: "كيمياء: عند إذابة مول من نترات الأمونيوم في الماء وانخفضت الحرارة، يكون التفاعل؟", a: "ماص و ΔH موجبة", o: ["ماص و ΔH موجبة", "طارد و ΔH سالبة", "ماص و ΔH سالبة", "طارد و ΔH موجبة"], type: "syllabus"},
+        {q: "أحياء: عند تزاوج نبات حنك السبع أحمر الأزهار مع أبيض الأزهار، نسبة اللون الوردي في الجيل الثاني؟", a: "50%", o: ["50%", "25%", "75%", "100%"], type: "syllabus"},
+        {q: "رياضيات: إذا كانت المصفوفة A على النظم (2×3) والمصفوفة B على النظم (3×1)، فإن المصفوفة AB على النظم؟", a: "2×1", o: ["2×1", "3×3", "1×2", "غير معرفة"], type: "syllabus"},
+        {q: "فيزياء: الشغل المبذول بواسطة قوة عمودية على اتجاه الحركة (مثل القوة الجاذبة المركزية) يساوي؟", a: "صفر", o: ["صفر", "قيمة عظمى", "نصف العظمى", "كتلة الجسم"], type: "syllabus"},
+        {q: "كيمياء: في القنبلة النووية، الكتل الحرجة هي الحد الأدنى من الكتلة لبدء؟", a: "التفاعل المتسلسل", o: ["التفاعل المتسلسل", "الاندماج النووي", "التحلل الإشعاعي", "التبخر"], type: "syllabus"},
+        {q: "أحياء: شخص فصيلة دمه لا تحتوي على مولدات الالتصاق A أو B، فما هي فصيلته؟", a: "O", o: ["O", "A", "B", "AB"], type: "syllabus"},
+        {q: "رياضيات: إذا كان المتجه أ = (3، 4)، فإن معيار المتجه أ يساوي؟", a: "5", o: ["5", "7", "25", "1"], type: "syllabus"},
+        {q: "فيزياء: النسبة بين ثابت الجذب العام على الأرض وثابت الجذب العام على القمر هي؟", a: "1 : 1", o: ["1 : 1", "6 : 1", "1 : 6", "3 : 1"], type: "syllabus"},
+        {q: "كيمياء: الحرارة النوعية للنحاس (0.385) وللألومنيوم (0.9)، عند تسخين جرام من كل منهما بنفس الطاقة؟", a: "يسخن النحاس أسرع", o: ["يسخن النحاس أسرع", "يسخن الألومنيوم أسرع", "يسخنان معاً", "لا تتغير حرارتهما"], type: "syllabus"},
+        {q: "أحياء: كم عدد الكروموسومات الجسدية في بويضة أنثى إنسان طبيعية؟", a: "22", o: ["22", "23", "44", "46"], type: "syllabus"},
+        {q: "رياضيات: أبسط صورة للمقدار (1 - جتا² س) / (جا س) هي؟", a: "جا س", o: ["جا س", "جتا س", "ظا س", "1"], type: "syllabus"},
+        {q: "فيزياء: تزداد عجلة الجاذبية على سطح الكوكب بزيادة؟", a: "كتلة الكوكب", o: ["كتلة الكوكب", "نصف قطر الكوكب", "سرعة الكوكب", "درجة حرارته"], type: "syllabus"},
+        {q: "كيمياء: الرابطة في جزيء الهيدروجين H-H طاقة كسرها 436kJ، هذا التفاعل يعتبر؟", a: "ماص للحرارة", o: ["ماص للحرارة", "طارد للحرارة", "تلقائي", "انفجاري"], type: "syllabus"},
+        {q: "أحياء: طفل فصيلة دمه O، وأبوه فصيلته A، فما هو الطرز الجيني للأب؟", a: "AO", o: ["AO", "AA", "AB", "OO"], type: "syllabus"},
+        {q: "رياضيات: مساحة المثلث الذي رؤوسه (0,0) , (4,0) , (0,6) باستخدام المحددات هي؟", a: "12", o: ["12", "24", "6", "10"], type: "syllabus"},
+        {q: "فيزياء: جسم يتحرك في مسار دائري بسرعة ثابتة، إذا زادت كتلته للضعف، فإن القوة الجاذبة المركزية؟", a: "تزداد للضعف", o: ["تزداد للضعف", "تقل للنصف", "تظل ثابتة", "تزداد 4 أمثال"], type: "syllabus"},
+        {q: "كيمياء: النظير هو ذرة عنصر لها نفس العدد الذري ولكن تختلف في؟", a: "عدد النيوترونات", o: ["عدد النيوترونات", "عدد البروتونات", "عدد الإلكترونات", "الشحنة"], type: "syllabus"},
+        {q: "أحياء: عند فحص طرز كروموسومي وُجد الزوج رقم 23 يحتوي على 3 كروموسومات (XXY)، هذه حالة؟", a: "كلاينفلتر", o: ["كلاينفلتر", "تيرنر", "داون", "أنثى طبيعية"], type: "syllabus"},
+        {q: "رياضيات: إذا كانت المصفوفة (س 4 / 3 6) ليس لها معكوس ضربي، فإن س تساوي؟", a: "2", o: ["2", "4", "0.5", "8"], type: "syllabus"},
+        {q: "فيزياء: النسبة بين القوة والكتلة طبقاً لقانون نيوتن الثاني تعطي؟", a: "العجلة", o: ["العجلة", "السرعة", "الشغل", "كمية التحرك"], type: "syllabus"},
+        {q: "كيمياء: كمية الحرارة المصاحبة لتكوين مول واحد من المركب من عناصره الأولية؟", a: "حرارة التكوين القياسية", o: ["حرارة التكوين القياسية", "حرارة الاحتراق", "حرارة الذوبان", "المحتوى الحراري"], type: "syllabus"},
+        {q: "أحياء: أي الفصائل التالية يمكنها التبرع لجميع الفصائل الأخرى؟", a: "O-", o: ["O-", "O+", "AB+", "AB-"], type: "syllabus"},
+        {q: "رياضيات: المتجه ج الذي يحقق ج + (3، -1) = (5، 2) هو؟", a: "(2، 3)", o: ["(2، 3)", "(8، 1)", "(-2، -3)", "(15، -2)"], type: "syllabus"},
+        {q: "فيزياء: قمران صناعيان (أ، ب) يدوران حول نفس الأرض، كتلة أ ضعف ب، فإن النسبة بين سرعتيهما؟", a: "1 : 1", o: ["1 : 1", "2 : 1", "1 : 2", "1 : 4"], type: "syllabus"},
+        {q: "كيمياء: المجموع الجبري للتغيرات الحرارية في التفاعلات المتعددة الخطوات ثابت، هذا قانون؟", a: "هس", o: ["هس", "لافوازيه", "أفوجادرو", "شارل"], type: "syllabus"},
+        {q: "أحياء: السيادة التامة تظهر في وراثة؟", a: "لون أزهار البازلاء", o: ["لون أزهار البازلاء", "لون أزهار حنك السبع", "فصائل الدم", "ريش الدجاج"], type: "syllabus"},
+        {q: "رياضيات: جا (90 - س) تساوي؟", a: "جتا س", o: ["جتا س", "جا س", "- جتا س", "ظا س"], type: "syllabus"},
+        {q: "فيزياء: إذا قل نصف قطر مدار قمر صناعي، فإن زمنه الدوري؟", a: "يقل", o: ["يقل", "يزداد", "يظل ثابتاً", "ينعدم"], type: "syllabus"},
+        {q: "كيمياء: طاقة الربط النووية لكل نوكليون هي مقياس لـ؟", a: "استقرار النواة", o: ["استقرار النواة", "سرعة النواة", "حجم النواة", "عدد الإلكترونات"], type: "syllabus"},
+        {q: "أحياء: تظهر حالة 'داون' نتيجة وجود كروموسوم زائد في الزوج رقم؟", a: "21", o: ["21", "23", "18", "13"], type: "syllabus"},
+        {q: "رياضيات: إذا كان أ ⊥ ب، وكان أ = (2، 3) وب = (6، ك)، فإن ك تساوي؟", a: "-4", o: ["-4", "4", "9", "-9"], type: "syllabus"},
+        {q: "فيزياء: وحدة قياس ثابت الجذب العام هي؟", a: "N.m²/kg²", o: ["N.m²/kg²", "N/kg", "m/s²", "J.s"], type: "syllabus"},
+        {q: "كيمياء: النظير المشع الذي يستخدم في تقدير عمر الصخور هو؟", a: "اليورانيوم-238", o: ["اليورانيوم-238", "الكربون-14", "اليود-131", "الكوبالت-60"], type: "syllabus"},
+        {q: "أحياء: النسبة المظهرية في حالة انعدام السيادة للجيل الثاني هي؟", a: "1 : 2 : 1", o: ["1 : 2 : 1", "3 : 1", "9 : 3 : 3 : 1", "1 : 1"], type: "syllabus"},
+        {q: "رياضيات: طول القوس في دائرة نصف قطرها 6 سم وزاوية مركزية 60 درجة بالتقدير الدائري؟", a: "2π", o: ["2π", "π", "3π", "6π"], type: "syllabus"},
+        {q: "فيزياء: عندما يسقط جسم سقوطاً حراً، فإن كمية تحركه؟", a: "تزداد", o: ["تزداد", "تقل", "تظل ثابتة", "تصبح صفراً"], type: "syllabus"},
+        {q: "كيمياء: جسيم ألفا يتكون من؟", a: "2 بروتون و 2 نيوترون", o: ["2 بروتون و 2 نيوترون", "إلكترون واحد", "نيوترون واحد", "موجة ضوئية"], type: "syllabus"},
+        {q: "أحياء: الكروموسومات المسؤولة عن الصفات الجسدية في الإنسان عددها؟", a: "44", o: ["44", "46", "22", "23"], type: "syllabus"},
+        {q: "رياضيات: (1 + ظتا² س) تساوي؟", a: "قتـا² س", o: ["قتـا² س", "قا² س", "جتا² س", "1"], type: "syllabus"},
+        {q: "فيزياء: القوة الجاذبة المركزية المسؤولة عن دوران الأرض حول الشمس هي؟", a: "قوة التجاذب المادي", o: ["قوة التجاذب المادي", "قوة الشد", "قوة الاحتكاك", "قوة رد الفعل"], type: "syllabus"},
+        {q: "كيمياء: أي العمليات التالية ماصة للحرارة؟", a: "تبخر الماء", o: ["تبخر الماء", "تجمد الماء", "تكثف البخار", "احتراق الخشب"], type: "syllabus"},
+        {q: "أحياء: فصيلة الدم التي لا تحتوي على أجسام مضادة (Anti-A أو Anti-B) هي؟", a: "AB", o: ["AB", "O", "A", "B"], type: "syllabus"},
+        {q: "رياضيات: إذا كان المتجه أ = (ك، 2) يوازي ب = (3، 6)، فإن ك تساوي؟", a: "1", o: ["1", "3", "6", "9"], type: "syllabus"},
+        {q: "فيزياء: القمر الصناعي الذي يظل ثابتاً فوق نقطة معينة زمنه الدوري؟", a: "24 ساعة", o: ["24 ساعة", "12 ساعة", "6 ساعات", "ساعة واحدة"], type: "syllabus"},
+        {q: "كيمياء: العنصر الذي يقع في 'نطاق الاستقرار' تكون نسبة (n/p) له؟", a: "قريبة من 1 : 1", o: ["قريبة من 1 : 1", "عالية جداً", "صفر", "سالبة"], type: "syllabus"},
+        {q: "أحياء: من أمثلة الجينات المميتة المتنحية؟", a: "غياب الكلوروفيل", o: ["غياب الكلوروفيل", "لون شعر الفئران", "سلالة البلدوج", "قصر القامة"], type: "syllabus"},
+        {q: "رياضيات: قيمة المحدد |2 3 / 1 5| تساوي؟", a: "7", o: ["7", "13", "10", "15"], type: "syllabus"},
+        {q: "فيزياء: العجلة المركزية لجسم يدور في مسار دائري تنتج عن تغير؟", a: "اتجاه السرعة", o: ["اتجاه السرعة", "مقدار السرعة", "كتلة الجسم", "الزمن"], type: "syllabus"}
+
     ];
 
-    let myName = prompt("أدخل اسمك يا بطل:") || "طالب مجهول";
-    let score = 0;
-    let currentQ = 0;
-
-    function getRank(s) {
-        if(s >= 800) return "إمبراطور السالموني 👑";
-        if(s >= 600) return "غابيمارو الخالي من المشاعر 🥷";
-        if(s >= 400) return "هيرويك (Heroic) 💎";
-        if(s >= 200) return "دحيح الدفعة 📚";
-        return "مستجد 🔰";
-    }
-
-    const userRef = db.ref('status/' + myName);
-    userRef.set({ name: myName, score: 0, rank: "مستجد 🔰" });
-    userRef.onDisconnect().remove();
-
-    function loadQ() {
-        const qData = gameQuestions[currentQ % gameQuestions.length];
-        currentQ++;
-
-        document.getElementById('lvl-tag').innerText = "سؤال رقم: " + currentQ + " / 100";
-        document.getElementById('q-text').innerText = qData.q;
-        
-        const optDiv = document.getElementById('opts');
-        optDiv.innerHTML = '';
-        
-        let options = [...qData.o].sort(() => Math.random() - 0.5);
-        let answered = false;
-
-        options.forEach(o => {
-            let b = document.createElement('button');
-            b.className = 'btn-opt';
-            b.innerText = o;
-            b.onclick = function() {
-                if(answered) return;
-                answered = true;
-                
-                if(o === qData.a) {
-                    score += 10;
-                    this.classList.add('correct-ans');
-                } else {
-                    score = Math.max(0, score - 5);
-                    this.classList.add('wrong-ans');
-                    Array.from(optDiv.children).forEach(btn => {
-                        if(btn.innerText === qData.a) btn.style.border = "2px solid var(--success)";
-                    });
-                }
-                
-                userRef.update({ score: score, rank: getRank(score) });
-                document.getElementById('score').innerText = score;
-                document.getElementById('rank').innerText = getRank(score);
-                setTimeout(loadQ, 1500);
+    let gameIdx = 0;
+    function loadGame() {
+        const list = allQuestions.filter(q => q.type === 'game');
+        const item = list[gameIdx % list.length];
+        document.getElementById('q-text').innerText = item.q;
+        const optBox = document.getElementById('options'); optBox.innerHTML = '';
+        item.o.sort(()=>Math.random()-0.5).forEach(o => {
+            const b = document.createElement('button'); b.className = 'btn-opt'; b.innerText = o;
+            b.onclick = () => {
+                if(o === item.a) { b.classList.add('correct'); updatePoints(10); setTimeout(()=>{gameIdx++; loadGame();}, 1000); }
+                else { b.classList.add('wrong'); updatePoints(-5); }
             };
-            optDiv.appendChild(b);
+            optBox.appendChild(b);
         });
     }
 
-    function sendMsg() {
-        let m = document.getElementById('chat-msg').value;
-        if(m.trim() !== "") {
-            db.ref('chat').push({ name: myName, text: m });
-            document.getElementById('chat-msg').value = '';
-        }
-    }
-
-    document.getElementById("chat-msg").addEventListener("keypress", function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        sendMsg();
-      }
-    });
-
-    db.ref('chat').limitToLast(20).on('child_added', snap => {
-        const chatBox = document.getElementById('chat-content');
-        chatBox.innerHTML += `<div class="msg-in"><b style="color: var(--main);">${snap.val().name}</b><br>${snap.val().text}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-    });
-
-    db.ref('status').on('value', snap => {
-        let users = [];
-        snap.forEach(child => { users.push(child.val()); });
-        users.sort((a, b) => b.score - a.score);
-        let html = '';
-        users.forEach(u => {
-            html += `<div class="online-user">
-                <div><b>${u.name}</b><br><span style="font-size:0.8rem;">${u.rank}</span></div>
-                <div style="font-weight:bold; color:var(--main);">${u.score} 🎯</div>
-            </div>`;
-        });
-        document.getElementById('online-list').innerHTML = html;
-    });
-
-    function switchTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
-    }
-
-    function addQuestion() {
-        let q = prompt("اكتب السؤال الجديد:");
-        if(q) alert("تم إرسال اقتراحك لغابيمارو!");
-    }
-
-    loadQ();
-</script>
-</body>
-</html>
+    function loadSyllabus() {
+        const list = allQuestions.filter(q => q.type === 'syllabus');
+        const box = document.getElementById('syllabus-list'); box.innerHTML = '';
+        if(list.length === 0) { box.innerHTML = '<p style="text-align:center;">لا توجد أسئلة منهج حالياً. أضفها في مصفوفة الأسئلة!</p>'; return; }
+        list.forEach((item, i) => {
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<h4>${item.q}</h4><div id="s-opt-${i}"></div>`;
+            box.appendChild(card);
+     
