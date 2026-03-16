@@ -2,157 +2,106 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تحدي يوسف علاء - 1 ثانوى 2026</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
     <style>
-        /* إعدادات الألوان والخطوط */
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        
         :root { 
             --main: #00d2ff; 
+            --main-glow: rgba(0, 210, 255, 0.5);
             --bg: #0a0a0c; 
-            --panel: #161b22; 
-            --accent: #ff007a; 
+            --panel: rgba(22, 27, 34, 0.85); 
+            --accent: #ff007a;
+            --success: #3fb950;
+            --danger: #ff4b4b;
         }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             font-family: 'Cairo', sans-serif; 
-            background: var(--bg); 
+            background: var(--bg) url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); 
             color: white; 
             margin: 0; 
+            height: 100dvh;
             display: flex; 
-            height: 100vh; 
-            overflow: hidden; /* لمنع التمرير الكلي وتخصيصه للأجزاء */
-        }
-
-        /* تأثيرات زخرفة المؤسس يوسف علاء */
-        .founder-header { 
-            position: absolute; 
-            top: 0; 
-            width: 100%; 
-            text-align: center; 
-            padding: 10px; 
-            background: linear-gradient(90deg, transparent, var(--accent), transparent); 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            letter-spacing: 5px; 
-            box-shadow: 0 0 20px var(--accent); 
-            z-index: 10; 
-            box-sizing: border-box;
-        }
-        
-        /* تقسيم الشاشة الأساسي */
-        .side { 
-            width: 250px; 
-            background: var(--panel); 
-            border-left: 1px solid #30363d; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            margin-top: 45px;
-            overflow-y: auto;
-        }
-        .main { 
-            flex: 1; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            margin-top: 45px;
-            overflow-y: auto; /* مهم جداً لتمرير الأسئلة المكتوبة */
-        }
-        .chat-area { 
-            width: 300px; 
-            background: var(--panel); 
-            border-right: 1px solid #30363d; 
-            display: flex; 
-            flex-direction: column; 
-            margin-top: 45px;
-        }
-
-        /* تنسيقات اللعبة */
-        .game-section {
-            display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 40px;
-            padding-top: 20px;
+            overflow: hidden;
         }
-        .card { 
-            background: #0d1117; 
-            border: 1px solid var(--main); 
-            padding: 30px; 
-            border-radius: 20px; 
+
+        .founder-header { 
             text-align: center; 
-            width: 100%; 
-            max-width: 600px; 
-            box-shadow: 0 0 30px rgba(0, 210, 255, 0.2); 
-        }
-        .btn-opt { 
-            display: block; 
-            width: 100%; 
-            margin: 10px 0; 
-            padding: 12px; 
-            background: transparent; 
-            border: 1px solid var(--main); 
-            color: white; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            transition: 0.3s; 
-            font-size: 1rem; 
-            font-family: inherit;
-        }
-        .btn-opt:hover { 
-            background: var(--main); 
-            color: black; 
-            font-weight: bold;
+            padding: 15px; 
+            background: linear-gradient(90deg, transparent, rgba(255,0,122,0.8), transparent); 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            box-shadow: 0 0 15px var(--accent); 
+            z-index: 10; 
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px white;
         }
         
-        /* تنسيقات الشات */
-        #chat-content { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px; 
-            font-size: 1rem; 
-        }
-        .msg-in { 
-            background: #21262d; 
-            padding: 15px 20px; 
-            border-radius: 15px; 
-            margin-bottom: 15px; 
-            border-right: 5px solid var(--main);
-            word-wrap: break-word;
-        }
-        .online-user { 
-            color: #3fb950; 
-            font-size: 1.2rem; 
-            margin-bottom: 15px; 
-            padding: 10px; 
-            background: rgba(63, 185, 80, 0.1); 
-            border-radius: 10px;
-        }
-        input, button { font-family: inherit; }
+        .app-container { flex: 1; position: relative; overflow: hidden; }
 
-        /* تنسيقات الأسئلة الـ 100 المكتوبة (المقاسات والألوان المفقودة) */
-        .questions-section h1 {
-            text-align: center; color: #58a6ff; border-bottom: 2px solid #30363d; padding-bottom: 15px; margin-bottom: 30px;
+        .tab-content {
+            display: none; height: 100%; overflow-y: auto; padding: 20px; padding-bottom: 80px; animation: fadeIn 0.3s ease;
         }
-        .subject-title, .category {
-            margin-top: 40px; padding: 12px; background: #161b22; font-size: 1.2em; font-weight: bold; color: #ffffff; border-radius: 4px;
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: #10141a; border-top: 2px solid #30363d;
+            display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; backdrop-filter: blur(10px);
         }
+
+        .nav-item {
+            color: #8b949e; background: none; border: none; font-family: inherit; font-size: 0.9rem; font-weight: bold;
+            display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.3s; width: 25%;
+        }
+        .nav-item.active { color: var(--main); text-shadow: 0 0 10px var(--main-glow); }
+        .nav-icon { font-size: 1.5rem; }
+
+        .card { 
+            background: rgba(13, 17, 23, 0.9); border: 2px solid var(--main); padding: 25px; 
+            border-radius: 20px; text-align: center; box-shadow: 0 0 20px var(--main-glow); backdrop-filter: blur(5px);
+        }
+        
+        .btn-opt { 
+            display: block; width: 100%; margin: 12px 0; padding: 15px; background: rgba(255,255,255,0.05); 
+            border: 1px solid var(--main); color: white; border-radius: 12px; cursor: pointer; 
+            transition: all 0.2s; font-size: 1.1rem; font-family: inherit; font-weight: bold;
+        }
+        .btn-opt:active { transform: scale(0.95); }
+        
+        .correct-ans { background: var(--success) !important; color: white !important; border-color: var(--success); box-shadow: 0 0 15px var(--success); }
+        .wrong-ans { background: var(--danger) !important; color: white !important; border-color: var(--danger); animation: shake 0.4s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
+
+        .chat-container { display: flex; flex-direction: column; height: 100%; }
+        #chat-content { flex: 1; overflow-y: auto; padding-right: 5px; }
+        .msg-in { background: #21262d; padding: 12px; border-radius: 12px; margin-bottom: 10px; border-right: 4px solid var(--main); font-size: 0.95rem; word-wrap: break-word;}
+        .chat-input-area { display: flex; gap: 10px; margin-top: 15px; }
+        .chat-input-area input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #30363d; background: #161b22; color: white; font-family: inherit; font-size: 1rem; }
+        .chat-input-area button { padding: 0 20px; background: var(--main); border: none; border-radius: 10px; color: #000; font-weight: bold; font-family: inherit; cursor: pointer; }
+
+        .online-user { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(63, 185, 80, 0.1); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(63, 185, 80, 0.3); }
+
+        /* تنسيقات بنك الأسئلة بالكامل */
+        .syllabus-header { text-align: center; color: #58a6ff; border-bottom: 2px solid #30363d; padding-bottom: 15px; margin-bottom: 30px; margin-top:0; font-size: 1.5rem;}
+        .subject-title, .category { margin-top: 40px; padding: 12px; background: #161b22; font-size: 1.2em; font-weight: bold; color: #ffffff; border-radius: 4px; }
         .subject-title { border-right: 5px solid #58a6ff; }
         .category { border-right: 5px solid #ff4b2b; }
         
-        .questions-section ol { counter-reset: custom-counter; list-style: none; padding: 0; }
-        .questions-section li {
-            background: #21262d; margin: 12px 0; padding: 15px 20px; border-radius: 6px; border: 1px solid #30363d; position: relative; line-height: 1.8;
-        }
-        .questions-section li::before {
-            counter-increment: custom-counter; content: counter(custom-counter) "- "; color: #58a6ff; font-weight: bold; margin-left: 5px;
-        }
+        ol.q-list { counter-reset: custom-counter; list-style: none; padding: 0; }
+        ol.q-list li { background: #21262d; margin: 12px 0; padding: 15px 20px; border-radius: 6px; border: 1px solid #30363d; position: relative; line-height: 1.8; font-size: 0.95rem;}
+        ol.q-list li::before { counter-increment: custom-counter; content: counter(custom-counter) "- "; color: #58a6ff; font-weight: bold; margin-left: 5px; }
+        
         .hard { border-right: 4px solid #d2a8ff !important; }
         .very-hard { border-right: 4px solid #ff7b72 !important; }
         .impossible { border-right: 4px solid #ff0000 !important; background: #2d1114 !important; }
@@ -162,44 +111,54 @@
         .tag-very-hard { background: #ff7b72; color: #000; }
         .tag-impossible { background: #ff0000; color: #fff; font-weight: bold; }
 
-        /* التجاوب مع شاشات الموبايل */
-        @media (max-width: 1024px) {
-            body { flex-direction: column; overflow-y: auto; }
-            .side, .chat-area { width: 100%; height: auto; border: none; border-bottom: 1px solid #30363d; margin-top: 0; }
-            .founder-header { position: relative; }
-            .main { margin-top: 0; overflow-y: visible; }
-            #chat-content { max-height: 300px; }
-        }
+        /* تنسيقات الخيارات (أسئلة اختيارية) */
+        .mcq-box { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .mcq-box label { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #30363d; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .mcq-box label:hover { background: rgba(0, 210, 255, 0.1); border-color: var(--main); }
+        .mcq-box input[type="radio"] { accent-color: var(--main); }
     </style>
 </head>
 <body>
 
-<div class="founder-header">المؤسس الاول :Yousef=غابيمارو </div>
+<div class="founder-header">المؤسس الأول : Yousef = غابيمارو 🔥</div>
 
-<div class="side">
-    <h3 style="color: var(--main); text-align: center;">🏆 المتصدرين و 🟢 المتصلون</h3>
-    <div id="online-list" style="overflow-y: auto; flex: 1;"></div>
-</div>
-
-<div class="main">
+<div class="app-container">
     
-    <div class="game-section">
+    <div id="game-tab" class="tab-content active">
         <div class="card">
             <div id="lvl-tag" style="color: var(--accent); font-size: 1rem; font-weight: bold; margin-bottom: 10px;">المستوى: جاري التحميل...</div>
-            <h2 id="q-text" style="line-height: 1.5; margin-bottom: 20px;">جاري تحميل التحدي...</h2>
+            <h2 id="q-text" style="line-height: 1.5; margin-bottom: 25px; font-size: 1.3rem;">جاري تجهيز التحدي...</h2>
             <div id="opts"></div>
-            <div style="margin-top: 25px; font-size: 1.1rem; border-top: 1px solid #30363d; padding-top: 15px;">
-                نقاطك: <span id="score" style="color: var(--main); font-weight: bold;">0</span> | الرتبة: <span id="rank" style="color: #3fb950; font-weight: bold;">مستجد</span>
+            
+            <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #30363d; display: flex; justify-content: space-between; font-size: 1.1rem;">
+                <div>نقاطك: <span id="score" style="color: var(--main); font-weight: 900; font-size: 1.3rem;">0</span></div>
+                <div id="rank" style="color: var(--success); font-weight: bold;">مستجد</div>
             </div>
         </div>
-        <button onclick="addQuestion()" style="margin-top:20px; background:none; color:#8b949e; border:1px dashed #8b949e; padding: 10px 20px; border-radius: 10px; cursor:pointer; transition: 0.3s;">+ اقترح سؤالاً جديداً ليوسف</button>
+        <button onclick="addQuestion()" style="display:block; width:100%; margin-top:20px; background:none; color:#8b949e; border:2px dashed #8b949e; padding: 15px; border-radius: 12px; font-weight:bold;">+ اقترح سؤالاً جديداً للعبة</button>
     </div>
 
-    <div class="questions-section">
-        <h1>100 سؤال نواتج تعلم: الصف الأول الثانوي (الترم الثاني 2026)</h1>
+    <div id="chat-tab" class="tab-content">
+        <div class="chat-container">
+            <h3 style="text-align:center; color: var(--main); margin-top:0;">💬 شات الأبطال</h3>
+            <div id="chat-content"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-msg" placeholder="اكتب رسالتك هنا...">
+                <button onclick="sendMsg()">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="leaderboard-tab" class="tab-content">
+        <h3 style="color: var(--main); text-align: center; margin-top:0;">🏆 المتصدرين و 🟢 المتصلون</h3>
+        <div id="online-list"></div>
+    </div>
+
+    <div id="syllabus-tab" class="tab-content">
+        <h1 class="syllabus-header">100 سؤال نواتج تعلم: الصف الأول الثانوي (الترم الثاني 2026)</h1>
 
         <div class="subject-title">أولاً: الفيزياء (الحركة الدائرية، الجاذبية الكونية، الشغل والطاقة)</div>
-        <ol>
+        <ol class="q-list">
             <li class="hard">جسم يتحرك في مسار دائري بسرعة ثابتة، إذا زادت القوة الجاذبة المركزية للضعف وقل نصف القطر للنصف، ماذا يحدث للسرعة المماسية؟<span class="tag tag-hard">صعب</span></li>
             <li class="hard">قمران صناعيان A و B يدوران حول الأرض، نصف قطر مدار A ضعف مدار B، احسب النسبة بين الزمن الدوري لهما.</li>
             <li class="hard">سيارة تتحرك في منحنى دائري يميل على الأفقي بزاوية (θ)، استنتج رياضياً أقصى سرعة آمنة مع إهمال قوة الاحتكاك.</li>
@@ -223,7 +182,7 @@
         </ol>
 
         <div class="subject-title">ثانياً: الكيمياء (الكيمياء الحرارية، الكيمياء النووية)</div>
-        <ol start="21">
+        <ol class="q-list" start="21">
             <li class="hard">تفاعل طارد للحرارة، إذا كانت طاقة المواد المتفاعلة 500kJ وطاقة التنشيط 100kJ، و ΔH=-200kJ، احسب طاقة المواد الناتجة.<span class="tag tag-hard">صعب</span></li>
             <li class="hard">احسب حرارة التكوين القياسية لغاز الميثان باستخدام قانون هس، بمعلومية حرارة احتراق (C, H2, CH4).</li>
             <li class="hard">عينة مشعة تحتوي على 1000 نواة، فترة عمر النصف لها 5 أيام. كم نواة تتبقى بعد 20 يوماً؟</li>
@@ -247,7 +206,7 @@
         </ol>
 
         <div class="subject-title">ثالثاً: الأحياء (الوراثة وتداخل فعل الجينات، التصنيف)</div>
-        <ol start="41">
+        <ol class="q-list" start="41">
             <li class="hard">تزاوج فردان كلاهما يحمل فصيلة دم (A)، فظهر في الأبناء فصيلة (O)، ما هو التركيب الجيني للآباء؟<span class="tag tag-hard">صعب</span></li>
             <li class="hard">اشرح حالة الجينات المتكاملة في نبات بسلة الزهور وكيف تختلف نسبتها (9:7) عن قانون مندل الثاني.</li>
             <li class="hard">لماذا يعتبر مرض عمى الألوان أكثر انتشاراً في الذكور عن الإناث؟</li>
@@ -271,7 +230,7 @@
         </ol>
 
         <div class="subject-title">رابعاً: الرياضيات (المصفوفات، المتجهات، الخط المستقيم، حساب المثلثات)</div>
-        <ol start="61">
+        <ol class="q-list" start="61">
             <li class="hard">إذا كانت أ مصفوفة متماثلة وشبه متماثلة في نفس الوقت، أثبت أن أ هي المصفوفة الصفرية.<span class="tag tag-hard">صعب</span></li>
             <li class="hard">حل نظام المعادلات الخطية الآتي باستخدام المعكوس الضربي للمصفوفة: 2س - ص = 3، وس + 3ص = 5.</li>
             <li class="hard">أوجد الصور المختلفة لمعادلة الخط المستقيم المار بالنقطة (2، -1) وعمودي على المتجه ن = (3، 4).</li>
@@ -295,7 +254,7 @@
         </ol>
 
         <div class="subject-title">خامساً: الفلسفة والتفكير العلمي (خصائص التفكير العلمي وخطواته)</div>
-        <ol start="81">
+        <ol class="q-list" start="81">
             <li class="hard">"العلم لا يعطي حقائق نهائية مطلقة". ناقش هذه العبارة في ضوء خصائص المعرفة العلمية (الاحتمالية).<span class="tag tag-hard">صعب</span></li>
             <li class="hard">كيف يمكن تطبيق خطوة "فرض الفروض" في التفكير العلمي لحل مشكلة الازدحام المروري في القاهرة؟</li>
             <li class="hard">قارن بين العوائق الذاتية والموضوعية التي تواجه الباحث العلمي مع ضرب أمثلة من الواقع.</li>
@@ -318,10 +277,10 @@
             <li class="impossible">السؤال الأخير: بناءً على كل ما درسته، إذا تعارض استنتاج رياضي قطعي مع ملاحظة بيولوجية مؤكدة، أيهما يُعدل ليتوافق مع الآخر؟</li>
         </ol>
 
-        <h1>100 سؤال: من الصعب إلى المستحيل</h1>
+        <h1 class="syllabus-header" style="margin-top: 40px;">100 سؤال: من الصعب إلى المستحيل</h1>
 
         <div class="category">المستوى الأول: تحديات منطقية وعلمية (صعب)</div>
-        <ol>
+        <ol class="q-list">
             <li>كيف يمكن تفسير "مفارقة فيرمي" بوجود مليارات الكواكب وصمت الكون التام؟</li>
             <li>اشرح الفرق الجوهري بين ميكانيكا الكم والنسبية العامة بلغة مبسطة.</li>
             <li>إذا سقطت شجرة في غابة ولم يسمعها أحد، هل أحدثت صوتاً فيزيائياً أم مجرد اهتزاز؟</li>
@@ -345,7 +304,7 @@
         </ol>
 
         <div class="category">المستوى الثاني: ألغاز الفيزياء والثقوب السوداء (صعب جداً)</div>
-        <ol start="21">
+        <ol class="q-list" start="21">
             <li>ماذا يحدث للمعلومات التي تسقط داخل ثقب أسود (مفارقة المعلومات)؟</li>
             <li>هل يمكن تفسير الوعي البشري كنتيجة للعمليات الكمومية داخل الأنابيب الدقيقة في الدماغ؟</li>
             <li>كيف يمكننا إثبات وجود "المادة المظلمة" دون رصدها مباشرة؟</li>
@@ -369,7 +328,7 @@
         </ol>
 
         <div class="category">المستوى الثالث: مفارقات فلسفية ورياضية (شبه مستحيل)</div>
-        <ol start="41">
+        <ol class="q-list" start="41">
             <li>هل الوعي هو الذي يخلق الواقع أم الواقع هو الذي يخلق الوعي؟</li>
             <li>حل معضلة "السفينة لثيسيوس": إذا استبدلت كل قطع السفينة، هل تظل هي نفسها؟</li>
             <li>هل يمكن لآلة أن تفكر فعلياً (اختبار تورينج القوي)؟</li>
@@ -393,7 +352,7 @@
         </ol>
 
         <div class="category">المستوى الرابع: معضلات القرن الحادي والعشرين (خارق للذكاء)</div>
-        <ol start="61">
+        <ol class="q-list" start="61">
             <li>حل مسألة "P vs NP" في علوم الحاسوب.</li>
             <li>إثبات "فرضية ريمان" المتعلقة بتوزيع الأعداد الأولية.</li>
             <li>توقع سلوك "معادلات نافيير-ستوكس" في ميكانيكا السوائل والاضطراب.</li>
@@ -417,7 +376,7 @@
         </ol>
 
         <div class="category">المستوى الخامس: الأسئلة المستحيلة (خارج حدود العقل)</div>
-        <ol start="81">
+        <ol class="q-list" start="81">
             <li class="impossible">هل يمكن لعقل بشري أن يفهم عقلاً أرقى منه ببعد واحد؟</li>
             <li class="impossible">ما هو لون "العدم"؟</li>
             <li class="impossible">إذا اختفى كل شيء في الكون، هل يبقى "المكان" موجوداً؟</li>
@@ -440,44 +399,60 @@
             <li class="impossible">السؤال الأخير: هل هذا السؤال له إجابة أصلاً؟</li>
         </ol>
     </div>
+
 </div>
 
-<div class="chat-area">
-    <h3 style="text-align:center; color: var(--main); padding-bottom: 10px; border-bottom: 1px solid #30363d;">💬 شات الأبطال</h3>
-    <div id="chat-content"></div>
-    <div style="display:flex; padding:15px; border-top: 1px solid #30363d;">
-        <input type="text" id="chat-msg" style="flex:1; padding:10px; border-radius: 5px; border: none; outline: none; background: #21262d; color: white;" placeholder="اكتب رسالتك...">
-        <button onclick="sendMsg()" style="margin-right: 10px; padding: 10px 15px; background: var(--main); border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">إرسال</button>
-    </div>
+<div class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('game-tab', this)">
+        <span class="nav-icon">🎮</span>اللعبة
+    </button>
+    <button class="nav-item" onclick="switchTab('chat-tab', this)">
+        <span class="nav-icon">💬</span>الشات
+    </button>
+    <button class="nav-item" onclick="switchTab('leaderboard-tab', this)">
+        <span class="nav-icon">🏆</span>الأبطال
+    </button>
+    <button class="nav-item" onclick="switchTab('syllabus-tab', this)">
+        <span class="nav-icon">📚</span>المنهج
+    </button>
 </div>
 
 <script>
-    // قاعدة بيانات الأسئلة المدمجة (Local DB)
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // إضافة الخيارات أ ب ج د لجميع الأسئلة في المنهج تلقائياً دون حذف أي سؤال
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('ol.q-list li').forEach((li, index) => {
+            const mcqHtml = `
+            <div class="mcq-box">
+                <label><input type="radio" name="q${index}"> أ</label>
+                <label><input type="radio" name="q${index}"> ب</label>
+                <label><input type="radio" name="q${index}"> ج</label>
+                <label><input type="radio" name="q${index}"> د</label>
+            </div>`;
+            li.innerHTML += mcqHtml;
+        });
+    });
+
     const localQuestions = {
         "hard": {
+            "h1": { "text": "رياضيات: إذا كانت المصفوفة (أ) على النظم 2×3 والمصفوفة (ب) على النظم 3×2، فإن المصفوفة (أ ب) تكون على النظم...؟", "options": ["3×3", "2×2", "2×3", "لا يمكن ضربهما"], "answer": "2×2" },
+            "h2": { "text": "أحياء: الكربوهيدرات المخزنة في الكبد والعضلات هي عبارة عن...؟", "options": ["نشا", "سليلوز", "جليكوجين", "فركتوز"], "answer": "جليكوجين" },
             "h14": { "text": "كيمياء: الانبعاث البوزيتروني من النواة يؤدي إلى...؟", "options": ["زيادة العدد الذري بمقدار 1", "نقص العدد الذري بمقدار 1", "نقص العدد الكتلي بمقدار 4", "عدم تغير العدد الذري أو الكتلي"], "answer": "نقص العدد الذري بمقدار 1" },
             "h15": { "text": "أحياء: الكائنات في مملكة البدائيات (Monera) تتميز بأن نواتها...؟", "options": ["حقيقية", "أولية (غير محاطة بغشاء)", "متعددة", "لا تحتوي على مادة وراثية"], "answer": "أولية (غير محاطة بغشاء)" }
         },
         "impossible": {
-            "i1": { "text": "فيزياء: إذا كان الشغل المبذول على جسم يساوي التغير في طاقة حركته، فإن هذا يُعرف بـ...؟", "options": ["قانون حفظ الطاقة الميكانيكية", "مبرهنة الشغل والطاقة (Work-Energy Theorem)", "قانون نيوتن الثالث", "قانون بقاء كمية التحرك"], "answer": "مبرهنة الشغل والطاقة (Work-Energy Theorem)" },
-            "i2": { "text": "كيمياء: ما هو الجسيم الذي يتكون من كوارك علوي (Up) واثنين كوارك سفلي (Down)؟", "options": ["البروتون", "النيوترون", "الإلكترون", "البوزيترون"], "answer": "النيوترون" },
-            "i3": { "text": "أحياء: أي من الفصائل التالية يمكن أن ينجبها أبوان فصيلة دمهما AB؟", "options": ["O فقط", "A و B و AB", "A و B فقط", "جميع الفصائل"], "answer": "A و B و AB" },
-            "i4": { "text": "أنمي: في مانغا بيرسيرك (Berserk)، في أي عام صدر الفصل الأول بالضبط؟", "options": ["1989", "1992", "1997", "1985"], "answer": "1989" },
-            "i5": { "text": "فيزياء: سرعة الإفلات (Escape Velocity) من جاذبية كوكب تتناسب طردياً مع...؟", "options": ["كتلة الكوكب", "الجذر التربيعي لكتلة الكوكب", "نصف قطر الكوكب", "كتلة الجسم المنطلق"], "answer": "الجذر التربيعي لكتلة الكوكب" },
-            "i6": { "text": "كيمياء: في التفاعل النووي الانشطاري لليورانيوم-235، ما هو الجسيم الذي يستخدم كـ 'قذيفة' لبدء الانشطار؟", "options": ["بروتون سريع", "نيوترون بطيء (حراري)", "جسيم ألفا", "أشعة جاما"], "answer": "نيوترون بطيء (حراري)" },
-            "i7": { "text": "أحياء: متلازمة داون تحدث نتيجة شذوذ كروموسومي جسمي، حيث يوجد 3 نسخ من الكروموسوم رقم...؟", "options": ["13", "18", "21", "23"], "answer": "21" },
-            "i8": { "text": "أنمي: في عالم 'فول ميتال الخيميائي'، ما هي المادة الأساسية المكونة لـ حجر الفلاسفة؟", "options": ["أرواح البشر", "الذهب الخالص", "دموع التنانين", "الزئبق الأحمر"], "answer": "أرواح البشر" },
-            "i9": { "text": "فيزياء: جسم يسقط سقوطاً حراً، النسبة بين المسافة المقطوعة في الثانية الأولى والثانية والثالثة على الترتيب هي...؟", "options": ["1:2:3", "1:3:5", "1:4:9", "1:8:27"], "answer": "1:3:5" },
-            "i10": { "text": "كيمياء: حرارة التكوين القياسية لأي عنصر في حالته القياسية تساوي...؟", "options": ["100 كيلوجول/مول", "صفر", "سالبة دائماً", "تعتمد على درجة الحرارة"], "answer": "صفر" },
-            "i11": { "text": "أحياء: إذا حدث عبور وراثي (Crossing over)، فإنه يحدث بين الكروماتيدات...؟", "options": ["الشقيقة في الكروموسوم الواحد", "غير الشقيقة في الكروموسومين المتماثلين", "الكروموسومات الجنسية فقط", "غير المتماثلة"], "answer": "غير الشقيقة في الكروموسومين المتماثلين" },
-            "i12": { "text": "أنمي: ما هو الباونتي (المكافأة) الأولى التي وضعت على رأس مونكي دي لوفي في ون بيس؟", "options": ["16 مليون بيلي", "30 مليون بيلي", "100 مليون بيلي", "15 مليون بيلي"], "answer": "30 مليون بيلي" },
-            "i13": { "text": "فيزياء: في الحركة الدائرية غير المنتظمة، العجلة الكلية للجسم هي المحصلة الاتجاهية لـ...؟", "options": ["العجلة المركزية والجاذبية الأرضية", "العجلة المركزية والعجلة المماسية", "السرعة والزمن", "القوة والكتلة"], "answer": "العجلة المركزية والعجلة المماسية" },
-            "i14": { "text": "كيمياء: عند ذوبان نترات الأمونيوم في الماء، تنخفض درجة حرارة المحلول. هذا يعني أن طاقة الشبكة البلورية (فصل الجزيئات)...؟", "options": ["أكبر من طاقة الإماهة", "أقل من طاقة الإماهة", "تساوي طاقة الإماهة", "لا علاقة لها بالذوبان"], "answer": "أكبر من طاقة الإماهة" },
-            "i15": { "text": "أحياء: العالم الذي أثبت أن الـ DNA هو المادة الوراثية باستخدام البكتيريوفاج (فيروس البكتيريا) هو/هم...؟", "options": ["واطسون وكريك", "هيرشي وتشيس", "جريفيث", "فرانكلين"], "answer": "هيرشي وتشيس" }
+            "i1": { "text": "فيزياء: إذا كان الشغل المبذول على جسم يساوي التغير في طاقة حركته، فإن هذا يُعرف بـ...؟", "options": ["قانون حفظ الطاقة الميكانيكية", "مبرهنة الشغل والطاقة", "قانون نيوتن الثالث", "قانون بقاء كمية التحرك"], "answer": "مبرهنة الشغل والطاقة" },
+            "i2": { "text": "رياضيات: الزاوية التي قياسها الدائري (π/3) تكافئ بالدرجات...؟", "options": ["30", "60", "90", "120"], "answer": "60" },
+            "i4": { "text": "أنمي: ما هو اسم القرية التي انتمى إليها غابيمارو الخالي من المشاعر؟", "options": ["كونوها", "إيواغاكوري", "إيواجاكوري (قرية الصخر)", "قرية الحجر (Iwagakure)"], "answer": "قرية الحجر (Iwagakure)" }
         }
     };
 
-    // إعدادات Firebase الخاصة بك
     const firebaseConfig = {
         apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
         authDomain: "tay-game.firebaseapp.com",
@@ -487,87 +462,91 @@
         messagingSenderId: "313499272374",
         appId: "1:313499272374:web:26b693f457239555365217"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     const db = firebase.database();
 
     let myName = prompt("أدخل اسمك يا بطل:") || "طالب مجهول";
     let score = 0;
+    let currentQuestionIndex = 0; // متغير لضمان الترتيب
 
-    // نظام الرتب
     function getRank(s) {
-        if(s >= 150) return "إمبراطور يوسف علاء 👑";
-        if(s >= 100) return "دحيح الدفعة 📚";
-        if(s >= 50) return "مقاتل أنمي 🔥";
-        return "طالب مستجد";
+        if(s >= 200) return "إمبراطور السالموني 👑";
+        if(s >= 150) return "غابيمارو الخالي من المشاعر 🥷";
+        if(s >= 100) return "هيرويك (Heroic) 💎";
+        if(s >= 50) return "دحيح الدفعة 📚";
+        return "مستجد 🔰";
     }
 
-    // الوجود والاتصال
     const userRef = db.ref('status/' + myName);
-    userRef.set({ name: myName, score: 0, rank: "مستجد" });
+    userRef.set({ name: myName, score: 0, rank: "مستجد 🔰" });
     userRef.onDisconnect().remove();
 
-    // تحديث قائمة المتصلين والمتصدرين
     db.ref('status').on('value', snap => {
         let users = [];
-        snap.forEach(child => {
-            users.push(child.val());
-        });
-        // ترتيب تنازلي حسب النقاط
+        snap.forEach(child => { users.push(child.val()); });
         users.sort((a, b) => b.score - a.score);
         
         let html = '';
         users.forEach(u => {
-            html += `<div class="online-user"><b>${u.name}</b> <br> <span style="color:#8b949e; font-size:0.8rem;">${u.rank} | ${u.score} نقطة</span></div>`;
+            html += `<div class="online-user">
+                        <div><b>${u.name}</b><br><span style="font-size:0.8rem; color:#8b949e;">${u.rank}</span></div>
+                        <div style="font-weight:bold; color:var(--main);">${u.score} 🎯</div>
+                     </div>`;
         });
         document.getElementById('online-list').innerHTML = html;
     });
 
-    // سحب الأسئلة من المكتبة المدمجة
     function loadQ() {
-        let difficulty = "hard"; // البداية مع الأسئلة الصعبة
-        if (score >= 50) difficulty = "impossible"; // الانتقال للمستحيل بعد 50 نقطة
-
+        let difficulty = score >= 50 ? "impossible" : "hard";
         let levelName = difficulty === "hard" ? "صعب 🟠" : "مستحيل 🔴";
         document.getElementById('lvl-tag').innerText = "المستوى: " + levelName;
 
         const data = localQuestions[difficulty];
         const keys = Object.keys(data);
-        const randomKey = keys[Math.floor(Math.random() * keys.length)];
-        const q = data[randomKey];
+        
+        // تعديل هنا: الأسئلة تظهر بالترتيب بدلاً من العشوائي
+        const orderedKey = keys[currentQuestionIndex % keys.length];
+        const q = data[orderedKey];
+        currentQuestionIndex++; // الانتقال للسؤال التالي بالترتيب
 
         document.getElementById('q-text').innerText = q.text;
         const optDiv = document.getElementById('opts');
         optDiv.innerHTML = '';
         
-        // خلط الخيارات عشوائياً
         let shuffledOptions = q.options.sort(() => Math.random() - 0.5);
+        let answered = false;
 
         shuffledOptions.forEach(o => {
             let b = document.createElement('button');
             b.className = 'btn-opt';
             b.innerText = o;
-            b.onclick = () => {
+            b.onclick = function() {
+                if(answered) return;
+                answered = true;
+                
                 if(o === q.answer) {
                     score += 10;
-                    b.style.background = "#3fb950"; // لون أخضر عند الإجابة الصحيحة
+                    this.classList.add('correct-ans');
                 } else {
-                    b.style.background = "#f85149"; // لون أحمر عند الإجابة الخاطئة
-                    score = Math.max(0, score - 5); // خصم 5 نقاط للخطأ
+                    score = Math.max(0, score - 5);
+                    this.classList.add('wrong-ans');
+                    Array.from(optDiv.children).forEach(btn => {
+                        if(btn.innerText === q.answer) btn.style.border = "2px solid var(--success)";
+                    });
                 }
                 
-                // تحديث البيانات في Firebase
                 userRef.update({ score: score, rank: getRank(score) });
                 document.getElementById('score').innerText = score;
                 document.getElementById('rank').innerText = getRank(score);
                 
-                // الانتظار نصف ثانية ثم تحميل السؤال التالي
-                setTimeout(loadQ, 800);
+                setTimeout(loadQ, 1200);
             };
             optDiv.appendChild(b);
         });
     }
 
-    // الشات
     function sendMsg() {
         let m = document.getElementById('chat-msg').value;
         if(m.trim() !== "") {
@@ -576,7 +555,6 @@
         }
     }
     
-    // إرسال الرسالة عند الضغط على Enter
     document.getElementById("chat-msg").addEventListener("keypress", function(event) {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -584,22 +562,21 @@
       }
     });
 
-    db.ref('chat').limitToLast(20).on('child_added', snap => {
-        document.getElementById('chat-content').innerHTML += `<div class="msg-in"><b style="color: var(--main);">${snap.val().name}:</b> ${snap.val().text}</div>`;
-        document.getElementById('chat-content').scrollTop = 9999;
+    db.ref('chat').limitToLast(30).on('child_added', snap => {
+        const chatBox = document.getElementById('chat-content');
+        chatBox.innerHTML += `<div class="msg-in"><b style="color: var(--main);">${snap.val().name}</b><br>${snap.val().text}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    // اقتراح سؤال
     function addQuestion() {
         let q = prompt("اكتب السؤال:");
         let a = prompt("اكتب الإجابة الصحيحة:");
         if(q && a) {
             db.ref('suggestions').push({ q, a, by: myName });
-            alert("تم إرسال اقتراحك ليوسف علاء بنجاح!");
+            alert("تم إرسال اقتراحك للزعيم بنجاح!");
         }
     }
 
-    // بدء اللعبة
     loadQ();
 </script>
 </body>
