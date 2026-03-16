@@ -79,8 +79,8 @@
         }
         .btn-opt:active { transform: scale(0.95); }
         
-        .correct-ans { background: var(--success) !important; color: white !important; border-color: var(--success); box-shadow: 0 0 15px var(--success); }
-        .wrong-ans { background: var(--danger) !important; color: white !important; border-color: var(--danger); animation: shake 0.4s; }
+        .correct-ans { background: var(--success) !important; color: white !important; border-color: var(--success) !important; box-shadow: 0 0 15px var(--success); }
+        .wrong-ans { background: var(--danger) !important; color: white !important; border-color: var(--danger) !important; animation: shake 0.4s; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
 
         .chat-container { display: flex; flex-direction: column; height: 100%; }
@@ -111,9 +111,18 @@
         .tag-impossible { background: #ff0000; color: #fff; font-weight: bold; }
 
         .mcq-box { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .mcq-box label { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; cursor: pointer; border: 1px solid #30363d; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .mcq-box label:hover { background: rgba(0, 210, 255, 0.1); border-color: var(--main); }
-        .mcq-box input[type="radio"] { accent-color: var(--main); }
+        .mcq-btn {
+            background: rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 8px; cursor: pointer;
+            border: 1px solid #30363d; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;
+            transition: 0.2s; color: white; font-family: inherit; font-weight: bold; text-align: right;
+            width: 100%;
+        }
+        .mcq-btn:hover { background: rgba(0, 210, 255, 0.1); border-color: var(--main); }
+        .mcq-btn.s-correct { background: var(--success) !important; border-color: var(--success) !important; box-shadow: 0 0 10px var(--success); pointer-events: none; }
+        .mcq-btn.s-wrong { background: var(--danger) !important; border-color: var(--danger) !important; animation: shake 0.4s; pointer-events: none; }
+        .mcq-btn.s-reveal { border-color: var(--success) !important; pointer-events: none; }
+        .mcq-btn:disabled { pointer-events: none; }
+        .q-text-body { margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -122,6 +131,7 @@
 
 <div class="app-container">
     
+    <!-- تبويب اللعبة -->
     <div id="game-tab" class="tab-content active">
         <div class="card">
             <div id="lvl-tag" style="color: var(--accent); font-size: 1rem; font-weight: bold; margin-bottom: 10px;">المستوى: جاري التحميل...</div>
@@ -136,6 +146,7 @@
         <button onclick="addQuestion()" style="display:block; width:100%; margin-top:20px; background:none; color:#8b949e; border:2px dashed #8b949e; padding: 15px; border-radius: 12px; font-weight:bold;">+ اقترح سؤالاً جديداً للعبة</button>
     </div>
 
+    <!-- تبويب الشات -->
     <div id="chat-tab" class="tab-content">
         <div class="chat-container">
             <h3 style="text-align:center; color: var(--main); margin-top:0;">💬 شات الأبطال</h3>
@@ -147,117 +158,993 @@
         </div>
     </div>
 
+    <!-- تبويب المتصدرين -->
     <div id="leaderboard-tab" class="tab-content">
         <h3 style="color: var(--main); text-align: center; margin-top:0;">🏆 المتصدرين و 🟢 المتصلون</h3>
         <div id="online-list"></div>
     </div>
 
+    <!-- تبويب المنهج -->
     <div id="syllabus-tab" class="tab-content">
         <h1 class="syllabus-header">100 سؤال نواتج تعلم: الصف الأول الثانوي (الترم الثاني 2026)</h1>
 
+        <!-- الفيزياء -->
         <div class="subject-title">أولاً: الفيزياء (الحركة الدائرية، الجاذبية الكونية، الشغل والطاقة)</div>
         <ol class="q-list">
-            <li class="hard">جسم يتحرك في مسار دائري بسرعة ثابتة، إذا زادت القوة الجاذبة المركزية للضعف وقل نصف القطر للنصف، ماذا يحدث للسرعة المماسية؟<span class="tag tag-hard">صعب</span></li>
-            <li class="hard">قمران صناعيان A و B يدوران حول الأرض، نصف قطر مدار A ضعف مدار B، احسب النسبة بين الزمن الدوري لهما.</li>
-            <li class="hard">سيارة تتحرك في منحنى دائري يميل على الأفقي بزاوية (θ)، استنتج رياضياً أقصى سرعة آمنة مع إهمال قوة الاحتكاك.</li>
-            <li class="hard">سقط جسم سقوطاً حراً من ارتفاع (h)، عند أي ارتفاع تكون طاقة حركته ضعف طاقة وضعه؟</li>
-            <li class="hard">إذا كانت قوة التجاذب بين كتلتين هي (F)، كم يجب أن تتغير المسافة بينهما لتصبح القوة (F/9)؟</li>
-            <li class="hard">رجل يدفع عربة بقوة تصنع زاوية 60 مع الأفقي، إذا بذل شغلاً (W)، فكم تكون القوة اللازمة لبذل نفس الشغل إذا دفعها أفقياً؟</li>
-            <li class="hard">جسم كتلته 2 كجم مربوط في خيط ويدور في مستوى رأسي، احسب الفرق بين الشد في أعلى نقطة وأسفل نقطة.</li>
-            <li class="hard">احسب النسبة بين عجلة الجاذبية على سطح الأرض وعجلة الجاذبية على ارتفاع يساوي ضعف نصف قطر الأرض.</li>
-            <li class="hard">إذا تضاعفت كمية تحرك جسم، فما هو مقدار التغير النسبي في طاقة حركته؟</li>
-            <li class="hard">منحنى السرعة المدارية للقمر الصناعي مع مقلوب الجذر التربيعي لنصف القطر يمثل خطاً مستقيماً، ماذا يمثل الميل؟</li>
-            <li class="very-hard">جسم ينزلق على مسار دائري أملس كروي من أعلى نقطة، عند أي زاوية سيترك الجسم سطح الكرة؟<span class="tag tag-very-hard">صعب جداً</span></li>
-            <li class="very-hard">كيف يمكن لقمر صناعي أن يدور في مدار متزامن مع الأرض وما هي الشروط الدقيقة لكتلته وسرعته؟</li>
-            <li class="very-hard">في البندول البسيط، ارسم العلاقة البيانية بين مربع السرعة والإزاحة الرأسية، واستنتج قيمة الميل.</li>
-            <li class="very-hard">إذا كان الشغل المبذول لزيادة سرعة سيارة من 10 إلى 20 م/ث هو W، فما الشغل لزيادتها من 20 إلى 30 م/ث؟</li>
-            <li class="very-hard">قمر صناعي يدور حول كوكب كتلته مجهولة، إذا علمنا فقط سرعته المدارية ومحيط مداره، استنتج كتلة الكوكب.</li>
-            <li class="impossible">إذا تم حفر نفق مستقيم عبر مركز الأرض بالكامل، وأسقطنا جسماً فيه، أثبت رياضياً أن حركته توافقية بسيطة.<span class="tag tag-impossible">مستحيل</span></li>
-            <li class="impossible">احسب سرعة الهروب لجسم من جاذبية الأرض إذا تم إطلاقه من قمة جبل ارتفاعه يوازي نصف قطر الأرض.</li>
-            <li class="impossible">هل يمكن لقوة الجاذبية المركزية أن تبذل شغلاً في مسار إهليجي (بيضاوي) وليس دائري؟ فسر رياضياً.</li>
-            <li class="impossible">أثبت أن الطاقة الميكانيكية الكلية لقمر صناعي تساوي القيمة السالبة لطاقة حركته.</li>
-            <li class="impossible">تخيل كوكباً كثافته تتغير تدريجياً من المركز للسطح، كيف ستحسب عجلة الجاذبية عند نقطة داخله؟</li>
+
+            <li class="hard">
+                <div class="q-text-body">جسم يتحرك في مسار دائري بسرعة ثابتة، إذا زادت القوة المركزية للضعف وقل نصف القطر للنصف، ماذا يحدث للسرعة المماسية؟<span class="tag tag-hard">صعب</span></div>
+                <div class="mcq-box" data-answer="تظل ثابتة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تظل ثابتة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تنصف</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتربع</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">قمران صناعيان A و B يدوران حول الأرض، نصف قطر مدار A ضعف مدار B، النسبة T_A : T_B تساوي؟</div>
+                <div class="mcq-box" data-answer="2√2 : 1">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2√2 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">4 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√2 : 1</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">سيارة تتحرك في منحنى دائري يميل بزاوية θ، أقصى سرعة آمنة بإهمال الاحتكاك تساوي؟</div>
+                <div class="mcq-box" data-answer="√(g·r·tan θ)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(g·r·tan θ)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(g·r)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">g·r·sin θ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(g·tan θ)</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">سقط جسم سقوطاً حراً من ارتفاع h، عند أي ارتفاع تكون طاقة حركته ضعف طاقة وضعه؟</div>
+                <div class="mcq-box" data-answer="h/3">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">h/3</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">h/2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2h/3</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">h/4</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">إذا كانت قوة التجاذب بين كتلتين (F)، كم تتغير المسافة لتصبح القوة (F/9)؟</div>
+                <div class="mcq-box" data-answer="تتضاعف 3 مرات">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف 3 مرات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف 9 مرات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تنصف</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تظل كما هي</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">رجل يدفع عربة بقوة تصنع زاوية 60° مع الأفقي، القوة اللازمة لبذل نفس الشغل أفقياً تساوي؟</div>
+                <div class="mcq-box" data-answer="نصف القوة الأصلية">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نصف القوة الأصلية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ضعف القوة الأصلية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مساوية للأصلية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ربع القوة الأصلية</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">جسم كتلته 2 كجم يدور في مستوى رأسي، الفرق بين شد الخيط في أسفل وأعلى نقطة يساوي؟ (g=10)</div>
+                <div class="mcq-box" data-answer="120 نيوتن">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">120 نيوتن</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">60 نيوتن</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">40 نيوتن</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">20 نيوتن</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">النسبة بين عجلة الجاذبية على سطح الأرض وعلى ارتفاع يساوي ضعف نصف قطر الأرض (أي عند 3R من المركز)؟</div>
+                <div class="mcq-box" data-answer="9 : 1">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">9 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">4 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">3 : 1</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">1 : 9</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">إذا تضاعفت كمية تحرك جسم (p)، فإن طاقة حركته؟</div>
+                <div class="mcq-box" data-answer="تتضاعف أربع مرات">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف أربع مرات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف مرتين</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تظل ثابتة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتضاعف ثماني مرات</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">في منحنى v – (1/√r) للقمر الصناعي، ماذا يمثل ميل الخط المستقيم؟</div>
+                <div class="mcq-box" data-answer="√(G·M) حيث M كتلة الأرض">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(G·M) حيث M كتلة الأرض</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كتلة القمر الصناعي</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تسارع الجاذبية g</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">سرعة دوران الأرض</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">جسم ينزلق على كرة ملساء من أعلى نقطة، عند أي زاوية θ من الشاقول يترك سطح الكرة؟<span class="tag tag-very-hard">صعب جداً</span></div>
+                <div class="mcq-box" data-answer="θ = cos⁻¹(2/3)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">θ = cos⁻¹(2/3)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">θ = 45°</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">θ = 60°</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">θ = cos⁻¹(1/2)</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">شرط تزامن القمر الصناعي مع دوران الأرض هو أن يكون مداره؟</div>
+                <div class="mcq-box" data-answer="دائرياً في مستوى خط الاستواء بارتفاع ≈36000 كم">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">دائرياً في مستوى خط الاستواء بارتفاع ≈36000 كم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">قطبياً على ارتفاع أي</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">إهليجياً حول القطبين</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">دائرياً فوق القطب الشمالي</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">في البندول البسيط، العلاقة البيانية بين v² والإزاحة الرأسية h خط مستقيم، قيمة الميل تساوي؟</div>
+                <div class="mcq-box" data-answer="2g">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2g</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">g</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">g/2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">4g</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">شغل زيادة سرعة سيارة من 10 إلى 20 م/ث هو W، فالشغل لزيادتها من 20 إلى 30 م/ث؟</div>
+                <div class="mcq-box" data-answer="5W/3">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">5W/3</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">W</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2W</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">3W</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">قمر صناعي سرعته المدارية v ومحيط مداره C، كتلة الكوكب المركزي تساوي؟</div>
+                <div class="mcq-box" data-answer="v²·C / (2π·G)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">v²·C / (2π·G)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">v·C / G</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">v² / (G·C)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">C² / (v·G)</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">جسم يسقط في نفق مستقيم عبر مركز الأرض، نوع حركته توافقية لأن القوة المؤثرة عليه؟<span class="tag tag-impossible">مستحيل</span></div>
+                <div class="mcq-box" data-answer="تتناسب مع الإزاحة وتعاكسها (F = -kx)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتناسب مع الإزاحة وتعاكسها (F = -kx)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ثابتة المقدار والاتجاه</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتناسب مع مربع الإزاحة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تساوي صفراً في المركز فقط</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">سرعة الهروب من قمة جبل ارتفاعه يساوي نصف قطر الأرض R (أي من مسافة 2R من مركز الأرض)؟</div>
+                <div class="mcq-box" data-answer="√(GM/R) = v_escape/√2">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(GM/R) = v_escape/√2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(2GM/R)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√(GM/2R)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2√(GM/R)</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">في المسار الإهليجي، قوة الجاذبية المركزية هل تبذل شغلاً؟</div>
+                <div class="mcq-box" data-answer="نعم، لأنها لا تظل عمودية على الإزاحة دائماً">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نعم، لأنها لا تظل عمودية على الإزاحة دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا، لأنها دائماً عمودية على الحركة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نعم، بشكل ثابت وموجب</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا، لأن المسار مغلق</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">الطاقة الميكانيكية الكلية للقمر الصناعي في مدار دائري تساوي؟</div>
+                <div class="mcq-box" data-answer="سالب طاقة الحركة (E = -KE)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">سالب طاقة الحركة (E = -KE)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ضعف طاقة الحركة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">صفر دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">موجبة دائماً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">في كوكب كثافته تتغير من المركز للسطح، عجلة الجاذبية عند نقطة داخلية تحسب باستخدام؟</div>
+                <div class="mcq-box" data-answer="كتلة الكرة الداخلية فقط حتى نقطة القياس (نظرية القشرة)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كتلة الكرة الداخلية فقط حتى نقطة القياس (نظرية القشرة)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الكتلة الكلية للكوكب</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كتلة القشرة الخارجية فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يمكن حسابها</button>
+                </div>
+            </li>
+
         </ol>
 
+        <!-- الكيمياء -->
         <div class="subject-title">ثانياً: الكيمياء (الكيمياء الحرارية، الكيمياء النووية)</div>
         <ol class="q-list" start="21">
-            <li class="hard">تفاعل طارد للحرارة، إذا كانت طاقة المتفاعلات 500kJ وطاقة التنشيط 100kJ، و ΔH=-200kJ، احسب طاقة النواتج.</li>
-            <li class="hard">احسب حرارة التكوين القياسية لغاز الميثان باستخدام قانون هس.</li>
-            <li class="hard">عينة مشعة تحتوي على 1000 نواة، فترة عمر النصف 5 أيام. كم نواة تتبقى بعد 20 يوماً؟</li>
-            <li class="hard">قارن بين قوة الترابط النووي لنواة الحديد-56 ونواة اليورانيوم-235 بناءً على منحنى الاستقرار.</li>
-            <li class="hard">احسب كمية الحرارة المنطلقة عند ذوبان 10 جم من هيدروكسيد الصوديوم في الماء.</li>
-            <li class="hard">لماذا لا يمكن قياس المحتوى الحراري لمادة معينة بشكل مباشر، بل نقيس التغير فيه (ΔH)؟</li>
-            <li class="hard">نواة عنصر (X) فقدت 2 جسيم ألفا و 3 بيتا لتتحول إلى رصاص (Pb-206, 82)، ما هو العنصر X؟</li>
-            <li class="hard">احسب طاقة الترابط النووي لكل نيوكليون في نواة الهيليوم.</li>
-            <li class="hard">ما هو الفرق الجوهري بين الانشطار النووي في المفاعل والانشطار في القنبلة الذرية من حيث الكتلة الحرجة؟</li>
-            <li class="hard">ارسم مخطط طاقة لتفاعل ماص للحرارة موضحاً عليه أثر إضافة عامل حفاز.</li>
-            <li class="very-hard">إذا كان تفاعل احتراق الجرافيت يمر بخطوتين، لماذا يفضل استخدام قانون هس؟</li>
-            <li class="very-hard">اشرح كيف يمكن لنظير مستقر أن يتحول إلى نظير مشع عن طريق القذف بالنيوترونات.</li>
-            <li class="very-hard">في مسعر القنبلة، إذا لم نقم بخصم السعة الحرارية للمسعر، كيف سيؤثر ذلك على قيمة حرارة الاحتراق؟</li>
-            <li class="very-hard">تفسير ظاهرة "نقص الكتلة" عند تكوين النواة ولماذا لا نلاحظها في التفاعلات العادية؟</li>
-            <li class="very-hard">عينة مشعة نشاطها 800 إشعاع/ث، وبعد ساعتين أصبح 50. احسب ثابت الانحلال.</li>
-            <li class="impossible">إذا استطعنا عكس الانشطار النووي لليورانيوم، هل سيكون طارداً أم ماصاً للحرارة ولماذا؟</li>
-            <li class="impossible">أثبت رياضياً أن فترة عمر النصف لا تعتمد على الكمية الابتدائية للمادة المشعة.</li>
-            <li class="impossible">في الاندماج النووي بالشمس، احسب بدقة نسبة الكتلة المتحولة لطاقة.</li>
-            <li class="impossible">تخيل تفاعلاً كيميائياً تكون فيه إنثالبي النواتج يساوي المتفاعلات عند الصفر المطلق، هل يحدث؟</li>
-            <li class="impossible">احسب الطاقة الناتجة من فناء 1 جرام من المادة والمادة المضادة معاً.</li>
+
+            <li class="hard">
+                <div class="q-text-body">تفاعل طارد للحرارة، طاقة المتفاعلات 500kJ، طاقة التنشيط 100kJ، ΔH = -200kJ، طاقة النواتج؟</div>
+                <div class="mcq-box" data-answer="300 kJ">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">300 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">700 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">400 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">200 kJ</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">حرارة تكوين الميثان القياسية CH₄ باستخدام قانون هس تُحسب من؟</div>
+                <div class="mcq-box" data-answer="حرارة احتراق الكربون والهيدروجين والميثان">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">حرارة احتراق الكربون والهيدروجين والميثان</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">درجة انصهار الميثان فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">حرارة تكوين الماء فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">حرارة التفاعل المباشر دائماً</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">عينة مشعة 1000 نواة، فترة نصف العمر 5 أيام، كم نواة تتبقى بعد 20 يوماً؟</div>
+                <div class="mcq-box" data-answer="62 نواة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">62 نواة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">125 نواة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">250 نواة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">500 نواة</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">قوة الترابط النووي لكل نيوكليون في الحديد-56 مقارنةً باليورانيوم-235؟</div>
+                <div class="mcq-box" data-answer="أكبر في الحديد (الحديد الأكثر استقراراً)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أكبر في الحديد (الحديد الأكثر استقراراً)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أكبر في اليورانيوم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">متساوية تماماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الحديد أقل استقراراً</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">الحرارة المنطلقة عند ذوبان 10g من NaOH (ΔH_ذوبان = -44.5 kJ/mol) تساوي تقريباً؟</div>
+                <div class="mcq-box" data-answer="11.1 kJ">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">11.1 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">44.5 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">22.2 kJ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">5.5 kJ</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">لماذا نقيس تغير المحتوى الحراري ΔH وليس المحتوى الحراري المطلق H؟</div>
+                <div class="mcq-box" data-answer="لأن H يشمل طاقة داخلية لا يمكن قياسها بشكل مطلق">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن H يشمل طاقة داخلية لا يمكن قياسها بشكل مطلق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن H دائماً ثابت</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن ΔH أصغر من H</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن الأجهزة غير دقيقة</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">نواة X فقدت 2 جسيم ألفا و3 جسيم بيتا لتصبح Pb-206 (82). ما هو العنصر X؟</div>
+                <div class="mcq-box" data-answer="رادون Ra-214 (86Ra)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">رادون Ra-214 (86Ra)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">بولونيوم Po-212 (84Po)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">بيزموث Bi-209 (83Bi)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ثاليوم Tl-208 (81Tl)</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">طاقة الترابط النووي لكل نيوكليون في نواة الهيليوم He-4 (نقص الكتلة ≈ 0.0303 وحدة كتلة ذرية)؟</div>
+                <div class="mcq-box" data-answer="≈ 7 MeV/نيوكليون">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 7 MeV/نيوكليون</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 1 MeV/نيوكليون</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 56 MeV/نيوكليون</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 200 MeV/نيوكليون</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">الفرق الجوهري بين الانشطار في المفاعل والقنبلة الذرية من حيث الكتلة الحرجة؟</div>
+                <div class="mcq-box" data-answer="المفاعل يعمل دون الكتلة الحرجة بوجود متباطئات ومسيطرات">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المفاعل يعمل دون الكتلة الحرجة بوجود متباطئات ومسيطرات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">القنبلة تحتاج أقل كتلة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المفاعل يحتاج كتلة فوق الحرجة دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا فرق بينهما</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">في مخطط طاقة التفاعل الماص، أثر إضافة عامل حفاز هو؟</div>
+                <div class="mcq-box" data-answer="تقليل طاقة التنشيط فقط دون تغيير ΔH">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تقليل طاقة التنشيط فقط دون تغيير ΔH</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تقليل ΔH للتفاعل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">رفع مستوى طاقة النواتج</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تحويله إلى تفاعل طارد</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">لماذا يُستخدم قانون هس لحساب حرارة احتراق الجرافيت في خطوتين؟<span class="tag tag-very-hard">صعب جداً</span></div>
+                <div class="mcq-box" data-answer="لأن التفاعل المباشر صعب التحكم فيه معملياً">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن التفاعل المباشر صعب التحكم فيه معملياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن هس يعطي نتائج أقل دقة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن الجرافيت لا يحترق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن ΔH يتغير مع الطريقة</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">نظير مستقر يتحول لمشع بقذفه بنيوترونات بسبب؟</div>
+                <div class="mcq-box" data-answer="زيادة النيوترونات تُخل بنسبة n/p المثالية">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">زيادة النيوترونات تُخل بنسبة n/p المثالية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">النيوترونات تكسر الروابط الإلكترونية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يزداد عدد البروتونات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتغير درجة حرارة النواة</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">في مسعر القنبلة، إذا أهملنا السعة الحرارية للمسعر نفسه، تكون قيمة ΔH الاحتراق؟</div>
+                <div class="mcq-box" data-answer="أقل من القيمة الحقيقية (قصور في الحساب)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أقل من القيمة الحقيقية (قصور في الحساب)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أكبر من القيمة الحقيقية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مساوية للقيمة الحقيقية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">سالبة دائماً</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">ظاهرة نقص الكتلة عند تكوين النواة: لماذا لا نلاحظها في التفاعلات الكيميائية العادية؟</div>
+                <div class="mcq-box" data-answer="لأن طاقة الترابط الكيميائي ضئيلة جداً وفق E=mc²">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن طاقة الترابط الكيميائي ضئيلة جداً وفق E=mc²</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن قانون حفظ الكتلة لا ينطبق نووياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن الكتلة ثابتة دائماً في الكيمياء</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن الإلكترونات تعوض النقص</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">عينة مشعة نشاطها 800 إشعاع/ث، وبعد ساعتين أصبح 50 إشعاع/ث، ثابت الانحلال λ يساوي تقريباً؟</div>
+                <div class="mcq-box" data-answer="≈ 0.385 h⁻¹">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 0.385 h⁻¹</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 0.5 h⁻¹</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 1.44 h⁻¹</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 0.25 h⁻¹</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">عكس انشطار اليورانيوم (دمج شظايا الانشطار): هل يكون طارداً أم ماصاً للحرارة؟<span class="tag tag-impossible">مستحيل</span></div>
+                <div class="mcq-box" data-answer="ماص للحرارة لأن النواتج أكثر استقراراً">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ماص للحرارة لأن النواتج أكثر استقراراً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">طارد للحرارة دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">محايد لا يطلق طاقة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يعتمد على درجة الحرارة</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">إثبات أن فترة نصف العمر لا تعتمد على الكمية الابتدائية: معادلة الانحلال N=N₀e^(-λt)، عند N=N₀/2؟</div>
+                <div class="mcq-box" data-answer="t₁/₂ = ln2/λ (لا تحتوي N₀)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">t₁/₂ = ln2/λ (لا تحتوي N₀)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">t₁/₂ = N₀/λ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">t₁/₂ تتناسب طردياً مع N₀</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">t₁/₂ = λ/ln2</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">في الاندماج النووي في الشمس: 4 نوى هيدروجين → He-4، نسبة الكتلة المتحولة لطاقة تقريباً؟</div>
+                <div class="mcq-box" data-answer="≈ 0.7% من الكتلة الكلية">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 0.7% من الكتلة الكلية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 10% من الكتلة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 50% من الكتلة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 100% تتحول كلها</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">تفاعل تكون فيه إنثالبي النواتج = إنثالبي المتفاعلات عند الصفر المطلق (0K)، هل يحدث؟</div>
+                <div class="mcq-box" data-answer="نظرياً ممكن (ΔH=0) لكن لا يحدث تلقائياً عند الصفر المطلق">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نظرياً ممكن (ΔH=0) لكن لا يحدث تلقائياً عند الصفر المطلق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مستحيل تماماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يحدث دائماً عند الصفر المطلق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يحدث فقط في التفاعلات النووية</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">الطاقة الناتجة من فناء 1 جرام مادة مع 1 جرام مضادة لها (E=mc²)؟</div>
+                <div class="mcq-box" data-answer="≈ 1.8 × 10¹⁴ جول">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 1.8 × 10¹⁴ جول</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 9 × 10¹³ جول</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 3 × 10¹⁶ جول</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 6.02 × 10²³ جول</button>
+                </div>
+            </li>
+
         </ol>
 
+        <!-- الأحياء -->
         <div class="subject-title">ثالثاً: الأحياء (الوراثة وتداخل فعل الجينات، التصنيف)</div>
         <ol class="q-list" start="41">
-            <li class="hard">تزاوج فردان كلاهما يحمل فصيلة دم (A)، فظهر في الأبناء فصيلة (O)، ما هو التركيب الجيني للآباء؟</li>
-            <li class="hard">اشرح حالة الجينات المتكاملة في نبات بسلة الزهور.</li>
-            <li class="hard">لماذا يعتبر مرض عمى الألوان أكثر انتشاراً في الذكور عن الإناث؟</li>
-            <li class="hard">قارن بين البدائيات والطلائعيات من حيث تركيب النواة.</li>
-            <li class="hard">ما هو الأساس العلمي الذي بنى عليه "كارل لينيوس" التسمية الثنائية؟</li>
-            <li class="hard">كيف تفرق بين ذكر وأنثى حشرة الدروسوفيلا من حيث لون العين؟</li>
-            <li class="hard">تزاوجت فئران صفراء معاً، ما نسبة الفاقد في النسل الناتج ولماذا؟</li>
-            <li class="hard">فصيلة الدم (AB) مستقبل عام، بينما (O) معطي عام، فسر ذلك مناعياً.</li>
-            <li class="hard">صنف فطر المشروم موضحاً المملكة والشعبة.</li>
-            <li class="hard">كيف يمكن استخدام البصمة الوراثية لإثبات البنوة؟</li>
-            <li class="very-hard">ما هو تفسير ظهور فصيلة دم (O) لأبوين فصيلة دمهما (AB)؟ (ظاهرة بومباي).</li>
-            <li class="very-hard">كيف تفسر وراثياً ولادة طفل مصاب بمتلازمة داون يحمل فصيلة دم غير متوافقة؟</li>
-            <li class="very-hard">إذا حدث عبور وراثي بين جينين مرتبطين، كيف يؤثر ذلك على النسب المندلية المتوقعة؟</li>
-            <li class="very-hard">لماذا لا يمكن تصنيف الفيروسات ضمن الممالك الخمس الكلاسيكية؟</li>
-            <li class="very-hard">اشرح كيف تورث صفة الصلع المبكر في الإنسان.</li>
-            <li class="impossible">هل يمكن أن تتواجد مورثات الميتوكوندريا في الحيوان المنوي وتنتقل للجنين؟</li>
-            <li class="impossible">في كائن افتراضي، تم اكتشاف نظام تحديد جنس خماسي الأليلات، صمم مربع بانيت.</li>
-            <li class="impossible">كيف تقوم بتصنيف كائن يمتلك جداراً خلوياً كيتينياً ويقوم بالبناء الضوئي في الينابيع الحارة؟</li>
-            <li class="impossible">إذا كانت صفة لون الريش محكومة بـ 4 أزواج من الجينات المتراكمة، كم عدد الفينوتيبات؟</li>
-            <li class="impossible">صمم خريطة وراثية لجين افتراضي يسبب مناعة ضد الإشعاع.</li>
+
+            <li class="hard">
+                <div class="q-text-body">تزاوج فردان فصيلة دمهما A، وظهر في أبنائهما فصيلة O. التركيب الجيني للأبوين هو؟</div>
+                <div class="mcq-box" data-answer="Iᴬ·i × Iᴬ·i (كلاهما متخالف)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">Iᴬ·i × Iᴬ·i (كلاهما متخالف)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">Iᴬ·Iᴬ × Iᴬ·Iᴬ (متماثلان)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">Iᴬ·Iᴮ × Iᴬ·i</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">i·i × Iᴬ·i</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">في نبات بسلة الزهور، الجينات المتكاملة تعني؟</div>
+                <div class="mcq-box" data-answer="جينان غير متقاطعان يتحكمان معاً في صفة واحدة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جينان غير متقاطعان يتحكمان معاً في صفة واحدة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جين واحد يتحكم في صفتين</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جينان متأثران بالجنس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جينات موجودة على كروموسومات مختلفة فقط</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">مرض عمى الألوان أكثر انتشاراً في الذكور لأن؟</div>
+                <div class="mcq-box" data-answer="الذكر يحمل نسخة واحدة من الجين (XY) فيظهر المرض بجين واحد متنحٍّ">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الذكر يحمل نسخة واحدة من الجين (XY) فيظهر المرض بجين واحد متنحٍّ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الذكور أضعف مناعةً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الجين موجود على كروموسوم Y</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الأنثى لا تحمل الجين أبداً</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">الفرق بين البدائيات (Prokaryota) والطلائعيات (Protista) من حيث النواة؟</div>
+                <div class="mcq-box" data-answer="البدائيات بلا غشاء نووي حقيقي، الطلائعيات لها نواة حقيقية محاطة بغشاء">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">البدائيات بلا غشاء نووي حقيقي، الطلائعيات لها نواة حقيقية محاطة بغشاء</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كلاهما لا يمتلك نواة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كلاهما يمتلك نوى متعددة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الطلائعيات بلا غشاء نووي</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">الأساس العلمي لـ"كارل لينيوس" في التسمية الثنائية هو؟</div>
+                <div class="mcq-box" data-answer="اسم الجنس + اسم النوع باللغة اللاتينية">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">اسم الجنس + اسم النوع باللغة اللاتينية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">اسم المكتشف + رقم التسلسل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">اسم الفصيلة + اسم المملكة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">اسم القارة + اسم الكائن</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">يُميّز ذكر الدروسوفيلا ذو العيون الحمراء عن الأنثى بأن؟</div>
+                <div class="mcq-box" data-answer="الذكر Xʷ·Y لا يمكنه أن يكون ناقلاً، والأنثى يمكنها حمل الجين دون إبدائه">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الذكر Xʷ·Y لا يمكنه أن يكون ناقلاً، والأنثى يمكنها حمل الجين دون إبدائه</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الذكر دائماً أبيض العيون</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الأنثى دائماً حمراء العيون</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا فرق بينهما وراثياً</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">عند تزاوج فئران صفراء اللون معاً (Yy × Yy)، نسبة الفاقد في النسل؟</div>
+                <div class="mcq-box" data-answer="1/4 (الفئران الصفراء المتماثلة YY تموت جنينياً)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">1/4 (الفئران الصفراء المتماثلة YY تموت جنينياً)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">3/4</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">1/2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يوجد فاقد</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">فصيلة الدم AB مستقبل عام لأنها؟</div>
+                <div class="mcq-box" data-answer="لا تحتوي دماؤها على أجسام مضادة (أنتيبودي) لـ A أو B">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا تحتوي دماؤها على أجسام مضادة (أنتيبودي) لـ A أو B</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تحتوي على كل المستضدات فتقبل أي دم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">دمها يتوافق مع كل الفصائل كيميائياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">خلاياها أكبر حجماً فتستوعب أي دم</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">تصنيف فطر المشروم: ينتمي إلى مملكة؟</div>
+                <div class="mcq-box" data-answer="الفطريات (Fungi) – شعبة Basidiomycota">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الفطريات (Fungi) – شعبة Basidiomycota</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">النبات – شعبة Bryophyta</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الطلائعيات – شعبة Oomycota</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">البدائيات – شعبة Firmicutes</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">البصمة الوراثية تُثبت البنوة لأن؟</div>
+                <div class="mcq-box" data-answer="نصف نمط الـ DNA يطابق الأم والنصف الآخر يطابق الأب">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نصف نمط الـ DNA يطابق الأم والنصف الآخر يطابق الأب</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لون الدم متطابق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">شكل الخلايا متماثل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">البروتينات السطحية لها نفس الوزن</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">ظاهرة بومباي: ظهور فصيلة O لأبوين فصيلة دمهما AB يحدث بسبب؟<span class="tag tag-very-hard">صعب جداً</span></div>
+                <div class="mcq-box" data-answer="طفرة في جين H الذي يمنع تكوين مستضدات A وB على خلايا الدم">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">طفرة في جين H الذي يمنع تكوين مستضدات A وB على خلايا الدم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">خطأ في تصنيف فصيلة الأبوين</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">عبور وراثي بين كروموسومات الجنس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">طفرة في كروموسوم Y</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">ولادة طفل بمتلازمة داون (3 كروموسومات 21) بفصيلة دم غير متوافقة مع والديه يُفسَّر بـ؟</div>
+                <div class="mcq-box" data-answer="حدوث عدم انفصال (Non-disjunction) في الكروموسومات + تأثير جينات مستقلة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">حدوث عدم انفصال (Non-disjunction) في الكروموسومات + تأثير جينات مستقلة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يمكن تفسيره وراثياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">خطأ في تحليل فصيلة الدم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جين الفصيلة موجود على كروموسوم 21</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">العبور الوراثي بين جينين مرتبطين يؤدي إلى؟</div>
+                <div class="mcq-box" data-answer="ظهور نسب جديدة تختلف عن تلك المتوقعة في مندل (تشكيلات إعادة الجمع)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ظهور نسب جديدة تختلف عن تلك المتوقعة في مندل (تشكيلات إعادة الجمع)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">انعدام التنوع الوراثي كلياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">توزيع الجينات بشكل عشوائي تماماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">موت الجنين دائماً</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">لماذا لا تُصنّف الفيروسات ضمن الممالك الخمس الكلاسيكية؟</div>
+                <div class="mcq-box" data-answer="لأنها لا تملك خلايا ولا أيض مستقل وتعتمد كلياً على عائل">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأنها لا تملك خلايا ولا أيض مستقل وتعتمد كلياً على عائل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأنها صغيرة جداً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأنها تعيش في البحار فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لأن لينيوس لم يكتشفها</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">صفة الصلع المبكر في الإنسان مثال على جين؟</div>
+                <div class="mcq-box" data-answer="متأثر بالجنس (Sex-influenced): سائد في الذكر، متنحٍّ في الأنثى">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">متأثر بالجنس (Sex-influenced): سائد في الذكر، متنحٍّ في الأنثى</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مرتبط بالجنس على كروموسوم X</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مرتبط بكروموسوم Y فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جين مميت متنحٍّ</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">هل يمكن لجينات الميتوكوندريا في الحيوان المنوي أن تنتقل للجنين؟<span class="tag tag-impossible">مستحيل</span></div>
+                <div class="mcq-box" data-answer="لا، لأن ميتوكوندريا الحيوان المنوي تُدمَّر بعد الإخصاب (الوراثة الأمومية)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا، لأن ميتوكوندريا الحيوان المنوي تُدمَّر بعد الإخصاب (الوراثة الأمومية)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نعم، تنتقل بالتساوي من الأب والأم</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نعم، لكن فقط في الذكور</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا، لأن الحيوان المنوي لا يحتوي على ميتوكوندريا</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">في كائن افتراضي ذو تحديد جنس خماسي الأليلات، عدد الأنماط الجينية الممكنة يساوي؟</div>
+                <div class="mcq-box" data-answer="10 أنماط (C(5,2) + 5 متماثلة = 15)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">10 أنماط (C(5,2) + 5 متماثلة = 15)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">5 أنماط فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">25 نمطاً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">120 نمطاً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">كائن له جدار خلوي كيتيني ويجري بناءً ضوئياً في ينابيع حارة، يُصنَّف في؟</div>
+                <div class="mcq-box" data-answer="يحتاج دراسة جينية لأنه مزيج غير مسبوق (احتمالاً طلائعيات أو فطريات ضوئية)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يحتاج دراسة جينية لأنه مزيج غير مسبوق (احتمالاً طلائعيات أو فطريات ضوئية)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مملكة النبات حتماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مملكة الفطريات حتماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مملكة الحيوان</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">صفة لون الريش محكومة بـ4 أزواج من الجينات المتراكمة، عدد الفينوتيبات يساوي؟</div>
+                <div class="mcq-box" data-answer="9 فينوتيبات (من 0 حتى 8 أليلات سائدة)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">9 فينوتيبات (من 0 حتى 8 أليلات سائدة)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">4 فينوتيبات فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">16 فينوتيباً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">256 فينوتيباً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">في الخريطة الوراثية، جين يسبب مناعة ضد الإشعاع يُحدَّد موضعه بـ؟</div>
+                <div class="mcq-box" data-answer="التهجين (Hybridization) ومعدلات العبور مع جينات معروفة المواضع">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">التهجين (Hybridization) ومعدلات العبور مع جينات معروفة المواضع</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الفحص بالعين المجردة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تسلسل كامل الجينوم مباشرةً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">قياس لون الكائن فقط</button>
+                </div>
+            </li>
+
         </ol>
 
-        <div class="subject-title">رابعاً: الرياضيات والفلسفة والتحديات الفكرية (أهم 40 سؤال)</div>
+        <!-- الرياضيات والفلسفة -->
+        <div class="subject-title">رابعاً: الرياضيات والفلسفة والتحديات الفكرية (40 سؤالاً)</div>
         <ol class="q-list" start="61">
-            <li class="hard">إذا كانت أ مصفوفة متماثلة وشبه متماثلة، أثبت أنها مصفوفة صفرية.</li>
-            <li class="hard">حل نظام المعادلات 2س - ص = 3، وس + 3ص = 5 باستخدام المعكوس الضربي.</li>
-            <li class="hard">أوجد معادلة الخط المستقيم المار بالنقطة (2، -1) وعمودي على المتجه (3، 4).</li>
-            <li class="hard">أثبت صحة المتطابقة: (جتا س / 1 - جا س) + (1 - جا س / جتا س) = 2 قا س.</li>
-            <li class="hard">أ ب جـ مثلث، أثبت بالمتجهات أن القطعة الواصلة بين منتصفي ضلعين توازي الثالث.</li>
-            <li class="hard">من قمة برج ارتفاعه 50م، قيست زاوية انخفاض مبنى 30 و 45 درجة، أوجد الارتفاع.</li>
-            <li class="very-hard">إذا كانت المصفوفة أ على النظم 3×3 ومحددها = 5، أوجد قيمة محدد (2 أ^مرفقة).</li>
-            <li class="very-hard">أثبت باستخدام المتجهات أن منصفات زوايا المثلث تتقاطع في نقطة واحدة.</li>
-            <li class="impossible">أثبت أن المعكوس الضربي لمصفوفة موجود فقط إذا كان محددها لا يساوي صفراً.</li>
-            <li class="impossible">حل المعادلة المثلثية: جا^6(س) + جتا^6(س) = 1/4.</li>
-            <li class="hard">"العلم لا يعطي حقائق نهائية". ناقش في ضوء خصائص المعرفة العلمية.</li>
-            <li class="hard">كيف يمكن تطبيق خطوة "فرض الفروض" لحل مشكلة الازدحام المروري؟</li>
-            <li class="very-hard">إذا كان العلم يعتمد على الحواس وهي خادعة، كيف نطمئن للقوانين؟</li>
-            <li class="impossible">هل الذكاء الاصطناعي قادر على ممارسة "التفكير الإبداعي" أم إعادة تدوير المعرفة؟</li>
-            <li class="impossible">حلل معضلة "السببية" لديفيد هيوم.</li>
-            <li class="very-hard">مفارقة فيرمي: أين الكائنات الفضائية؟</li>
-            <li class="very-hard">الفرق الجوهري بين ميكانيكا الكم والنسبية العامة.</li>
-            <li class="impossible">تأثير المراقب في تجربة الشق المزدوج.</li>
-            <li class="impossible">مصير المعلومات داخل الثقب الأسود.</li>
-            <li class="impossible">مفارقة الجد في السفر عبر الزمن.</li>
-            <li class="impossible">هل نحن نعيش في محاكاة حاسوبية فائقة؟</li>
-            <li class="impossible">هل الوعي يخلق الواقع أم الواقع يخلق الوعي؟</li>
-            <li class="impossible">مفارقة سفينة ثيسيوس.</li>
-            <li class="impossible">فرضية ريمان المتعلقة بتوزيع الأعداد الأولية.</li>
-            <li class="impossible">هل هناك نهاية للمعرفة أم الأسئلة تتوالد للأبد؟</li>
+
+            <li class="hard">
+                <div class="q-text-body">إذا كانت المصفوفة A متماثلة (Aᵀ=A) وشبه متماثلة (Aᵀ=-A) معاً، إذن هي؟</div>
+                <div class="mcq-box" data-answer="مصفوفة صفرية (A=0)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مصفوفة صفرية (A=0)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مصفوفة وحدة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مصفوفة قطرية غير صفرية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مصفوفة متعامدة</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">حل نظام: 2س - ص = 3 و س + 3ص = 5 باستخدام المعكوس الضربي، قيمة (س، ص)؟</div>
+                <div class="mcq-box" data-answer="(2، 1)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(2، 1)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(1، 2)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(3، 0)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(0، 3)</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">معادلة الخط المار بالنقطة (2،-1) والعمودي على المتجه (3، 4) هي؟</div>
+                <div class="mcq-box" data-answer="3(س-2) + 4(ص+1) = 0 أي 3س + 4ص - 2 = 0">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">3س + 4ص - 2 = 0</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">4س - 3ص - 11 = 0</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">3س - 4ص + 10 = 0</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">س + ص + 1 = 0</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">المتطابقة المثلثية: (جتا س / 1-جاس) + (1-جاس / جتاس) تساوي؟</div>
+                <div class="mcq-box" data-answer="2 قا س (أي 2/جتا س)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 قا س</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 جا س</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 جتا س</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 ظا س</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">بالمتجهات، القطعة الواصلة بين منتصفي ضلعين في المثلث توازي الضلع الثالث وطولها؟</div>
+                <div class="mcq-box" data-answer="نصف طول الضلع الثالث">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نصف طول الضلع الثالث</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مساوية للضلع الثالث</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ضعف الضلع الثالث</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تربيع الضلع الثالث</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">من قمة برج 50م، زاوية انخفاض قاعدة مبنى 30°، ارتفاع المبنى إذا كانت زاوية قمته 45°؟</div>
+                <div class="mcq-box" data-answer="≈ 50 - 50/√3 ≈ 21.1 متر">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 21.1 متر</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 25 متر</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 50 متر</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">≈ 36 متر</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">مصفوفة A نظم 3×3 ومحددها = 5، قيمة محدد (2·A المرفقة adj(2A)) تساوي؟<span class="tag tag-very-hard">صعب جداً</span></div>
+                <div class="mcq-box" data-answer="2⁶ × 5² = 64 × 25 = 1600">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">1600</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">40</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">200</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">80</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">بالمتجهات، منصفات زوايا المثلث تتقاطع في نقطة واحدة تُسمى؟</div>
+                <div class="mcq-box" data-answer="مركز الدائرة المحاطة بالمثلث (المحيط الداخلي)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مركز الدائرة المحاطة بالمثلث (المحيط الداخلي)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مركز الثقل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مركز الدائرة المحيطة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مركز التعامد</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">المعكوس الضربي لمصفوفة A موجود فقط عندما؟<span class="tag tag-impossible">مستحيل</span></div>
+                <div class="mcq-box" data-answer="|A| ≠ 0 (المحدد لا يساوي صفراً)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">|A| ≠ 0 (المحدد لا يساوي صفراً)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">|A| = 1 دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">A مصفوفة مربعة فقط بغض النظر عن المحدد</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">A متماثلة</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">حل المعادلة المثلثية: جا⁶(س) + جتا⁶(س) = 1/4، الحل في [0,2π]؟</div>
+                <div class="mcq-box" data-answer="بعد التحليل: (1 - ¾جا²2س) = ¼ → جا2س = ±1 → س = π/4 وما يقابله">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">س = π/4، 3π/4، 5π/4، 7π/4</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">س = 0، π، 2π</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">س = π/6، 5π/6</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا حل حقيقي</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">الفيلسوف الذي قال "العلم لا يعطي حقائق نهائية" يقصد أن المعرفة العلمية؟</div>
+                <div class="mcq-box" data-answer="قابلة للتعديل والمراجعة (احتمالية)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">قابلة للتعديل والمراجعة (احتمالية)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">خاطئة دائماً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يقينية لا تُعدَّل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا قيمة لها</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">خطوة "فرض الفروض" في حل مشكلة الازدحام المروري تعني؟</div>
+                <div class="mcq-box" data-answer="اقتراح حلول مؤقتة قابلة للاختبار (مثل توسعة الطريق أو أنظمة ذكية)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">اقتراح حلول مؤقتة قابلة للاختبار (مثل توسعة الطريق أو أنظمة ذكية)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تجاهل المشكلة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">قبول أول حل مطروح</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">إحالة المشكلة لجهة أخرى</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">إذا كان العلم يعتمد على الحواس وهي قد تخدع، كيف تطمئن للقوانين العلمية؟<span class="tag tag-very-hard">صعب جداً</span></div>
+                <div class="mcq-box" data-answer="بالتحقق التجريبي المتكرر وتعدد الأدوات والمراجعة المستمرة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">بالتحقق التجريبي المتكرر وتعدد الأدوات والمراجعة المستمرة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">العلم لا يطمئن له أبداً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">بالإيمان المطلق بالسلطة العلمية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">بقبول الحواس بلا تساؤل</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">الذكاء الاصطناعي والتفكير الإبداعي: الرأي الفلسفي الأقرب للدقة؟<span class="tag tag-impossible">مستحيل</span></div>
+                <div class="mcq-box" data-answer="يعيد تنظيم المعرفة الموجودة بأنماط جديدة ولا يملك إبداعاً حقيقياً بالمعنى الإنساني">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يعيد تنظيم المعرفة الموجودة بأنماط جديدة ولا يملك إبداعاً حقيقياً بالمعنى الإنساني</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">يملك وعياً وإبداعاً حقيقياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يستطيع فعل أي شيء إبداعي</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">مطابق للإبداع البشري تماماً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">معضلة "السببية" لديفيد هيوم: أين المشكلة الجوهرية؟</div>
+                <div class="mcq-box" data-answer="لا يمكن إثبات العلاقة السببية بالحواس، بل هي عادة ذهنية لا يقين منطقي">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يمكن إثبات العلاقة السببية بالحواس، بل هي عادة ذهنية لا يقين منطقي</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">السببية قانون مطلق في الفيزياء</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا توجد علاقة بين أي أحداث</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">السببية تُثبَت بالتجربة الواحدة</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">مفارقة فيرمي "أين الكائنات الفضائية؟" - التفسير الأكثر قبولاً علمياً؟</div>
+                <div class="mcq-box" data-answer="المسافات الكونية الشاسعة تجعل التواصل أو الوصول شبه مستحيل في نطاق عمر الحضارات">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المسافات الكونية الشاسعة تجعل التواصل أو الوصول شبه مستحيل في نطاق عمر الحضارات</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا توجد حياة ذكية غير الإنسان</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الكائنات تخفي وجودها عمداً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الكون صغير جداً لاحتواء حياة أخرى</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">الفرق الجوهري بين ميكانيكا الكم والنسبية العامة هو؟</div>
+                <div class="mcq-box" data-answer="الكم تصف العالم الصغير باحتمالية، النسبية تصف الكون الكبير بمنحنيات الزمكان">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الكم تصف العالم الصغير باحتمالية، النسبية تصف الكون الكبير بمنحنيات الزمكان</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كلتاهما تصفان نفس الأشياء</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">النسبية تصف الجسيمات الدون ذرية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ميكانيكا الكم أثبتت خطأ النسبية كلياً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">تأثير المراقب في تجربة الشق المزدوج يُظهر أن الجسيمات؟</div>
+                <div class="mcq-box" data-answer="تتصرف كموجات (تداخل) بدون قياس، وكجسيمات (خطوط) عند القياس">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتصرف كموجات بدون قياس، وكجسيمات عند القياس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">دائماً جسيمات بغض النظر عن القياس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">دائماً موجات بغض النظر عن القياس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">القياس لا يؤثر في سلوكها</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">مصير المعلومات داخل الثقب الأسود وفق مبدأ هوكينج؟</div>
+                <div class="mcq-box" data-answer="ربما تُشفَّر على أفق الحدث وتُطلَق مع إشعاع هوكينج (لا تُتلف)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">ربما تُشفَّر على أفق الحدث وتُطلَق مع إشعاع هوكينج (لا تُتلف)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تُتلف نهائياً ولا تُسترجع</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تنتقل لكون موازٍ</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المعلومات تخرج من الجانب الآخر للثقب</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">مفارقة الجد في السفر عبر الزمن للماضي وقتل الجد - أشهر حل فيزيائي؟</div>
+                <div class="mcq-box" data-answer="نظرية التاريخ المتسق: أي فعل في الماضي قد حدث بالفعل ولا يمكنه تغيير المستقبل">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نظرية التاريخ المتسق: الماضي لا يتغير مهما فعلت</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">نظرية الأكوان المتوازية: تنشأ خط زمني جديد</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">السفر عبر الزمن مستحيل رياضياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الفيزياء لا تتناول هذا السؤال</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">فرضية المحاكاة الحاسوبية (نيك بوسترم): الحجة الرئيسية هي؟</div>
+                <div class="mcq-box" data-answer="إذا أمكن محاكاة وعي فإن أغلب الكائنات الواعية ستكون في محاكاة وليس في الحقيقة">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">إذا أمكن محاكاة وعي فإن أغلب الكائنات الواعية ستكون محاكَاة</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا يمكن محاكاة وعي إطلاقاً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الكون محاكاة مثبتة علمياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الفرضية تُثبت وجود الله</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">هل الوعي يخلق الواقع أم العكس؟ - موقف الفيزياء الكمية؟</div>
+                <div class="mcq-box" data-answer="القياس (الوعي) يحدد حالة الجسيم: يُرجَّح أن الواقع الكمي محتمل حتى يُقاس">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">القياس يحدد حالة الجسيم: الواقع الكمي محتمل حتى يُقاس</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الواقع يوجد بمعزل تام عن الوعي</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الوعي لا يؤثر في الفيزياء أبداً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">السؤال لا معنى له علمياً</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">مفارقة سفينة ثيسيوس - السؤال الفلسفي الجوهري هو؟</div>
+                <div class="mcq-box" data-answer="هل الهوية تعتمد على الاستمرارية المادية أم الاستمرارية الوظيفية؟">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">هل الهوية تعتمد على الاستمرارية المادية أم الوظيفية؟</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">هل يمكن بناء سفينة مطابقة؟</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">هل الخشب القديم له قيمة أكبر؟</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">هل ثيسيوس حقيقي أم أسطوري؟</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">فرضية ريمان تتعلق بأصفار دالة زيتا، وأهميتها في توزيع الأعداد الأولية هي؟</div>
+                <div class="mcq-box" data-answer="إثباتها يعني أن توزيع الأعداد الأولية أكثر انتظاماً مما نظن (وله تطبيقات في التشفير)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">إثباتها يعني انتظام توزيع الأعداد الأولية وله تطبيقات في التشفير</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تُثبت أن الأعداد الأولية متناهية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا علاقة لها بالأعداد الأولية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أُثبتت عام 2000</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">هل هناك نهاية للمعرفة؟ - مبرهنة غودل تقول؟</div>
+                <div class="mcq-box" data-answer="في أي نظام رياضي متسق توجد دائماً قضايا لا يمكن إثباتها أو نفيها (الأسئلة لا تنتهي)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">توجد دائماً قضايا لا تُثبت ولا تُنفى (الأسئلة لا تنتهي)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كل الحقائق يمكن إثباتها رياضياً</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المعرفة ستنتهي بحلول 2100</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">غودل أثبت أن الرياضيات مكتملة</button>
+                </div>
+            </li>
+
+            <!-- أسئلة إضافية لاستكمال 40 سؤالاً -->
+            <li class="hard">
+                <div class="q-text-body">أوجد نقطة تقاطع الخطين: س - ص = 2 و 2س + ص = 7</div>
+                <div class="mcq-box" data-answer="(3، 1)">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(3، 1)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(2، 0)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(1، 3)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">(4، 2)</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">جا(س + ص) + جا(س - ص) باستخدام مجموع الصيغ يساوي؟</div>
+                <div class="mcq-box" data-answer="2 جا س جتا ص">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 جا س جتا ص</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 جتا س جتا ص</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2 جا س جا ص</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">جا 2س</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">إذا كانت A = [[1,2],[3,4]]، قيمة محدد A تساوي؟</div>
+                <div class="mcq-box" data-answer="-2">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">-2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">10</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">-10</button>
+                </div>
+            </li>
+
+            <li class="hard">
+                <div class="q-text-body">في مثلث قياس زاويته A=60°، ب=4، جـ=6، قيمة ضلع "أ" بقانون جيب التمام؟</div>
+                <div class="mcq-box" data-answer="√28 ≈ 5.3">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√28 ≈ 5.3</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√52 ≈ 7.2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√20 ≈ 4.5</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">√36 = 6</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">مفهوم "الاستنتاج" في الفلسفة يختلف عن "الاستقراء" في أن؟</div>
+                <div class="mcq-box" data-answer="الاستنتاج يصل من العام للخاص بيقين، الاستقراء من الخاص للعام باحتمالية">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الاستنتاج من العام للخاص بيقين، الاستقراء من الخاص للعام باحتمالية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كلاهما نفس المعنى</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الاستقراء يعطي يقيناً أكبر</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الاستنتاج يستخدم في العلوم التجريبية فقط</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">المتجه أ⃗ = (2، -1، 3) والمتجه ب⃗ = (1، 4، -2)، حاصل ضربهما النقطي يساوي؟</div>
+                <div class="mcq-box" data-answer="-8">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">-8</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">8</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">0</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">14</button>
+                </div>
+            </li>
+
+            <li class="very-hard">
+                <div class="q-text-body">إذا كانت المصفوفة A مقلوبة لنفسها (A² = I)، فإن قيم المحدد الممكنة هي؟</div>
+                <div class="mcq-box" data-answer="+1 أو -1 فقط">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">+1 أو -1 فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أي قيمة حقيقية</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">صفر فقط</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">+1 فقط</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">نظرية الأعداد: مبرهنة فيرما الأخيرة (أثبتها أندرو وايلز 1995) تنص على؟</div>
+                <div class="mcq-box" data-answer="لا توجد حلول صحيحة موجبة للمعادلة xⁿ + yⁿ = zⁿ عندما n > 2">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا توجد حلول صحيحة لـ xⁿ + yⁿ = zⁿ عند n أكبر من 2</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">توجد حلول لا نهائية لأي n</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المعادلة صحيحة فقط عند n=2 (فيثاغورس)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">المبرهنة لا تزال غير مُثبَتة</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">مشكلة P مقابل NP: ماذا يعني حلها؟</div>
+                <div class="mcq-box" data-answer="إثبات أن ما يمكن التحقق منه بسرعة يمكن حله بسرعة (أو العكس) سيثور في التشفير والذكاء الاصطناعي">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">إثبات تساوي أو تفاوت فئتي المسائل الحسابية (ثورة في التشفير والذكاء الاصطناعي)</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">هي مجرد مسألة رياضية نظرية لا تطبيق لها</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">أُثبت أن P=NP بالفعل</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">تتعلق بسرعة الحاسوب فقط لا بالرياضيات</button>
+                </div>
+            </li>
+
+            <li class="impossible">
+                <div class="q-text-body">مبدأ "شفرة أوكام" في الفلسفة العلمية يعني؟</div>
+                <div class="mcq-box" data-answer="لا تضاعف الفروض دون ضرورة: الحل الأبسط هو الأرجح">
+                    <button class="mcq-btn" onclick="sylAnswer(this)">لا تضاعف الفروض دون ضرورة: الحل الأبسط هو الأرجح</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">كل الفروض يجب أن تُختبر</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">الفروض المعقدة دائماً أدق</button>
+                    <button class="mcq-btn" onclick="sylAnswer(this)">العلم يرفض الحلول البسيطة</button>
+                </div>
+            </li>
+
         </ol>
 
-    </div>
-</div>
+    </div><!-- نهاية تبويب المنهج -->
+</div><!-- نهاية app-container -->
 
 <div class="bottom-nav">
     <button class="nav-item active" onclick="switchTab('game-tab', this)">
@@ -275,6 +1162,7 @@
 </div>
 
 <script>
+    // Firebase config
     const firebaseConfig = {
         apiKey: "AIzaSyDXr5aORgONB7Cvq9qTru3Y_v0-dLzVYNA",
         authDomain: "tay-game.firebaseapp.com",
@@ -288,133 +1176,157 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // إضافة الخيارات (أ ب ج د) لجميع أسئلة المنهج تلقائياً
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('ol.q-list li').forEach((li, index) => {
-            const mcqHtml = `
-            <div class="mcq-box">
-                <label><input type="radio" name="q${index}"> أ</label>
-                <label><input type="radio" name="q${index}"> ب</label>
-                <label><input type="radio" name="q${index}"> ج</label>
-                <label><input type="radio" name="q${index}"> د</label>
-            </div>`;
-            li.innerHTML += mcqHtml;
-        });
-    });
+    // =============================================
+    // منطق أسئلة المنهج التفاعلية
+    // =============================================
+    function sylAnswer(btn) {
+        const box = btn.closest('.mcq-box');
+        if (!box || box.dataset.answered) return;
+        box.dataset.answered = "true";
 
-    // --- بنك أسئلة اللعبة الجبار (100 سؤال) ---
+        const correct = box.dataset.answer;
+        const allBtns = box.querySelectorAll('.mcq-btn');
+
+        allBtns.forEach(b => {
+            b.disabled = true;
+            if (b.textContent.trim() === correct) {
+                b.classList.add('s-reveal');
+            }
+        });
+
+        if (btn.textContent.trim() === correct) {
+            btn.classList.add('s-correct');
+        } else {
+            btn.classList.add('s-wrong');
+        }
+    }
+
+    // =============================================
+    // بنك أسئلة اللعبة (100 سؤال متنوع فريد)
+    // =============================================
     const gameQuestions = [
-        { q: "فيزياء: ما هي وحدة قياس القوة الجاذبة المركزية؟", a: "النيوتن", o: ["النيوتن", "الجول", "الوات", "المتر/ثانية"] },
-        { q: "كيمياء: ما هو رمز غاز الميثان؟", a: "CH4", o: ["CH4", "CO2", "H2O", "NH3"] },
-        { q: "أحياء: أين يتم تخزين الجليكوجين في جسم الإنسان؟", a: "الكبد والعضلات", o: ["الكبد والعضلات", "المعدة", "الرئتين", "العظام"] },
-        { q: "رياضيات: مصفوفة 2x3 ضرب مصفوفة 3x2 تعطي مصفوفة نظمها؟", a: "2x2", o: ["2x2", "3x3", "2x3", "5x5"] },
-        { q: "أنمي: من هو 'الخالي من المشاعر'؟", a: "غابيمارو", o: ["غابيمارو", "ناروتو", "لوفي", "إيرين"] },
-        { q: "فيزياء: تزداد عجلة الجاذبية كلما...", a: "اقتربنا من مركز الأرض", o: ["اقتربنا من مركز الأرض", "ابتعدنا عن الأرض", "زاد الارتفاع", "قلت الكتلة"] },
-        { q: "كيمياء: تفاعل طارد للحرارة تكون فيه دلتا H...", a: "سالبة", o: ["سالبة", "موجبة", "صفر", "لا نهائية"] },
-        { q: "أحياء: فصيلة الدم التي تعتبر معطياً عاماً هي؟", a: "O", o: ["O", "A", "B", "AB"] },
-        { q: "رياضيات: جا تربيع س + جتا تربيع س تساوي؟", a: "1", o: ["1", "صفر", "2", "0.5"] },
-        { q: "ذكاء: ما هو الشيء الذي يكسى الناس وهو عارٍ؟", a: "الإبرة", o: ["الإبرة", "الشجر", "البحر", "الطريق"] },
-        { q: "فيزياء: السرعة المدارية للقمر الصناعي تعتمد على...", a: "نصف قطر المدار", o: ["نصف قطر المدار", "كتلة القمر", "لون القمر", "طول القمر"] },
-        { q: "كيمياء: الرابطة في جزيء الهيدروجين هي؟", a: "تساهمية نقية", o: ["تساهمية نقية", "أيونية", "فلزية", "تناسقية"] },
-        { q: "أحياء: عدد الكروموسومات في الخلية الجسدية للإنسان؟", a: "46", o: ["46", "23", "92", "12"] },
-        { q: "فلسفة: المعرفة العلمية معرفة...", a: "احتمالية", o: ["احتمالية", "يقينية مطلقة", "خرافية", "ثابتة"] },
-        { q: "رياضيات: ميل الخط المستقيم الموازي لمحور السينات؟", a: "صفر", o: ["صفر", "1", "غير معرف", "-1"] },
-        { q: "فيزياء: الشغل المبذول يساوي القوة في...", a: "الإزاحة", o: ["الإزاحة", "الزمن", "الكتلة", "السرعة"] },
-        { q: "كيمياء: المحتوى الحراري للعنصر في حالته القياسية؟", a: "صفر", o: ["صفر", "100", "1", "50"] },
-        { q: "أحياء: جين صفة الصلع في الرجال هو جين...", a: "متأثر بالجنس", o: ["متأثر بالجنس", "مرتبط بالجنس", "مميت", "متنحي دائماً"] },
-        { q: "رياضيات: محدد المصفوفة الصفرية دائماً...", a: "صفر", o: ["صفر", "1", "لا يمكن حسابه", "مالانهاية"] },
-        { q: "عام: ما هو الكوكب الأحمر؟", a: "المريخ", o: ["المريخ", "المشتري", "زحل", "الزهرة"] },
-        { q: "فيزياء: إذا تضاعفت المسافة بين كتلتين، القوة تقل إلى...", a: "الربع", o: ["الربع", "النصف", "الثمن", "تظل ثابتة"] },
-        { q: "كيمياء: الحرارة النوعية للماء هي...", a: "4.18", o: ["4.18", "1", "2.5", "0.9"] },
-        { q: "أحياء: مملكة تضم كائنات تعيش في الينابيع الحارة؟", a: "البدائيات", o: ["البدائيات", "الفطريات", "النبات", "الحيوان"] },
-        { q: "رياضيات: الزاوية 180 درجة تسمى زاوية...", a: "مستقيمة", o: ["مستقيمة", "قائمة", "حادة", "منفرجة"] },
-        { q: "ذكاء: ما هو الذي يكون أمامك دائماً ولا تراه؟", a: "المستقبل", o: ["المستقبل", "الهواء", "الشمس", "القمر"] },
-        { q: "فيزياء: طاقة الوضع تعتمد على الكتلة والارتفاع و...", a: "عجلة الجاذبية", o: ["عجلة الجاذبية", "السرعة", "الحجم", "الكثافة"] },
-        { q: "كيمياء: جسيم ألفا عبارة عن نواة ذرة...", a: "الهيليوم", o: ["الهيليوم", "الهيدروجين", "الليثيوم", "الكربون"] },
-        { q: "أحياء: النيوكليوتيدة هي وحدة بناء...", a: "الحمض النووي", o: ["الحمض النووي", "البروتين", "الدهون", "النشا"] },
-        { q: "رياضيات: قياس الزاوية الخارجية للمثلث المتساوي الأضلاع؟", a: "120", o: ["120", "60", "90", "180"] },
-        { q: "فيزياء: الحركة الاهتزازية مثال للحركة...", a: "الدورية", o: ["الدورية", "الموجية", "الانتقالية", "الدائرية"] },
-        { q: "كيمياء: قانون هس يتعامل مع التفاعلات كأنها معادلات...", a: "جبرية", o: ["جبرية", "كيميائية فقط", "فيزيائية", "نووية"] },
-        { q: "أحياء: مؤسس علم التصنيف الحديث هو...", a: "كارل لينيوس", o: ["كارل لينيوس", "مندل", "داروين", "ارسطو"] },
-        { q: "رياضيات: المعكوس الضربي للمصفوفة يكون موجوداً إذا كان المحدد...", a: "لا يساوي صفر", o: ["لا يساوي صفر", "يساوي صفر", "يساوي واحد", "سالب"] },
-        { q: "ذكاء: يسير بلا رجلين ولا يدخل إلا بالأذنين، ما هو؟", a: "الصوت", o: ["الصوت", "الماء", "النور", "الريح"] },
-        { q: "فيزياء: وحدة قياس التردد هي؟", a: "الهرتز", o: ["الهرتز", "المتر", "الثانية", "النيوتن"] },
-        { q: "كيمياء: النظائر هي ذرات لها نفس العدد الذري وتختلف في...", a: "الكتلي", o: ["الكتلي", "الإلكترونات", "البروتونات", "الكيميائي"] },
-        { q: "أحياء: الطور الذي تختفي فيه النوية والغشاء النووي؟", a: "التمهيدي", o: ["التمهيدي", "الاستوائي", "الانفصالي", "النهائي"] },
-        { q: "رياضيات: طول القوس الذي يقابل زاوية مركزية 1 راديان في دائرة نق=5؟", a: "5", o: ["5", "1", "10", "3.14"] },
-        { q: "أنمي: ما هي عين الشارينغان؟", a: "قدرة بصرية", o: ["قدرة بصرية", "سيف", "طاقة ريح", "وحش"] },
-        { q: "فيزياء: الضغط يقاس بوحدة؟", a: "الباسكال", o: ["الباسكال", "النيوتن", "الجول", "الكيلوجرام"] },
-        { q: "كيمياء: الاندماج النووي يحدث غالباً في...", a: "النجوم", o: ["النجوم", "المفاعلات الأرضية", "البطاريات", "الاحتراق"] },
-        { q: "أحياء: فطر عفن الخبز يتكاثر عن طريق...", a: "الجراثيم", o: ["الجراثيم", "التبرعم", "الانشطار", "التجدد"] },
-        { q: "رياضيات: عدد أقطار الشكل الخماسي؟", a: "5", o: ["5", "2", "10", "0"] },
-        { q: "ذكاء: ما هو الشيء الذي يزداد كلما أخذت منه؟", a: "الحفرة", o: ["الحفرة", "العمر", "المال", "العلم"] },
-        { q: "فيزياء: الموجات الصوتية موجات...", a: "طولية", o: ["طولية", "مستعرضة", "كهرومغناطيسية", "فراغية"] },
-        { q: "كيمياء: أشعة بيتا عبارة عن...", a: "إلكترونات", o: ["إلكترونات", "بروتونات", "فوتونات", "نيوترونات"] },
-        { q: "أحياء: الغدة النخامية تسمى غدة...", a: "المايسترو", o: ["المايسترو", "الادرينالين", "النمو", "اللعاب"] },
-        { q: "رياضيات: مساحة الدائرة تساوي؟", a: "ط نق تربيع", o: ["ط نق تربيع", "2 ط نق", "ط نق", "4 ط نق"] },
-        { q: "عام: كم عدد قارات العالم؟", a: "7", o: ["7", "6", "5", "8"] },
-        { q: "فيزياء: سرعة الضوء في الفراغ تقريباً...", a: "300 ألف كم/ث", o: ["300 ألف كم/ث", "300 م/ث", "1000 كم/ث", "مليون كم/ث"] },
-        { q: "كيمياء: الرقم الهيدروجيني pH للماء النقي هو؟", a: "7", o: ["7", "1", "14", "0"] },
-        { q: "أحياء: الوحدة البنائية للكلية هي...", a: "النيفرون", o: ["النيفرون", "العصبون", "الحويصلة", "المعدة"] },
-        { q: "رياضيات: قيمة جا 30 تساوي؟", a: "0.5", o: ["0.5", "1", "0", "0.866"] },
-        { q: "فلسفة: من القائل 'أنا أفكر، إذن أنا موجود'؟", a: "ديكارت", o: ["ديكارت", "سقراط", "أفلاطون", "أرسطو"] },
-        { q: "ذكاء: شيء له أسنان ولا يعض، ما هو؟", a: "المشط", o: ["المشط", "المسمار", "المفتاح", "الكتاب"] },
-        { q: "فيزياء: ما هو الجهاز المستخدم لقياس التيار الكهربائي؟", a: "الأميتر", o: ["الأميتر", "الفولتميتر", "الأوميتر", "البارومتر"] },
-        { q: "كيمياء: الغاز الذي يشتعل بفرقعة هو...", a: "الهيدروجين", o: ["الهيدروجين", "الأكسجين", "النيتروجين", "الهيليوم"] },
-        { q: "أحياء: أي الفصائل التالية لا تحتوي على أجسام مضادة؟", a: "AB", o: ["AB", "O", "A", "B"] },
-        { q: "رياضيات: مجموع قياسات زوايا المثلث الداخلية؟", a: "180", o: ["180", "360", "90", "270"] },
-        { q: "أنمي: ما هو حلم مونكي دي لوفي؟", a: "ملك القراصنة", o: ["ملك القراصنة", "الهوكاجي", "صائد شياطين", "بطل خارق"] },
-        { q: "فيزياء: طاقة الحركة لجسم ساكن تساوي...", a: "صفر", o: ["صفر", "10", "مالانهاية", "سالبة"] },
-        { q: "كيمياء: الصيغة الكيميائية لملح الطعام؟", a: "NaCl", o: ["NaCl", "H2O", "CO2", "HCl"] },
-        { q: "أحياء: مرض عمى الألوان محمول على الكروموسوم...", a: "X", o: ["X", "Y", "21", "22"] },
-        { q: "رياضيات: جتا 60 تساوي...", a: "0.5", o: ["0.5", "1", "0.866", "صفر"] },
-        { q: "عام: ما هو أطول نهر في العالم؟", a: "النيل", o: ["النيل", "الأمازون", "الفرات", "الميسيسيبي"] },
-        { q: "فيزياء: القوة التي تعيق الحركة تسمى قوة...", a: "الاحتكاك", o: ["الاحتكاك", "الجاذبية", "الدفع", "الشد"] },
-        { q: "كيمياء: المادة التي تغير لون ورقة عباد الشمس للأحمر؟", a: "حمض", o: ["حمض", "قاعدة", "ملح متعادل", "ماء نقي"] },
-        { q: "أحياء: الجزء المسؤول عن حفظ التوازن في الدماغ؟", a: "المخيخ", o: ["المخيخ", "النخاع", "المخ", "القنطرة"] },
-        { q: "رياضيات: مشتقة الثابت تساوي...", a: "صفر", o: ["صفر", "1", "س", "مالانهاية"] },
-        { q: "ذكاء: ما هو الشيء الذي كلما كثر غلا وكلما قل رخص؟", a: "العقل", o: ["العقل", "الذهب", "الماء", "التراب"] },
-        { q: "فيزياء: من مكتشف قوانين الحركة؟", a: "نيوتن", o: ["نيوتن", "أينشتاين", "جاليليو", "باسكال"] },
-        { q: "كيمياء: التوزيع الإلكتروني للصوديوم Na11 هو...", a: "2, 8, 1", o: ["2, 8, 1", "2, 8, 2", "2, 8", "2, 8, 8"] },
-        { q: "أحياء: الغاز الذي تأخذه النباتات في البناء الضوئي؟", a: "ثاني أكسيد الكربون", o: ["ثاني أكسيد الكربون", "الأكسجين", "النيتروجين", "الهيدروجين"] },
-        { q: "رياضيات: العدد الأولي الزوجي الوحيد هو...", a: "2", o: ["2", "4", "6", "8"] },
-        { q: "فلسفة: مؤسس علم المنطق هو...", a: "أرسطو", o: ["أرسطو", "أفلاطون", "سقراط", "كانط"] },
-        { q: "ذكاء: ما هو القفص الذي لا يحبس فيه أي حيوان؟", a: "القفص الصدري", o: ["القفص الصدري", "قفص الاتهام", "قفص العصافير", "القفص الحديدي"] },
-        { q: "فيزياء: البندول البسيط مثال على حركة...", a: "توافقية بسيطة", o: ["توافقية بسيطة", "دائرية", "مستقيمة", "عشوائية"] },
-        { q: "كيمياء: عدد أفوجادرو يساوي تقريباً...", a: "6.02 x 10^23", o: ["6.02 x 10^23", "3.14", "9.8", "1000"] },
-        { q: "أحياء: فقر الدم ينتج عن نقص...", a: "الحديد", o: ["الحديد", "الكالسيوم", "الصوديوم", "البوتاسيوم"] },
-        { q: "رياضيات: الجذر التربيعي للعدد 144 هو...", a: "12", o: ["12", "14", "16", "10"] },
-        { q: "أنمي: اسم السيف الملعون في ون بيس؟", a: "إنما", o: ["إنما", "يورو", "سوسانو", "إكسكاليبر"] },
-        { q: "فيزياء: الإزاحة كمية...", a: "متجهة", o: ["متجهة", "قياسية", "أساسية", "عددية"] },
-        { q: "كيمياء: الألكانات مركبات هيدروكربونية...", a: "مشبعة", o: ["مشبعة", "غير مشبعة", "حلقية", "أروماتية"] },
-        { q: "أحياء: الكروموسوم المسؤول عن تحديد الذكورة؟", a: "Y", o: ["Y", "X", "O", "A"] },
-        { q: "رياضيات: حجم المكعب الذي طول حرفه 3؟", a: "27", o: ["27", "9", "18", "6"] },
-        { q: "عام: ما هو المعدن السائل في درجة الحرارة العادية؟", a: "الزئبق", o: ["الزئبق", "الحديد", "النحاس", "الألمنيوم"] },
-        { q: "فيزياء: وحدة قياس كمية التحرك؟", a: "كجم.م/ث", o: ["كجم.م/ث", "نيوتن", "جول", "وات"] },
-        { q: "كيمياء: عدد الكم الرئيسي n يحدد...", a: "مستوى الطاقة", o: ["مستوى الطاقة", "شكل المدار", "اتجاه المدار", "دوران الإلكترون"] },
-        { q: "أحياء: من مكتشف الدورة الدموية الكبرى؟", a: "ابن النفيس", o: ["ابن النفيس", "ابن سينا", "هارفي", "مندل"] },
-        { q: "رياضيات: 5 مضروب (5!) يساوي...", a: "120", o: ["120", "25", "100", "50"] },
-        { q: "ذكاء: له عين واحدة ولا يرى، ما هو؟", a: "الإبرة", o: ["الإبرة", "الإعصار", "الخيط", "المفتاح"] },
-        { q: "فيزياء: تحولات الطاقة في المولد الكهربائي من...", a: "ميكانيكية لكهربية", o: ["ميكانيكية لكهربية", "كهربية لميكانيكية", "حرارية لكهربية", "كيميائية لكهربية"] },
-        { q: "كيمياء: حمض الكبريتيك صيغته...", a: "H2SO4", o: ["H2SO4", "HCl", "HNO3", "H3PO4"] },
-        { q: "أحياء: العضية المسؤولة عن إنتاج الطاقة في الخلية؟", a: "الميتوكوندريا", o: ["الميتوكوندريا", "النواة", "الريبوسوم", "الجولجي"] },
-        { q: "رياضيات: log(1) للأساس 10 يساوي...", a: "0", o: ["0", "1", "10", "غير معرف"] },
-        { q: "عام: ما هي عاصمة اليابان؟", a: "طوكيو", o: ["طوكيو", "بكين", "سول", "أوساكا"] },
-        { q: "فيزياء: قوة الطفو تتبع قاعدة...", a: "أرخميدس", o: ["أرخميدس", "باسكال", "نيوتن", "برنولي"] },
-        { q: "كيمياء: تفاعل الحمض مع القاعدة يعطي...", a: "ملح وماء", o: ["ملح وماء", "غاز", "راسب", "طاقة فقط"] },
-        { q: "أحياء: ما هو أكبر عضو في جسم الإنسان؟", a: "الجلد", o: ["الجلد", "الكبد", "القلب", "الرئة"] },
-        { q: "تحدي: من هو مؤسس هذا الموقع؟", a: "يوسف غابيمارو", o: ["يوسف غابيمارو", "مدرس الفيزياء", "شركة جوجل", "أحمد"] }
+        // فيزياء - حركة دائرية
+        { q: "🔵 فيزياء: وحدة قياس القوة المركزية في النظام الدولي؟", a: "نيوتن (N)", o: ["نيوتن (N)", "جول (J)", "وات (W)", "باسكال (Pa)"] },
+        { q: "🔵 فيزياء: عندما تتضاعف السرعة في المسار الدائري، القوة المركزية؟", a: "تتضاعف 4 مرات", o: ["تتضاعف 4 مرات", "تتضاعف مرتين", "تظل ثابتة", "تنصف"] },
+        { q: "🔵 فيزياء: تسارع الجسم في الحركة الدائرية المنتظمة يكون دائماً؟", a: "باتجاه المركز", o: ["باتجاه المركز", "مماساً للمسار", "صفراً", "مواجهاً للحركة"] },
+        { q: "🔵 فيزياء: السرعة المدارية للقمر الصناعي v = √(GM/r)، ما الذي يحددها؟", a: "نصف قطر المدار وكتلة الأرض", o: ["نصف قطر المدار وكتلة الأرض", "كتلة القمر فقط", "سرعة الأرض فقط", "ضغط الغلاف الجوي"] },
+        { q: "🔵 فيزياء: الزمن الدوري للقمر الصناعي يتناسب مع نصف القطر بأس؟", a: "3/2", o: ["3/2", "1/2", "2", "1"] },
+        { q: "🔵 فيزياء: إذا تضاعف نصف قطر مدار القمر الصناعي، سرعته المدارية؟", a: "تصبح 1/√2 من الأصلية", o: ["تصبح 1/√2 من الأصلية", "تتضاعف", "تتضاعف 4 مرات", "تظل ثابتة"] },
+        // فيزياء - جاذبية كونية
+        { q: "🟡 فيزياء: من صاغ قانون الجاذبية الكونية؟", a: "إسحاق نيوتن", o: ["إسحاق نيوتن", "ألبرت أينشتاين", "جاليليو جاليلي", "إدوين هابل"] },
+        { q: "🟡 فيزياء: ثابت الجاذبية الكونية G يساوي تقريباً؟", a: "6.67 × 10⁻¹¹ N·m²/kg²", o: ["6.67 × 10⁻¹¹ N·m²/kg²", "9.8 m/s²", "3 × 10⁸ m/s", "6.02 × 10²³"] },
+        { q: "🟡 فيزياء: القمر المتزامن مع الأرض يقع على ارتفاع؟", a: "≈ 36000 كيلومتر", o: ["≈ 36000 كيلومتر", "≈ 400 كيلومتر", "≈ 100 كيلومتر", "≈ 1 مليون كيلومتر"] },
+        { q: "🟡 فيزياء: عجلة الجاذبية g عند ارتفاع R (على مسافة 2R من المركز)؟", a: "g/4", o: ["g/4", "g/2", "g", "2g"] },
+        // فيزياء - شغل وطاقة
+        { q: "🟢 فيزياء: الشغل = القوة × الإزاحة × ؟", a: "جتا الزاوية بينهما", o: ["جتا الزاوية بينهما", "جا الزاوية", "مجموع القوى", "الزمن"] },
+        { q: "🟢 فيزياء: طاقة حركة جسم كتلته 4 كجم يتحرك بسرعة 10 م/ث؟", a: "200 جول", o: ["200 جول", "400 جول", "40 جول", "80 جول"] },
+        { q: "🟢 فيزياء: مبدأ حفظ الطاقة الميكانيكية ينطبق عند غياب؟", a: "قوى الاحتكاك", o: ["قوى الاحتكاك", "قوى الجاذبية", "قوى الشد", "كل القوى"] },
+        { q: "🟢 فيزياء: القوة التي لا تبذل شغلاً عند الحركة الدائرية المنتظمة؟", a: "القوة المركزية", o: ["القوة المركزية", "الجاذبية", "قوة الاحتكاك", "القوة الطاردة"] },
+        { q: "🟢 فيزياء: وحدة قياس القدرة (الطاقة/الزمن)؟", a: "وات", o: ["وات", "جول", "نيوتن", "ميجا"] },
+        // كيمياء - حرارية
+        { q: "🔴 كيمياء: التفاعل الذي يمتص الحرارة من المحيط يسمى؟", a: "ماص للحرارة (ΔH موجب)", o: ["ماص للحرارة (ΔH موجب)", "طارد للحرارة (ΔH سالب)", "متعادل حرارياً", "محفوز"] },
+        { q: "🔴 كيمياء: حرارة التكوين القياسية للعنصر في حالته المرجعية تساوي؟", a: "صفر", o: ["صفر", "100 kJ/mol", "1 kJ/mol", "غير معرفة"] },
+        { q: "🔴 كيمياء: قانون هس ينص على أن تغير الانثالبي ΔH؟", a: "لا يتعلق بمسار التفاعل بل بالحالة الابتدائية والنهائية فقط", o: ["لا يتعلق بمسار التفاعل", "يعتمد على عدد خطوات التفاعل", "يختلف مع درجة الحرارة دائماً", "يساوي صفر دائماً"] },
+        { q: "🔴 كيمياء: الجهاز المستخدم لقياس حرارة التفاعل يسمى؟", a: "المسعر (Calorimeter)", o: ["المسعر (Calorimeter)", "الترمومتر", "الكروماتوجراف", "المطياف"] },
+        { q: "🔴 كيمياء: طاقة التنشيط للتفاعل الكيميائي يعرّفها؟", a: "الفرق بين طاقة حالة الانتقال وطاقة المتفاعلات", o: ["الفرق بين طاقة حالة الانتقال وطاقة المتفاعلات", "فرق ΔH", "طاقة النواتج فقط", "الحرارة المنطلقة الكلية"] },
+        // كيمياء - نووية
+        { q: "🟠 كيمياء: نصف عمر العينة المشعة يعني؟", a: "الزمن اللازم لتحلل نصف عدد النوى المشعة", o: ["الزمن اللازم لتحلل نصف عدد النوى المشعة", "الزمن الكلي للتحلل", "وقت تضاعف النشاط الإشعاعي", "عمر الذرة"] },
+        { q: "🟠 كيمياء: جسيم بيتا (β⁻) هو؟", a: "إلكترون عالي الطاقة منبعث من النواة", o: ["إلكترون عالي الطاقة منبعث من النواة", "نواة هيليوم", "فوتون", "نيوترون"] },
+        { q: "🟠 كيمياء: عند انبعاث جسيم ألفا، العدد الذري يتغير بمقدار؟", a: "-2", o: ["-2", "+2", "-4", "+4"] },
+        { q: "🟠 كيمياء: الانشطار النووي هو انقسام نواة ثقيلة لنواتين أصغر مع انطلاق؟", a: "طاقة هائلة ونيوترونات", o: ["طاقة هائلة ونيوترونات", "بروتونات فقط", "فوتونات فقط", "إلكترونات"] },
+        { q: "🟠 كيمياء: الاندماج النووي يحدث في الشمس: 4H → He + طاقة. مصدر الطاقة هو؟", a: "نقص الكتلة المتحول لطاقة (E=mc²)", o: ["نقص الكتلة المتحول لطاقة (E=mc²)", "احتراق الهيدروجين كيميائياً", "التفاعل الحمضي القاعدي", "الكهرباء الساكنة"] },
+        // أحياء - وراثة
+        { q: "🟣 أحياء: عدد كروموسومات الخلية الجسدية في الإنسان؟", a: "46 كروموسوم (23 زوجاً)", o: ["46 كروموسوم (23 زوجاً)", "23 كروموسوم", "92 كروموسوم", "48 كروموسوم"] },
+        { q: "🟣 أحياء: فصيلة الدم O هي المعطي العام لأن دمها؟", a: "لا يحتوي على مستضدات A أو B على كريات الدم", o: ["لا يحتوي على مستضدات A أو B على كريات الدم", "يحتوي على جميع الأجسام المضادة", "خلاياه أصغر حجماً", "لا يتجلط"] },
+        { q: "🟣 أحياء: الجين المرتبط بالجنس يكون موجوداً على الكروموسوم؟", a: "X فقط (في الحالات الشائعة)", o: ["X فقط (في الحالات الشائعة)", "Y فقط", "21 فقط", "أي كروموسوم"] },
+        { q: "🟣 أحياء: في التهجين الأحادي الصفة Aa × Aa، نسبة التعبير عن الصفة المتنحية؟", a: "1/4 (25%)", o: ["1/4 (25%)", "1/2 (50%)", "3/4 (75%)", "صفر"] },
+        { q: "🟣 أحياء: الجين المتأثر بالجنس يختلف في تعبيره بين الذكر والأنثى بسبب؟", a: "الهرمونات الجنسية المختلفة", o: ["الهرمونات الجنسية المختلفة", "اختلاف في الكروموسومات الجسدية", "عدد الكروموسومات", "بيئة الخلية فقط"] },
+        // أحياء - تصنيف
+        { q: "⚪ أحياء: مملكة الفطريات تتغذى بطريقة؟", a: "الامتصاص (تحلل المواد العضوية خارجياً)", o: ["الامتصاص (تحلل المواد العضوية خارجياً)", "البناء الضوئي", "الابتلاع", "الاصطياد"] },
+        { q: "⚪ أحياء: الفيروسات تُصنَّف خارج الممالك لأنها؟", a: "لا تملك خلايا ولا تقوم بأيض مستقل", o: ["لا تملك خلايا ولا تقوم بأيض مستقل", "صغيرة جداً لا تُرى", "لا تتكاثر", "تعيش في الفضاء فقط"] },
+        { q: "⚪ أحياء: النظام المستخدم لتصنيف الكائنات من الأشمل للأخص هو؟", a: "مملكة، شعبة، رتبة، فصيلة، جنس، نوع", o: ["مملكة، شعبة، رتبة، فصيلة، جنس، نوع", "نوع، جنس، فصيلة، رتبة، شعبة، مملكة", "جنس، نوع، مملكة، شعبة", "فصيلة، مملكة، جنس"] },
+        { q: "⚪ أحياء: البكتيريا تنتمي إلى مملكة؟", a: "البدائيات (Monera)", o: ["البدائيات (Monera)", "الطلائعيات", "الفطريات", "الحيوانات"] },
+        { q: "⚪ أحياء: الاسم العلمي للإنسان هو؟", a: "Homo sapiens", o: ["Homo sapiens", "Homo erectus", "Pan sapiens", "Primate human"] },
+        // رياضيات - مصفوفات
+        { q: "📐 رياضيات: ناتج ضرب مصفوفة (2×3) في مصفوفة (3×4) هو مصفوفة نظمها؟", a: "2×4", o: ["2×4", "3×3", "2×3", "4×2"] },
+        { q: "📐 رياضيات: المصفوفة المعكوسة A⁻¹ تحقق الشرط؟", a: "A × A⁻¹ = I (مصفوفة الوحدة)", o: ["A × A⁻¹ = I", "A + A⁻¹ = 0", "A - A⁻¹ = A", "A² = A⁻¹"] },
+        { q: "📐 رياضيات: محدد مصفوفة الوحدة I يساوي؟", a: "1", o: ["1", "0", "-1", "غير معرف"] },
+        { q: "📐 رياضيات: إذا كان محدد A = 0 فإن المصفوفة تكون؟", a: "مفردة (لا معكوس لها)", o: ["مفردة (لا معكوس لها)", "متماثلة", "وحدة", "صفرية"] },
+        { q: "📐 رياضيات: المصفوفة المنقولة Aᵀ تُحصل بـ؟", a: "تبديل الصفوف مع الأعمدة", o: ["تبديل الصفوف مع الأعمدة", "قلب الإشارات", "ضرب عناصرها في -1", "حساب المعكوس الضربي"] },
+        // رياضيات - مثلثات
+        { q: "📐 رياضيات: قيمة جا(90°) تساوي؟", a: "1", o: ["1", "0", "0.5", "√2/2"] },
+        { q: "📐 رياضيات: قيمة جتا(0°) تساوي؟", a: "1", o: ["1", "0", "-1", "غير معرفة"] },
+        { q: "📐 رياضيات: قيمة ظا(45°) تساوي؟", a: "1", o: ["1", "√3", "1/√2", "√3/2"] },
+        { q: "📐 رياضيات: الزاوية 270° بالراديان تساوي؟", a: "3π/2", o: ["3π/2", "π/2", "π", "2π"] },
+        { q: "📐 رياضيات: معادلة جا²س + جتا²س = ؟", a: "1", o: ["1", "0", "2", "جتا 2س"] },
+        // رياضيات - متجهات
+        { q: "📐 رياضيات: المتجهان أ⃗(3،0) وب⃗(0،4)، مقدار مجموعهما؟", a: "5", o: ["5", "7", "12", "1"] },
+        { q: "📐 رياضيات: حاصل الضرب النقطي لمتجهين متعامدين يساوي؟", a: "صفر", o: ["صفر", "1", "مقدار أحدهما", "مجموع مقاديرهما"] },
+        { q: "📐 رياضيات: متجه الوحدة في اتجاه المتجه أ⃗ = (3، 4) يكون؟", a: "(3/5، 4/5)", o: ["(3/5، 4/5)", "(3، 4)", "(4/5، 3/5)", "(1، 1)"] },
+        // فلسفة
+        { q: "💭 فلسفة: من قال 'أنا أفكر إذن أنا موجود'؟", a: "رينيه ديكارت", o: ["رينيه ديكارت", "سقراط", "أفلاطون", "كانط"] },
+        { q: "💭 فلسفة: مؤسس علم المنطق الصوري الأول هو؟", a: "أرسطو", o: ["أرسطو", "أفلاطون", "سقراط", "فيثاغورس"] },
+        { q: "💭 فلسفة: المنهج الاستقرائي في العلم يعتمد على؟", a: "التعميم من الخاص (التجربة) إلى العام (القانون)", o: ["التعميم من الخاص إلى العام", "التوصل من العام إلى الخاص", "الحدس المباشر", "النصوص فقط"] },
+        { q: "💭 فلسفة: خاصية 'الموضوعية' في المعرفة العلمية تعني؟", a: "عدم تأثر النتائج بأراء الباحث الشخصية", o: ["عدم تأثر النتائج بأراء الباحث الشخصية", "صواب النتائج دائماً", "سهولة الفهم", "ثبات النتائج على الدوام"] },
+        { q: "💭 فلسفة: الفرق بين النظرية العلمية والقانون العلمي هو؟", a: "القانون يصف، النظرية تفسر", o: ["القانون يصف، النظرية تفسر", "كلاهما نفس الشيء", "النظرية أقل دقة دائماً", "القانون تخميني والنظرية مؤكدة"] },
+        // أسئلة عامة مثيرة
+        { q: "🧠 ذكاء: ما هو الشيء الذي له أسنان ولا يعض؟", a: "المشط", o: ["المشط", "المنشار", "المفتاح", "المسمار"] },
+        { q: "🧠 ذكاء: له عين واحدة ولا يرى، ما هو؟", a: "الإبرة", o: ["الإبرة", "الإعصار", "الثقب الأسود", "الخاتم"] },
+        { q: "🧠 ذكاء: ما هو الشيء الذي يزداد كلما أخذت منه؟", a: "الحفرة", o: ["الحفرة", "العمر", "المال", "الوقت"] },
+        { q: "🧠 ذكاء: ما هو الذي يكون أمامك دائماً ولا تراه؟", a: "المستقبل", o: ["المستقبل", "الهواء", "العقل", "الخلف"] },
+        { q: "🧠 ذكاء: يسير بلا رجلين ولا يدخل إلا بالأذنين، ما هو؟", a: "الصوت", o: ["الصوت", "الضوء", "الريح", "الماء"] },
+        { q: "🧠 ذكاء: ما الشيء الذي كسي الناس وهو عارٍ؟", a: "الإبرة", o: ["الإبرة", "الشجر", "المرآة", "الأرض"] },
+        // أنمي وثقافة شبابية
+        { q: "🎌 أنمي: من هو غابيمارو في أنمي 'Hell's Paradise'؟", a: "نينجا يبحث عن العفو مقابل العثور على الجنة", o: ["نينجا يبحث عن العفو مقابل العثور على الجنة", "شيطان أسطوري", "ملك الجن", "محارب سامورائي"] },
+        { q: "🎌 أنمي: حلم مونكي دي لوفي في ون بيس؟", a: "ملك القراصنة", o: ["ملك القراصنة", "الهوكاجي", "بطل مريح", "إمبراطور البحار"] },
+        { q: "🎌 أنمي: قوة ناروتو المخبأة في البداية هي؟", a: "ثعلب الذيل التسعة (كيوبي)", o: ["ثعلب الذيل التسعة (كيوبي)", "شيرينغان", "الشكرين", "طاقة الرمل"] },
+        { q: "🎌 أنمي: اسم السيف الملعون في ون بيس لزورو؟", a: "إنما (Enma)", o: ["إنما (Enma)", "يورو", "ساندي", "شوسوي"] },
+        { q: "🎌 أنمي: الشخصية التي تقول 'العالم جميل'؟", a: "لوفي (في كثير من المواقف)", o: ["لوفي (في كثير من المواقف)", "غابيمارو", "إيتاشي", "زيناتسو"] },
+        // معلومات عامة
+        { q: "🌍 عام: ما هو الكوكب الأحمر؟", a: "المريخ", o: ["المريخ", "المشتري", "زحل", "الزهرة"] },
+        { q: "🌍 عام: ما هو أطول نهر في العالم؟", a: "النيل", o: ["النيل", "الأمازون", "الفرات", "الكونغو"] },
+        { q: "🌍 عام: ما هو المعدن السائل في درجة الحرارة العادية؟", a: "الزئبق", o: ["الزئبق", "الرصاص", "النحاس", "الغاليوم"] },
+        { q: "🌍 عام: كم عدد عناصر الجدول الدوري الحالي؟", a: "118 عنصراً", o: ["118 عنصراً", "92 عنصراً", "100 عنصراً", "105 عنصراً"] },
+        { q: "🌍 عام: سرعة الضوء في الفراغ تقريباً؟", a: "300,000 كم/ثانية", o: ["300,000 كم/ثانية", "300 م/ثانية", "مليون كم/ثانية", "150,000 كم/ثانية"] },
+        // أسئلة فيزياء إضافية
+        { q: "🔵 فيزياء: القوة = الكتلة × العجلة، قانون نيوتن؟", a: "الثاني", o: ["الثاني", "الأول", "الثالث", "الصفر"] },
+        { q: "🔵 فيزياء: الكميات المتجهة تحتاج لتحديد؟", a: "المقدار والاتجاه معاً", o: ["المقدار والاتجاه معاً", "المقدار فقط", "الاتجاه فقط", "الوحدة والزمن"] },
+        { q: "🔵 فيزياء: الطاقة الميكانيكية الكلية = ؟", a: "طاقة حركة + طاقة وضع", o: ["طاقة حركة + طاقة وضع", "طاقة وضع فقط", "طاقة حركة فقط", "الشغل الكلي"] },
+        { q: "🔵 فيزياء: الموجات الصوتية نوعها؟", a: "طولية (ميكانيكية)", o: ["طولية (ميكانيكية)", "مستعرضة", "كهرومغناطيسية", "فراغية"] },
+        { q: "🔵 فيزياء: قانون أرخميدس يتعلق بـ؟", a: "قوة الطفو", o: ["قوة الطفو", "قوة الاحتكاك", "الجاذبية", "الضغط الجوي"] },
+        // كيمياء إضافية
+        { q: "🔴 كيمياء: pH الماء النقي عند 25°C؟", a: "7", o: ["7", "0", "14", "1"] },
+        { q: "🔴 كيمياء: رمز عنصر الذهب في الجدول الدوري؟", a: "Au", o: ["Au", "Go", "Ag", "Fe"] },
+        { q: "🔴 كيمياء: الصيغة الكيميائية للجلوكوز؟", a: "C₆H₁₂O₆", o: ["C₆H₁₂O₆", "C₆H₆", "CH₄", "C₁₂H₂₂O₁₁"] },
+        { q: "🔴 كيمياء: عدد أفوجادرو يساوي تقريباً؟", a: "6.02 × 10²³", o: ["6.02 × 10²³", "3.14 × 10²³", "1.6 × 10⁻¹⁹", "9.1 × 10⁻³¹"] },
+        { q: "🔴 كيمياء: الرابطة الأقوى في الكيمياء عموماً؟", a: "رابطة تساهمية", o: ["رابطة تساهمية", "رابطة هيدروجينية", "تفاعل فاندر فالس", "رابطة أيونية"] },
+        // أحياء إضافية
+        { q: "🟣 أحياء: العضية المسؤولة عن بناء البروتين هي؟", a: "الريبوسوم", o: ["الريبوسوم", "الميتوكوندريا", "الجولجي", "النواة"] },
+        { q: "🟣 أحياء: أكبر عضو في جسم الإنسان هو؟", a: "الجلد", o: ["الجلد", "الكبد", "القلب", "الرئتان"] },
+        { q: "🟣 أحياء: الكروموسومات الجنسية في الأنثى؟", a: "XX", o: ["XX", "XY", "YY", "XO"] },
+        { q: "🟣 أحياء: الغدة النخامية تُعرف بـ؟", a: "سيدة الغدد (المايسترو)", o: ["سيدة الغدد (المايسترو)", "غدة الأدرينالين", "غدة التنفس", "غدة الهضم"] },
+        { q: "🟣 أحياء: الحمض النووي DNA يتكون أساساً من؟", a: "نيوكليوتيدات (سكر + فوسفات + قاعدة نيتروجينية)", o: ["نيوكليوتيدات", "أحماض أمينية فقط", "جلوكوز + فوسفات", "دهون + بروتينات"] },
+        // تحديات ختامية
+        { q: "🏆 تحدي: من هو مؤسس هذا الموقع الجبار؟", a: "يوسف غابيمارو 🔥", o: ["يوسف غابيمارو 🔥", "مدرس الفيزياء", "شركة غوغل", "طالب مجهول"] },
+        { q: "🏆 تحدي: ما هي مادة المنهج التي تشمل الحركة الدائرية في الترم الثاني؟", a: "الفيزياء", o: ["الفيزياء", "الكيمياء", "الأحياء", "الرياضيات"] },
+        { q: "🏆 تحدي: الترم الثاني 2026 هو ترم الصف الأول الثانوي، كم مادة دراسية يشمل هذا التطبيق؟", a: "4 مواد (فيزياء، كيمياء، أحياء، رياضيات+فلسفة)", o: ["4 مواد", "3 مواد", "5 مواد", "مادة واحدة فقط"] },
+        { q: "🏆 تحدي: عدد أسئلة المنهج في هذا التطبيق؟", a: "100 سؤال", o: ["100 سؤال", "50 سؤال", "200 سؤال", "75 سؤال"] },
+        { q: "🏆 تحدي: للحصول على رتبة 'إمبراطور السالموني' تحتاج؟", a: "800 نقطة أو أكثر", o: ["800 نقطة أو أكثر", "500 نقطة", "1000 نقطة", "100 نقطة"] }
     ];
 
+    // =============================================
+    // منطق اللعبة
+    // =============================================
     let myName = prompt("أدخل اسمك يا بطل:") || "طالب مجهول";
     let score = 0;
     let currentQ = 0;
+    let usedQuestions = [];
 
     function getRank(s) {
-        if(s >= 800) return "إمبراطور السالموني 👑";
-        if(s >= 600) return "غابيمارو الخالي من المشاعر 🥷";
-        if(s >= 400) return "هيرويك (Heroic) 💎";
-        if(s >= 200) return "دحيح الدفعة 📚";
+        if (s >= 800) return "إمبراطور السالموني 👑";
+        if (s >= 600) return "غابيمارو الخالي من المشاعر 🥷";
+        if (s >= 400) return "هيرويك (Heroic) 💎";
+        if (s >= 200) return "دحيح الدفعة 📚";
         return "مستجد 🔰";
     }
 
@@ -422,16 +1334,28 @@
     userRef.set({ name: myName, score: 0, rank: "مستجد 🔰" });
     userRef.onDisconnect().remove();
 
+    function getNextQuestion() {
+        if (usedQuestions.length >= gameQuestions.length) {
+            usedQuestions = [];
+        }
+        let idx;
+        do {
+            idx = Math.floor(Math.random() * gameQuestions.length);
+        } while (usedQuestions.includes(idx));
+        usedQuestions.push(idx);
+        return gameQuestions[idx];
+    }
+
     function loadQ() {
-        const qData = gameQuestions[currentQ % gameQuestions.length];
+        const qData = getNextQuestion();
         currentQ++;
 
-        document.getElementById('lvl-tag').innerText = "سؤال رقم: " + currentQ + " / 100";
+        document.getElementById('lvl-tag').innerText = "سؤال رقم: " + currentQ + " | درجتك: " + score;
         document.getElementById('q-text').innerText = qData.q;
-        
+
         const optDiv = document.getElementById('opts');
         optDiv.innerHTML = '';
-        
+
         let options = [...qData.o].sort(() => Math.random() - 0.5);
         let answered = false;
 
@@ -439,65 +1363,82 @@
             let b = document.createElement('button');
             b.className = 'btn-opt';
             b.innerText = o;
-            b.onclick = function() {
-                if(answered) return;
+            b.onclick = function () {
+                if (answered) return;
                 answered = true;
-                
-                if(o === qData.a) {
+
+                // تعطيل كل الأزرار
+                Array.from(optDiv.children).forEach(btn => btn.disabled = true);
+
+                if (o === qData.a) {
                     score += 10;
                     this.classList.add('correct-ans');
                 } else {
                     score = Math.max(0, score - 5);
                     this.classList.add('wrong-ans');
                     Array.from(optDiv.children).forEach(btn => {
-                        if(btn.innerText === qData.a) btn.style.border = "2px solid var(--success)";
+                        if (btn.innerText === qData.a) {
+                            btn.style.border = "2px solid var(--success)";
+                            btn.style.boxShadow = "0 0 10px var(--success)";
+                        }
                     });
                 }
-                
+
                 userRef.update({ score: score, rank: getRank(score) });
                 document.getElementById('score').innerText = score;
                 document.getElementById('rank').innerText = getRank(score);
-                setTimeout(loadQ, 1500);
+                setTimeout(loadQ, 1800);
             };
             optDiv.appendChild(b);
         });
     }
 
+    // =============================================
+    // الشات
+    // =============================================
     function sendMsg() {
-        let m = document.getElementById('chat-msg').value;
-        if(m.trim() !== "") {
-            db.ref('chat').push({ name: myName, text: m });
+        let m = document.getElementById('chat-msg').value.trim();
+        if (m !== "") {
+            db.ref('chat').push({ name: myName, text: m, time: Date.now() });
             document.getElementById('chat-msg').value = '';
         }
     }
 
-    document.getElementById("chat-msg").addEventListener("keypress", function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        sendMsg();
-      }
+    document.getElementById("chat-msg").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMsg();
+        }
     });
 
-    db.ref('chat').limitToLast(20).on('child_added', snap => {
+    db.ref('chat').limitToLast(30).on('child_added', snap => {
         const chatBox = document.getElementById('chat-content');
-        chatBox.innerHTML += `<div class="msg-in"><b style="color: var(--main);">${snap.val().name}</b><br>${snap.val().text}</div>`;
+        const d = snap.val();
+        chatBox.innerHTML += `<div class="msg-in"><b style="color: var(--main);">${d.name}</b><br>${d.text}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
     });
 
+    // =============================================
+    // المتصدرون
+    // =============================================
     db.ref('status').on('value', snap => {
         let users = [];
         snap.forEach(child => { users.push(child.val()); });
         users.sort((a, b) => b.score - a.score);
         let html = '';
-        users.forEach(u => {
+        users.forEach((u, i) => {
+            let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
             html += `<div class="online-user">
-                <div><b>${u.name}</b><br><span style="font-size:0.8rem;">${u.rank}</span></div>
-                <div style="font-weight:bold; color:var(--main);">${u.score} 🎯</div>
+                <div><b>${medal} ${u.name}</b><br><span style="font-size:0.8rem;color:#8b949e;">${u.rank}</span></div>
+                <div style="font-weight:bold; color:var(--main); font-size:1.2rem;">${u.score} 🎯</div>
             </div>`;
         });
-        document.getElementById('online-list').innerHTML = html;
+        document.getElementById('online-list').innerHTML = html || '<p style="text-align:center;color:#8b949e;">لا يوجد لاعبون متصلون الآن</p>';
     });
 
+    // =============================================
+    // التبويبات
+    // =============================================
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -506,10 +1447,14 @@
     }
 
     function addQuestion() {
-        let q = prompt("اكتب السؤال الجديد:");
-        if(q) alert("تم إرسال اقتراحك لغابيمارو!");
+        let q = prompt("اكتب السؤال الجديد الذي تقترحه:");
+        if (q && q.trim()) {
+            db.ref('suggestions').push({ name: myName, question: q.trim(), time: Date.now() });
+            alert("✅ تم إرسال اقتراحك لغابيمارو! شكراً يا بطل!");
+        }
     }
 
+    // بدء اللعبة
     loadQ();
 </script>
 </body>
