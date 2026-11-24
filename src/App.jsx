@@ -354,10 +354,12 @@ function AccountPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpPending, setOtpPending] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [shareTelemetry, setShareTelemetry] = useState(false);
-  const [confirmationPending, setConfirmationPending] = useState(false);
-  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+  const [signupDetails, setSignupDetails] = useState(null);
   const [notice, setNotice] = useState(null);
 
   async function loadProfile(user) {
@@ -390,10 +392,20 @@ function AccountPage() {
     };
   }, []);
 
-  async function sendSignupNotice(authSession, userEmail, displayName) {
-    if (!shareTelemetry || !authSession?.access_token) return;
+  function describeEmailError(error) {
+    if (error?.code === "over_email_send_rate_limit") {
+      return "لم يُرسل الرمز لأن المشروع وصل إلى حد البريد المجاني: رسالتان في الساعة فقط. يلزم ربط خدمة SMTP حتى تصل الرموز إلى جميع الطلاب.";
+    }
+    if (error?.code === "email_address_not_authorized" || /email address not authorized/i.test(error?.message || "")) {
+      return "خدمة البريد الحالية لا تسمح بالإرسال إلى هذا العنوان. يلزم ربط خدمة SMTP خارجية في Supabase.";
+    }
+    return "تعذر إرسال رمز التحقق الآن. تحقق من إعدادات البريد وحاول لاحقًا.";
+  }
+
+  async function sendSignupNotice(authSession, userEmail, displayName, consent) {
+    if (!consent || !authSession?.access_token) return { ok: true, skipped: true };
     try {
-      await fetch("/api/telegram-signup", {
+      const response = await fetch("/api/telegram-signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -405,8 +417,39 @@ function AccountPage() {
           displayName,
         }),
       });
+      const result = await response.json().catch(() => ({}));
+      return { ok: response.ok && result.ok === true, error: result.error || "notification_failed" };
     } catch {
-      // Account creation must not fail because an optional admin notification failed.
+      return { ok: false, error: "network_error" };
+    }
+  }
+
+  async function finishVerifiedSignup(authData) {
+    const user = authData?.user;
+    const authSession = authData?.session;
+    setSession(authSession);
+    if (user) await loadProfile(user);
+
+    const details = signupDetails;
+    setOtpPending(false);
+    setOtp("");
+    setPassword("");
+    setSignupDetails(null);
+
+    if (details?.shareTelemetry) {
+      const notification = await sendSignupNotice(
+        authSession,
+        user?.email || email.trim().toLowerCase(),
+        details.name,
+        true
+      );
+      if (notification.ok) {
+        setNotice({ kind: "success", text: "تم تفعيل حسابك وتسجيل دخولك، ووصل إشعار التسجيل إلى إدارة الموقع." });
+      } else {
+        setNotice({ kind: "warning", text: "تم تفعيل حسابك بنجاح، لكن تعذر إرسال إشعار تيليجرام للإدارة. راجع إعدادات البوت في Vercel." });
+      }
+    } else {
+      setNotice({ kind: "success", text: "تم تفعيل حسابك وتسجيل دخولك بنجاح." });
     }
   }
 
@@ -421,38 +464,75 @@ function AccountPage() {
     setBusy(true);
     const cleanEmail = email.trim().toLowerCase();
     try {
+      if (otpPending) {
+        const cleanOtp = otp.trim();
+        if (!/^\d{6}$/.test(cleanOtp)) {
+          setNotice({ kind: "warning", text: "اكتب رمز التحقق المكوّن من 6 أرقام." });
+          return;
+        }
+        const { data, error: otpError } = await supabase.auth.verifyOtp({
+          email: cleanEmail,
+          token: cleanOtp,
+          type: "email",
+        });
+        if (otpError) {
+          setNotice({ kind: "error", text: "الرمز غير صحيح أو انتهت صلاحيته. تأكد من الأرقام أو اطلب رمزًا جديدًا." });
+          return;
+        }
+        await finishVerifiedSignup(data);
+        return;
+      }
+
       if (mode === "signup") {
+        const cleanName = name.trim();
+        const consentAtSignup = shareTelemetry;
         const { data, error: authError } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
-            data: { full_name: name.trim() },
-            emailRedirectTo: "https://tay-space.vercel.app/",
+            data: { full_name: cleanName },
           },
         });
         if (authError) {
           setNotice({
             kind: "error",
-            text: authError.code === "over_email_send_rate_limit"
-              ? "تم طلب رسالة تأكيد قبل قليل. انتظر قليلًا ثم حاول مرة أخرى."
+            text: authError.code === "over_email_send_rate_limit" ||
+              authError.code === "email_address_not_authorized"
+              ? describeEmailError(authError)
               : "تعذر إنشاء الحساب. راجع البريد الإلكتروني وكلمة المرور أو جرّب بريدًا آخر.",
           });
           return;
         }
 
         if (data.session) {
-          setConfirmationPending(false);
-          await sendSignupNotice(data.session, cleanEmail, name.trim());
-          setNotice({ kind: "success", text: "تم إنشاء حسابك وتسجيل دخولك بنجاح." });
-        } else {
-          setConfirmationPending(true);
-          setMode("login");
+          setSession(data.session);
+          await loadProfile(data.user);
+          const notification = await sendSignupNotice(data.session, cleanEmail, cleanName, consentAtSignup);
           setNotice({
-            kind: "warning",
-            text: "تم إنشاء الحساب، لكن يجب تأكيد البريد الإلكتروني أولًا. افتح رسالة التأكيد التي أرسلناها، ثم ارجع إلى هنا وسجّل الدخول.",
+            kind: notification.ok
+              ? "success"
+              : consentAtSignup ? "warning" : "success",
+            text: consentAtSignup && !notification.ok
+              ? "تم إنشاء حسابك، لكن تعذر إرسال إشعار تيليجرام للإدارة. راجع إعدادات البوت في Vercel."
+              : "تم إنشاء حسابك وتسجيل دخولك بنجاح.",
           });
+          setPassword("");
+          return;
         }
+
+        const existingAccount = Boolean(
+          data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
+        );
+        setSignupDetails(existingAccount ? null : { name: cleanName, shareTelemetry: consentAtSignup });
+        setOtpPending(true);
+        setOtp("");
         setPassword("");
+        setNotice({
+          kind: existingAccount ? "warning" : "success",
+          text: existingAccount
+            ? "هذا البريد مسجّل بالفعل. يمكنك طلب رمز جديد أدناه أو تسجيل الدخول إلى حسابك."
+            : "أرسلنا رمز تحقق مكوّنًا من 6 أرقام إلى بريدك. اكتبه هنا لتفعيل حسابك.",
+        });
         return;
       }
 
@@ -463,11 +543,15 @@ function AccountPage() {
       if (authError) {
         const notConfirmed = authError.code === "email_not_confirmed" ||
           /email not confirmed/i.test(authError.message || "");
-        setConfirmationPending(notConfirmed);
+        if (notConfirmed) {
+          setSignupDetails(null);
+          setOtpPending(true);
+          setOtp("");
+        }
         setNotice({
           kind: notConfirmed ? "warning" : "error",
           text: notConfirmed
-            ? "هذا الحساب لم يؤكد بريده الإلكتروني بعد. افتح رسالة التأكيد أو اطلب إرسالها مرة أخرى من الزر أدناه."
+            ? "هذا الحساب لم يُفعّل بعد. اضغط «إعادة إرسال الرمز»، ثم أدخل الرمز الذي يصلك هنا."
             : authError.code === "invalid_credentials"
               ? "البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد من كتابتهما كما استخدمتهما عند إنشاء الحساب."
               : "تعذر تسجيل الدخول الآن. حاول مرة أخرى بعد قليل.",
@@ -475,7 +559,6 @@ function AccountPage() {
         return;
       }
 
-      setConfirmationPending(false);
       setSession(data.session);
       await loadProfile(data.user);
       setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح." });
@@ -488,37 +571,29 @@ function AccountPage() {
     }
   }
 
-  async function resendConfirmation() {
+  async function resendCode() {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      setNotice({ kind: "warning", text: "اكتب بريدك الإلكتروني أولًا لإعادة إرسال رسالة التأكيد." });
+      setNotice({ kind: "warning", text: "اكتب بريدك الإلكتروني أولًا." });
       return;
     }
-    setResendingConfirmation(true);
+    setOtpSending(true);
     setNotice(null);
     try {
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: cleanEmail,
-        options: { emailRedirectTo: "https://tay-space.vercel.app/" },
       });
       if (resendError) {
-        const waitMatch = (resendError.message || "").match(/after\s+(\d+)\s+seconds?/i);
-        setNotice({
-          kind: "warning",
-          text: resendError.code === "over_email_send_rate_limit" || waitMatch
-            ? "أرسلنا طلبًا مؤخرًا. انتظر " + (waitMatch?.[1] || "بضع") + " ثانية ثم أعد المحاولة."
-            : "تعذر إرسال رسالة التأكيد الآن. تحقق من البريد الإلكتروني وحاول لاحقًا.",
-        });
+        setNotice({ kind: "warning", text: describeEmailError(resendError) });
       } else {
-        setConfirmationPending(true);
-        setNotice({ kind: "success", text: "تم طلب إعادة إرسال رسالة التأكيد. افحص الوارد والرسائل غير المرغوب فيها." });
+        setNotice({ kind: "success", text: "تم طلب إرسال رمز جديد. أدخل الرمز الأحدث الذي يصلك." });
       }
     } catch (error) {
-      console.error("Resend confirmation failed:", error);
-      setNotice({ kind: "error", text: "تعذر إرسال رسالة التأكيد بسبب مشكلة اتصال. حاول لاحقًا." });
+      console.error("Resend signup OTP failed:", error);
+      setNotice({ kind: "error", text: "تعذر طلب رمز جديد بسبب مشكلة اتصال. حاول لاحقًا." });
     } finally {
-      setResendingConfirmation(false);
+      setOtpSending(false);
     }
   }
 
@@ -536,8 +611,8 @@ function AccountPage() {
         <div className="account-wrap">
           <div className="account-intro">
             <span className="admin-label">مساحة — حساب الطالب</span>
-            <h1>{session ? "أهلًا بعودتك." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
-            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، أو ادخل إلى حسابك الحالي."}</p>
+            <h1>{session ? "أهلًا بعودتك." : otpPending ? "أكّد بريدك الإلكتروني." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
+            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : otpPending ? "أدخل رمز التحقق المكوّن من 6 أرقام الذي وصلك في رسالة البريد الإلكتروني." : "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، أو ادخل إلى حسابك الحالي."}</p>
           </div>
           {loading ? (
             <div className="account-card"><p className="muted">جارٍ التحقق من حسابك...</p></div>
@@ -556,41 +631,72 @@ function AccountPage() {
             </section>
           ) : (
             <section className="account-card">
-              <div className="account-switch">
-                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
-                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
-              </div>
+              {!otpPending && (
+                <div className="account-switch">
+                  <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
+                  <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
+                </div>
+              )}
               <form className="account-form" onSubmit={submitAuth}>
-                {mode === "signup" && (
-                  <label>الاسم الكامل
-                    <input required autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
-                  </label>
+                {otpPending ? (
+                  <>
+                    <label>البريد الإلكتروني
+                      <input type="email" value={email} readOnly dir="ltr" />
+                    </label>
+                    <label>رمز التحقق المكوّن من 6 أرقام
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        required
+                        value={otp}
+                        onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        dir="ltr"
+                      />
+                    </label>
+                    {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+                    <button className="button button-primary account-submit" type="submit" disabled={busy}>
+                      {busy ? "جارٍ التحقق..." : "تأكيد الرمز وتفعيل الحساب"} <ShieldCheck size={17} />
+                    </button>
+                    <button className="button button-ghost-dark account-submit" type="button" onClick={resendCode} disabled={otpSending}>
+                      {otpSending ? "جارٍ طلب الرمز..." : "إعادة إرسال الرمز"} <Mail size={16} />
+                    </button>
+                    <button className="account-home-link" type="button" onClick={() => { setOtpPending(false); setOtp(""); setSignupDetails(null); setNotice(null); }}>
+                      العودة إلى بيانات الحساب
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {mode === "signup" && (
+                      <label>الاسم الكامل
+                        <input required autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
+                      </label>
+                    )}
+                    <label>البريد الإلكتروني
+                      <input type="email" required autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setNotice(null); }} placeholder="name@example.com" dir="ltr" />
+                    </label>
+                    <label>كلمة المرور
+                      <span className="password-field">
+                        <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
+                        <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+                      </span>
+                    </label>
+                    {mode === "signup" && (
+                      <label className="telemetry-consent">
+                        <input type="checkbox" checked={shareTelemetry} onChange={e => setShareTelemetry(e.target.checked)} />
+                        <span>أوافق على إرسال اسمي وبريدي ومعلومات جهازي وعنوان IP إلى إدارة الموقع عبر تيليجرام بعد تفعيل الحساب. هذا اختياري ولا يؤثر على التسجيل.</span>
+                      </label>
+                    )}
+                    {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+                    <button className="button button-primary account-submit" type="submit" disabled={busy}>
+                      {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
+                      {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
+                    </button>
+                  </>
                 )}
-                <label>البريد الإلكتروني
-                  <input type="email" required autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setConfirmationPending(false); }} placeholder="name@example.com" dir="ltr" />
-                </label>
-                <label>كلمة المرور
-                  <span className="password-field">
-                    <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
-                    <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
-                  </span>
-                </label>
-                {mode === "signup" && (
-                  <label className="telemetry-consent">
-                    <input type="checkbox" checked={shareTelemetry} onChange={e => setShareTelemetry(e.target.checked)} />
-                    <span>أوافق على إرسال اسمي وبريدي ومعلومات جهازي وعنوان IP إلى إدارة الموقع عبر تيليجرام عند إنشاء الحساب. هذا اختياري ولا يؤثر على التسجيل.</span>
-                  </label>
-                )}
-                {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
-                {confirmationPending && mode === "login" && (
-                  <button className="button button-ghost-dark account-submit" type="button" onClick={resendConfirmation} disabled={resendingConfirmation}>
-                    {resendingConfirmation ? "جارٍ إرسال رسالة التأكيد..." : "إعادة إرسال رسالة التأكيد"} <Mail size={16} />
-                  </button>
-                )}
-                <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
-                  {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
-                </button>
               </form>
               <p className="account-footnote">لن نطلب منك أي بيانات غير لازمة لإنشاء حسابك.</p>
             </section>
@@ -601,7 +707,6 @@ function AccountPage() {
     </>
   );
 }
-
 function SiteGate() {
   const [session, setSession] = useState(undefined);
 
