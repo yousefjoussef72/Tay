@@ -356,6 +356,8 @@ function AccountPage() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [otpPending, setOtpPending] = useState(false);
+  const [otpPurpose, setOtpPurpose] = useState("signup");
+  const [loginMethod, setLoginMethod] = useState("otp");
   const [otpSending, setOtpSending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [shareTelemetry, setShareTelemetry] = useState(false);
@@ -433,6 +435,7 @@ function AccountPage() {
     const details = signupDetails;
     setOtpPending(false);
     setOtp("");
+    setOtpPurpose("signup");
     setPassword("");
     setSignupDetails(null);
 
@@ -479,7 +482,17 @@ function AccountPage() {
           setNotice({ kind: "error", text: "الرمز غير صحيح أو انتهت صلاحيته. تأكد من الأرقام أو اطلب رمزًا جديدًا." });
           return;
         }
-        await finishVerifiedSignup(data);
+        if (otpPurpose === "signup") {
+          await finishVerifiedSignup(data);
+        } else {
+          setSession(data.session);
+          if (data.user) await loadProfile(data.user);
+          setOtpPending(false);
+          setOtp("");
+          setOtpPurpose("signup");
+          setSignupDetails(null);
+          setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح بعد التحقق من رمز البريد." });
+        }
         return;
       }
 
@@ -523,15 +536,43 @@ function AccountPage() {
         const existingAccount = Boolean(
           data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
         );
-        setSignupDetails(existingAccount ? null : { name: cleanName, shareTelemetry: consentAtSignup });
+        if (existingAccount) {
+          setSignupDetails(null);
+          setMode("login");
+          setLoginMethod("otp");
+          setNotice({
+            kind: "warning",
+            text: "هذا البريد مسجّل بالفعل. استخدم تسجيل الدخول لطلب رمز تحقق جديد.",
+          });
+          return;
+        }
+        setSignupDetails({ name: cleanName, shareTelemetry: consentAtSignup });
+        setOtpPurpose("signup");
         setOtpPending(true);
         setOtp("");
         setPassword("");
         setNotice({
-          kind: existingAccount ? "warning" : "success",
-          text: existingAccount
-            ? "هذا البريد مسجّل بالفعل. يمكنك طلب رمز جديد أدناه أو تسجيل الدخول إلى حسابك."
-            : "أرسلنا رمز تحقق مكوّنًا من 6 أرقام إلى بريدك. اكتبه هنا لتفعيل حسابك.",
+          kind: "success",
+          text: "أرسلنا رمز تحقق مكوّنًا من 6 أرقام إلى بريدك. اكتبه هنا لتفعيل حسابك.",
+        });
+        return;
+      }
+
+      if (mode === "login" && loginMethod === "otp") {
+        const { error: otpRequestError } = await supabase.auth.signInWithOtp({
+          email: cleanEmail,
+          options: { shouldCreateUser: false },
+        });
+        if (otpRequestError) {
+          setNotice({ kind: "error", text: describeEmailError(otpRequestError) });
+          return;
+        }
+        setOtpPurpose("login");
+        setOtpPending(true);
+        setOtp("");
+        setNotice({
+          kind: "success",
+          text: "لو البريد مسجّل لدينا، هيوصلك رمز دخول من 6 أرقام. اكتبه هنا للمتابعة.",
         });
         return;
       }
@@ -580,10 +621,12 @@ function AccountPage() {
     setOtpSending(true);
     setNotice(null);
     try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: "signup",
-        email: cleanEmail,
-      });
+      const { error: resendError } = otpPurpose === "signup"
+        ? await supabase.auth.resend({ type: "signup", email: cleanEmail })
+        : await supabase.auth.signInWithOtp({
+            email: cleanEmail,
+            options: { shouldCreateUser: false },
+          });
       if (resendError) {
         setNotice({ kind: "warning", text: describeEmailError(resendError) });
       } else {
@@ -611,8 +654,8 @@ function AccountPage() {
         <div className="account-wrap">
           <div className="account-intro">
             <span className="admin-label">مساحة — حساب الطالب</span>
-            <h1>{session ? "أهلًا بعودتك." : otpPending ? "أكّد بريدك الإلكتروني." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
-            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : otpPending ? "أدخل رمز التحقق المكوّن من 6 أرقام الذي وصلك في رسالة البريد الإلكتروني." : "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، أو ادخل إلى حسابك الحالي."}</p>
+            <h1>{session ? "أهلًا بعودتك." : otpPending ? otpPurpose === "signup" ? "أكّد بريدك الإلكتروني." : "أدخل رمز تسجيل الدخول." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
+            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : otpPending ? "أدخل رمز التحقق المكوّن من 6 أرقام الذي وصلك في رسالة البريد الإلكتروني." : mode === "signup" ? "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، ثم أكّد بريدك برمز يصل إليك." : "اطلب رمز دخول إلى بريدك الإلكتروني، أو استخدم كلمة المرور."}</p>
           </div>
           {loading ? (
             <div className="account-card"><p className="muted">جارٍ التحقق من حسابك...</p></div>
@@ -634,7 +677,7 @@ function AccountPage() {
               {!otpPending && (
                 <div className="account-switch">
                   <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
-                  <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
+                  <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setLoginMethod("otp"); setNotice(null); }}>تسجيل الدخول</button>
                 </div>
               )}
               <form className="account-form" onSubmit={submitAuth}>
@@ -678,12 +721,26 @@ function AccountPage() {
                     <label>البريد الإلكتروني
                       <input type="email" required autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setNotice(null); }} placeholder="name@example.com" dir="ltr" />
                     </label>
-                    <label>كلمة المرور
-                      <span className="password-field">
-                        <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
-                        <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
-                      </span>
-                    </label>
+                    {(mode === "signup" || (mode === "login" && loginMethod === "password")) && (
+                      <label>كلمة المرور
+                        <span className="password-field">
+                          <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
+                          <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+                        </span>
+                      </label>
+                    )}
+                    {mode === "login" && (
+                      <button
+                        className="account-home-link"
+                        type="button"
+                        onClick={() => {
+                          setLoginMethod(loginMethod === "otp" ? "password" : "otp");
+                          setNotice(null);
+                        }}
+                      >
+                        {loginMethod === "otp" ? "الدخول بكلمة المرور بدل الرمز" : "الدخول برمز يصل إلى البريد"}
+                      </button>
+                    )}
                     {mode === "signup" && (
                       <label className="telemetry-consent">
                         <input type="checkbox" checked={shareTelemetry} onChange={e => setShareTelemetry(e.target.checked)} />
@@ -692,8 +749,8 @@ function AccountPage() {
                     )}
                     {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
                     <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                      {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
-                      {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
+                      {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : loginMethod === "otp" ? "إرسال رمز الدخول" : "تسجيل الدخول"}
+                      {mode === "signup" ? <UserRound size={17} /> : loginMethod === "otp" ? <Mail size={17} /> : <LogIn size={17} />}
                     </button>
                   </>
                 )}
