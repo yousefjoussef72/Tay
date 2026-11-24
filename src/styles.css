@@ -239,3 +239,40 @@ button { cursor: pointer; }
   html { scroll-behavior: auto; }
   *,*::before,*::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Student account */
+.account-page { min-height: calc(100vh - 82px); background: #f3f1eb; padding: 78px 20px 90px; }
+.account-wrap { width: min(520px,100%); margin: 0 auto; }
+.account-intro { text-align: center; margin-bottom: 28px; }
+.account-intro .admin-label { justify-content: center; }
+.account-intro h1 { font-size: clamp(27px,5vw,38px); line-height: 1.5; margin: 16px 0 8px; color: var(--navy); }
+.account-intro p { color: #7d898d; font-size: 11px; line-height: 2.2; margin: 0 auto; max-width: 410px; }
+.account-card { background: #fff; border: 1px solid var(--line); padding: 28px; box-shadow: 0 16px 50px rgba(16,29,43,.045); }
+.account-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; background: #f3f3ed; padding: 5px; margin-bottom: 24px; }
+.account-switch button { border: 0; background: transparent; color: #7e898d; padding: 12px 8px; font-size: 10px; border-radius: 3px; }
+.account-switch button.active { background: var(--navy); color: white; }
+.account-form { display: flex; flex-direction: column; gap: 17px; }
+.account-form > label:not(.telemetry-consent) { display: flex; flex-direction: column; gap: 8px; color: #53616a; font-size: 10px; }
+.account-form input:not([type="checkbox"]) { width: 100%; min-height: 46px; padding: 12px; border: 1px solid var(--line); border-radius: 3px; outline: none; color: var(--navy); background: #fafaf7; font: 11px "DM Sans","Alexandria",sans-serif; }
+.account-form input:focus { border-color: #a4b76b; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-left: 43px !important; }
+.password-field button { position: absolute; top: 0; left: 0; height: 46px; width: 42px; border: 0; background: transparent; color: #849096; display: grid; place-items: center; }
+.telemetry-consent { display: flex; align-items: flex-start; gap: 9px; color: #78858a; font-size: 9px; line-height: 1.9; padding: 10px 11px; background: #f7f7f2; border: 1px solid var(--line); }
+.telemetry-consent input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: #182a3b; flex: 0 0 auto; }
+.account-submit { width: 100%; margin-top: 2px; }
+.account-footnote { color: #9aa4a5; font-size: 9px; text-align: center; margin: 18px 0 0; }
+.account-home-link { display: flex; align-items: center; justify-content: center; gap: 7px; color: #758188; font-size: 10px; margin-top: 23px; }
+.account-profile { text-align: center; }
+.account-avatar { width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 18px; display: grid; place-items: center; background: var(--navy); color: var(--lime); }
+.account-profile .admin-label { justify-content: center; }
+.account-profile h2 { font-size: 21px; margin: 14px 0 5px; }
+.account-email { color: #819096; font: 12px "DM Sans",sans-serif; margin: 0; }
+.account-role { display: inline-block; padding: 7px 12px; background: #f1f3e8; color: #697b3d; font-size: 9px; margin-top: 16px; }
+.account-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 25px; }
+@media (max-width: 620px) {
+  .account-page { min-height: calc(100vh - 70px); padding: 52px 17px 65px; }
+  .account-card { padding: 22px 18px; }
+  .account-actions { flex-direction: column; }
+  .account-actions .button { width: 100%; }
+}
