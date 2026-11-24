@@ -702,12 +702,12 @@ function AccountPage() {
                     </label>
                     {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
                     <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                      {busy ? "جارٍ التحقق..." : "تأكيد الرمز وتفعيل الحساب"} <ShieldCheck size={17} />
+                      {busy ? "جارٍ التحقق..." : otpPurpose === "signup" ? "تأكيد الرمز وتفعيل الحساب" : "تأكيد الرمز وتسجيل الدخول"} <ShieldCheck size={17} />
                     </button>
                     <button className="button button-ghost-dark account-submit" type="button" onClick={resendCode} disabled={otpSending}>
                       {otpSending ? "جارٍ طلب الرمز..." : "إعادة إرسال الرمز"} <Mail size={16} />
                     </button>
-                    <button className="account-home-link" type="button" onClick={() => { setOtpPending(false); setOtp(""); setSignupDetails(null); setNotice(null); }}>
+                    <button className="account-home-link" type="button" onClick={() => { setOtpPending(false); setOtp(""); setOtpPurpose("signup"); setSignupDetails(null); setNotice(null); }}>
                       العودة إلى بيانات الحساب
                     </button>
                   </>
