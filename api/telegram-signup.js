@@ -63,9 +63,9 @@ export default async function handler(req, res) {
     }
 
     const forwardedFor = req.headers["x-forwarded-for"];
-    const ip = (Array.isArray(forwardedFor) ? forwardedFor[0] : String(forwardedFor || "").split(",")[0]).trim()
-      || req.headers["x-real-ip"]
-      || "غير متاح";
+    const forwardedIps = (Array.isArray(forwardedFor) ? forwardedFor.join(",") : String(forwardedFor || ""))
+      .split(",").map((value) => value.trim()).filter(Boolean);
+    const ip = req.headers["x-real-ip"] || forwardedIps.at(-1) || "غير متاح";
     const { device, os, browser } = describeDevice(req.headers["user-agent"]);
     const safeName = escapeHtml(String(displayName || "").slice(0, 120));
     const text = [
