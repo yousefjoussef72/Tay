@@ -195,7 +195,7 @@ function Home() {
               <div className="section-kicker light"><span>04</span> / الخطوة التالية</div>
               <h2>عندك فكرة؟<br /><em>خلّينا نبدأ.</em></h2>
               <p>أرسل رسالة تجريبية الآن، أو استخدم هذا القسم لاحقًا لاستقبال استفسارات زوار الموقع.</p>
-              <div className="contact-meta"><Mail size={17} /><span>نموذج التواصل — يُربط بقاعدة البيانات عند تفعيلها</span></div>
+              <div className="contact-meta"><Mail size={17} /><span>نموذج التواصل — تُحفظ الرسائل مباشرةً في قاعدة البيانات</span></div>
             </div>
             <form className="contact-form" onSubmit={submitMessage}>
               <div className="form-row">
