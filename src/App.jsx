@@ -527,10 +527,28 @@ function AccountPage() {
   );
 }
 
+function SiteGate() {
+  const [session, setSession] = useState(undefined);
+
+  useEffect(() => {
+    if (!supabase) { setSession(null); return; }
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) {
+    return <div className="admin-message"><p>جارٍ التحقق من حسابك...</p></div>;
+  }
+  return session ? <Home /> : <AccountPage />;
+}
+
 function NotFound() {
   return <div className="not-found"><span>404</span><h1>هذه الصفحة غير موجودة.</h1><Link to="/" className="button button-primary">العودة للرئيسية <ArrowLeft size={17} /></Link></div>;
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<Home />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<NotFound />} /></Routes>;
+  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<NotFound />} /></Routes>;
 }
