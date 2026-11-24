@@ -499,7 +499,7 @@ function AccountPage() {
         email: cleanEmail,
       });
       if (resendError) {
-        const waitMatch = (resendError.message || "").match(/after\\s+(\\d+)\\s+seconds?/i);
+        const waitMatch = (resendError.message || "").match(/after\s+(\d+)\s+seconds?/i);
         setNotice({
           kind: "warning",
           text: resendError.code === "over_email_send_rate_limit" || waitMatch
