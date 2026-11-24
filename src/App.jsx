@@ -356,6 +356,8 @@ function AccountPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [shareTelemetry, setShareTelemetry] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [notice, setNotice] = useState(null);
 
   async function loadProfile(user) {
@@ -415,40 +417,104 @@ function AccountPage() {
       setNotice({ kind: "error", text: "خدمة الحسابات غير متاحة الآن. حاول لاحقًا." });
       return;
     }
+
     setBusy(true);
     const cleanEmail = email.trim().toLowerCase();
-    if (mode === "signup") {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: { data: { full_name: name.trim() } },
-      });
-      setBusy(false);
-      if (authError) {
-        setNotice({ kind: "error", text: "تعذر إنشاء الحساب. تأكد من البيانات أو جرّب بريدًا آخر." });
+    try {
+      if (mode === "signup") {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: { data: { full_name: name.trim() } },
+        });
+        if (authError) {
+          setNotice({
+            kind: "error",
+            text: authError.code === "over_email_send_rate_limit"
+              ? "تم طلب رسالة تأكيد قبل قليل. انتظر قليلًا ثم حاول مرة أخرى."
+              : "تعذر إنشاء الحساب. راجع البريد الإلكتروني وكلمة المرور أو جرّب بريدًا آخر.",
+          });
+          return;
+        }
+
+        if (data.session) {
+          setConfirmationPending(false);
+          await sendSignupNotice(data.session, cleanEmail, name.trim());
+          setNotice({ kind: "success", text: "تم إنشاء حسابك وتسجيل دخولك بنجاح." });
+        } else {
+          setConfirmationPending(true);
+          setMode("login");
+          setNotice({
+            kind: "warning",
+            text: "تم إنشاء الحساب، لكن يجب تأكيد البريد الإلكتروني أولًا. افتح رسالة التأكيد التي أرسلناها، ثم ارجع إلى هنا وسجّل الدخول.",
+          });
+        }
+        setPassword("");
         return;
       }
-      if (data.session) {
-        await sendSignupNotice(data.session, cleanEmail, name.trim());
-        setNotice({ kind: "success", text: "تم إنشاء حسابك وتسجيل دخولك بنجاح." });
-      } else {
-        setNotice({ kind: "success", text: "تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده ثم سجّل الدخول." });
-      }
-      setPassword("");
-    } else {
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
-      setBusy(false);
       if (authError) {
-        setNotice({ kind: "error", text: "بيانات الدخول غير صحيحة. راجع البريد وكلمة المرور." });
-      } else {
-        setSession(data.session);
-        await loadProfile(data.user);
-        setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح." });
-        setPassword("");
+        const notConfirmed = authError.code === "email_not_confirmed" ||
+          /email not confirmed/i.test(authError.message || "");
+        setConfirmationPending(notConfirmed);
+        setNotice({
+          kind: notConfirmed ? "warning" : "error",
+          text: notConfirmed
+            ? "هذا الحساب لم يؤكد بريده الإلكتروني بعد. افتح رسالة التأكيد أو اطلب إرسالها مرة أخرى من الزر أدناه."
+            : authError.code === "invalid_credentials"
+              ? "البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد من كتابتهما كما استخدمتهما عند إنشاء الحساب."
+              : "تعذر تسجيل الدخول الآن. حاول مرة أخرى بعد قليل.",
+        });
+        return;
       }
+
+      setConfirmationPending(false);
+      setSession(data.session);
+      await loadProfile(data.user);
+      setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح." });
+      setPassword("");
+    } catch (error) {
+      console.error("Authentication request failed:", error);
+      setNotice({ kind: "error", text: "حدث اتصال غير متوقع أثناء تنفيذ الطلب. تحقق من الإنترنت ثم حاول مرة أخرى." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setNotice({ kind: "warning", text: "اكتب بريدك الإلكتروني أولًا لإعادة إرسال رسالة التأكيد." });
+      return;
+    }
+    setResendingConfirmation(true);
+    setNotice(null);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: cleanEmail,
+      });
+      if (resendError) {
+        const waitMatch = (resendError.message || "").match(/after\\s+(\\d+)\\s+seconds?/i);
+        setNotice({
+          kind: "warning",
+          text: resendError.code === "over_email_send_rate_limit" || waitMatch
+            ? "أرسلنا طلبًا مؤخرًا. انتظر " + (waitMatch?.[1] || "بضع") + " ثانية ثم أعد المحاولة."
+            : "تعذر إرسال رسالة التأكيد الآن. تحقق من البريد الإلكتروني وحاول لاحقًا.",
+        });
+      } else {
+        setConfirmationPending(true);
+        setNotice({ kind: "success", text: "تم طلب إعادة إرسال رسالة التأكيد. افحص الوارد والرسائل غير المرغوب فيها." });
+      }
+    } catch (error) {
+      console.error("Resend confirmation failed:", error);
+      setNotice({ kind: "error", text: "تعذر إرسال رسالة التأكيد بسبب مشكلة اتصال. حاول لاحقًا." });
+    } finally {
+      setResendingConfirmation(false);
     }
   }
 
@@ -497,7 +563,7 @@ function AccountPage() {
                   </label>
                 )}
                 <label>البريد الإلكتروني
-                  <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" />
+                  <input type="email" required autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setConfirmationPending(false); }} placeholder="name@example.com" dir="ltr" />
                 </label>
                 <label>كلمة المرور
                   <span className="password-field">
@@ -512,6 +578,11 @@ function AccountPage() {
                   </label>
                 )}
                 {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+                {confirmationPending && mode === "login" && (
+                  <button className="button button-ghost-dark account-submit" type="button" onClick={resendConfirmation} disabled={resendingConfirmation}>
+                    {resendingConfirmation ? "جارٍ إرسال رسالة التأكيد..." : "إعادة إرسال رسالة التأكيد"} <Mail size={16} />
+                  </button>
+                )}
                 <button className="button button-primary account-submit" type="submit" disabled={busy}>
                   {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
                   {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
