@@ -513,7 +513,7 @@ function AccountPage() {
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      minLength={8}
+                      minLength={mode === "signup" ? 8 : 6}
                       maxLength={72}
                       autoComplete={mode === "signup" ? "new-password" : "current-password"}
                       value={password}
