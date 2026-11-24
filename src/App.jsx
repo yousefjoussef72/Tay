@@ -425,7 +425,10 @@ function AccountPage() {
         const { data, error: authError } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
-          options: { data: { full_name: name.trim() } },
+          options: {
+            data: { full_name: name.trim() },
+            emailRedirectTo: "https://tay-space.vercel.app/",
+          },
         });
         if (authError) {
           setNotice({
@@ -497,6 +500,7 @@ function AccountPage() {
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: cleanEmail,
+        options: { emailRedirectTo: "https://tay-space.vercel.app/" },
       });
       if (resendError) {
         const waitMatch = (resendError.message || "").match(/after\s+(\d+)\s+seconds?/i);
