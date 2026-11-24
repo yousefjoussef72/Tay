@@ -3,7 +3,7 @@ import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpLeft, ArrowUpRight, Check, Clock3, FileText,
   Layers3, LayoutDashboard, LockKeyhole, Mail, Menu, MessageSquare,
-  Plus, Send, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff
+  Plus, Send, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
 } from "lucide-react";
 import { supabase, supabaseReady } from "./lib/supabase.js";
 
@@ -46,6 +46,7 @@ function Header() {
           <a href="/#about" onClick={close}>عن الموقع</a>
           <a href="/#features" onClick={close}>المميزات</a>
           <a href="/#contact" onClick={close}>تواصل معنا</a>
+          <Link to="/account" onClick={close}>حساب الطالب</Link>
         </nav>
         <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> لوحة الإدارة</Link>
       </div>
@@ -343,10 +344,193 @@ function AdminPage() {
   );
 }
 
+
+function AccountPage() {
+  const [mode, setMode] = useState("signup");
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [shareTelemetry, setShareTelemetry] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  async function loadProfile(user) {
+    if (!supabase || !user) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name,role")
+      .eq("id", user.id)
+      .maybeSingle();
+    setProfile(data ?? null);
+  }
+
+  useEffect(() => {
+    if (!supabase) { setLoading(false); return; }
+    let active = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      if (data.session?.user) await loadProfile(data.session.user);
+      if (active) setLoading(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      if (!nextSession) setProfile(null);
+      else setTimeout(() => loadProfile(nextSession.user), 0);
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function sendSignupNotice(authSession, userEmail, displayName) {
+    if (!shareTelemetry || !authSession?.access_token) return;
+    try {
+      await fetch("/api/telegram-signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + authSession.access_token,
+        },
+        body: JSON.stringify({
+          consent: true,
+          email: userEmail,
+          displayName,
+        }),
+      });
+    } catch {
+      // Account creation must not fail because an optional admin notification failed.
+    }
+  }
+
+  async function submitAuth(event) {
+    event.preventDefault();
+    setNotice(null);
+    if (!supabase) {
+      setNotice({ kind: "error", text: "خدمة الحسابات غير متاحة الآن. حاول لاحقًا." });
+      return;
+    }
+    setBusy(true);
+    const cleanEmail = email.trim().toLowerCase();
+    if (mode === "signup") {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: { data: { full_name: name.trim() } },
+      });
+      setBusy(false);
+      if (authError) {
+        setNotice({ kind: "error", text: "تعذر إنشاء الحساب. تأكد من البيانات أو جرّب بريدًا آخر." });
+        return;
+      }
+      if (data.session) {
+        await sendSignupNotice(data.session, cleanEmail, name.trim());
+        setNotice({ kind: "success", text: "تم إنشاء حسابك وتسجيل دخولك بنجاح." });
+      } else {
+        setNotice({ kind: "success", text: "تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده ثم سجّل الدخول." });
+      }
+      setPassword("");
+    } else {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      setBusy(false);
+      if (authError) {
+        setNotice({ kind: "error", text: "بيانات الدخول غير صحيحة. راجع البريد وكلمة المرور." });
+      } else {
+        setSession(data.session);
+        await loadProfile(data.user);
+        setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح." });
+        setPassword("");
+      }
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setSession(null);
+    setProfile(null);
+    setNotice({ kind: "success", text: "تم تسجيل الخروج." });
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="account-page">
+        <div className="account-wrap">
+          <div className="account-intro">
+            <span className="admin-label">مساحة — حساب الطالب</span>
+            <h1>{session ? "أهلًا بعودتك." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
+            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، أو ادخل إلى حسابك الحالي."}</p>
+          </div>
+          {loading ? (
+            <div className="account-card"><p className="muted">جارٍ التحقق من حسابك...</p></div>
+          ) : session ? (
+            <section className="account-card account-profile">
+              <div className="account-avatar"><UserRound size={28} /></div>
+              <span className="admin-label">تم تسجيل الدخول</span>
+              <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
+              <p className="account-email" dir="ltr">{session.user.email}</p>
+              <div className="account-role">{profile?.role === "admin" ? "مدير الموقع" : "حساب طالب"}</div>
+              <div className="account-actions">
+                <Link to="/" className="button button-primary">العودة إلى الموقع <ArrowLeft size={17} /></Link>
+                <button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> تسجيل الخروج</button>
+              </div>
+              {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+            </section>
+          ) : (
+            <section className="account-card">
+              <div className="account-switch">
+                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
+                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
+              </div>
+              <form className="account-form" onSubmit={submitAuth}>
+                {mode === "signup" && (
+                  <label>الاسم الكامل
+                    <input required autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
+                  </label>
+                )}
+                <label>البريد الإلكتروني
+                  <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" dir="ltr" />
+                </label>
+                <label>كلمة المرور
+                  <span className="password-field">
+                    <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
+                    <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+                  </span>
+                </label>
+                {mode === "signup" && (
+                  <label className="telemetry-consent">
+                    <input type="checkbox" checked={shareTelemetry} onChange={e => setShareTelemetry(e.target.checked)} />
+                    <span>أوافق على إرسال اسمي وبريدي ومعلومات جهازي وعنوان IP إلى إدارة الموقع عبر تيليجرام عند إنشاء الحساب. هذا اختياري ولا يؤثر على التسجيل.</span>
+                  </label>
+                )}
+                {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+                <button className="button button-primary account-submit" type="submit" disabled={busy}>
+                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
+                  {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
+                </button>
+              </form>
+              <p className="account-footnote">لن نطلب منك أي بيانات غير لازمة لإنشاء حسابك.</p>
+            </section>
+          )}
+          <Link to="/" className="account-home-link"><ArrowLeft size={15} /> العودة إلى الصفحة الرئيسية</Link>
+        </div>
+      </main>
+    </>
+  );
+}
+
 function NotFound() {
   return <div className="not-found"><span>404</span><h1>هذه الصفحة غير موجودة.</h1><Link to="/" className="button button-primary">العودة للرئيسية <ArrowLeft size={17} /></Link></div>;
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<Home />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<NotFound />} /></Routes>;
+  return <Routes><Route path="/" element={<Home />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<NotFound />} /></Routes>;
 }
