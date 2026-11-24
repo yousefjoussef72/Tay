@@ -14,7 +14,12 @@ function describeDevice(userAgent) {
 
   if (/iPhone/i.test(ua)) { device = "iPhone"; os = "iOS"; }
   else if (/iPad/i.test(ua)) { device = "iPad"; os = "iPadOS"; }
-  else if (/Android/i.test(ua)) { device = /Mobile/i.test(ua) ? "هاتف Android" : "جهاز Android"; os = "Android"; }
+  else if (/Android/i.test(ua)) {
+    os = "Android";
+    const modelMatch = ua.match(/Android [^;]+;\\s*([^;)]+)/i);
+    const model = modelMatch?.[1]?.replace(/\\s+Build.*$/i, "").trim();
+    device = (/Mobile/i.test(ua) ? "هاتف Android" : "جهاز Android") + (model && model.length < 50 ? " (" + model + ")" : "");
+  }
   else if (/Windows/i.test(ua)) { device = "كمبيوتر"; os = "Windows"; }
   else if (/Mac OS X|Macintosh/i.test(ua)) { device = "كمبيوتر"; os = "macOS"; }
   else if (/Linux/i.test(ua)) { device = "كمبيوتر"; os = "Linux"; }
