@@ -74,7 +74,7 @@ function Header() {
           <a href={safeSiteHref(copy.navFeaturesUrl, "/#features")} onClick={close}>{copy.navFeatures}</a>
           <a href={safeSiteHref(copy.navContactUrl, "/#contact")} onClick={close}>{copy.navContact}</a>
           <Link to={safeSiteHref(copy.navExperimentsUrl, "/experiments")} onClick={close}>{copy.navExperiments || "المواد والتجارب"}</Link>
-          <Link to="/research" onClick={close}>مختبر التجارب</Link>
+          <Link to="/research" onClick={close}>المختبر والمساعد الذكي</Link>
           <a href={safeSiteHref(copy.navLibraryUrl, "/library")} onClick={close}>{copy.navLibrary}</a>
           <a href={safeSiteHref(copy.navExamsUrl, "/exams")} onClick={close}>{copy.navExams}</a>
           <a href={safeSiteHref(copy.navAccountUrl, "/account")} onClick={close}>{copy.navAccount}</a>
