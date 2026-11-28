@@ -20,8 +20,8 @@ const TABS = [
 
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
 const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", external_url: "", file_path: "", file_name: "", is_published: false };
-const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30 };
-const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1 };
+const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
+const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1, image_url: "" };
 
 function slugFor(title) {
   const normalized = title.toLowerCase().trim()
@@ -75,9 +75,11 @@ export default function AdminWorkspace({ session }) {
   const [resourceDraft, setResourceDraft] = useState(EMPTY_RESOURCE);
   const [resourceFile, setResourceFile] = useState(null);
   const [examDraft, setExamDraft] = useState(EMPTY_EXAM);
+  const [examCoverFile, setExamCoverFile] = useState(null);
   const [selectedExam, setSelectedExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [questionDraft, setQuestionDraft] = useState(EMPTY_QUESTION);
+  const [questionImageFile, setQuestionImageFile] = useState(null);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editingExam, setEditingExam] = useState(false);
 
@@ -86,7 +88,7 @@ export default function AdminWorkspace({ session }) {
     const [articleResult, resourceResult, examResult, messageResult, attemptResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("exams").select("id,title,description,duration_minutes,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,score,max_score,submitted_at").order("submitted_at", { ascending: false }).limit(200),
     ]);
@@ -246,7 +248,7 @@ export default function AdminWorkspace({ session }) {
 
   async function loadQuestions(examId) {
     const [questionResult, answerResult] = await Promise.all([
-      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order").eq("exam_id", examId).order("sort_order").order("created_at"),
+      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url").eq("exam_id", examId).order("sort_order").order("created_at"),
       supabase.from("exam_answer_keys").select("question_id,correct_answer"),
     ]);
     if (questionResult.error || answerResult.error) {
@@ -260,29 +262,45 @@ export default function AdminWorkspace({ session }) {
   async function saveExam(event) {
     event.preventDefault();
     if (!examDraft.title.trim()) return setAlert({ kind: "error", text: "اكتب اسم الامتحان." });
-    setBusy(true); setAlert(null);
-    const values = {
-      title: examDraft.title.trim(),
-      description: examDraft.description.trim(),
-      duration_minutes: Number(examDraft.duration_minutes) || 30,
-      created_by: session.user.id,
-    };
-    const result = examDraft.id
-      ? await supabase.from("exams").update(values).eq("id", examDraft.id).select().single()
-      : await supabase.from("exams").insert(values).select().single();
-    setBusy(false);
-    if (result.error) return setAlert({ kind: "error", text: result.error.message || "تعذر حفظ الامتحان." });
-    setSelectedExam(result.data);
-    setEditingExam(false);
-    setExamDraft({ ...EMPTY_EXAM });
-    await loadQuestions(result.data.id);
-    await loadAll();
-    setAlert({ kind: "success", text: examDraft.id ? "تم تحديث بيانات الامتحان." : "تم إنشاء الامتحان. أضف أسئلته الآن." });
+    setBusy(true);
+    setAlert(null);
+    let uploadedPath = null;
+    try {
+      let coverImageUrl = examDraft.cover_image_url || null;
+      if (examCoverFile) {
+        uploadedPath = await uploadAsset(examCoverFile, "exam-covers");
+        coverImageUrl = publicFileUrl(uploadedPath);
+      }
+      const values = {
+        title: examDraft.title.trim(),
+        description: examDraft.description.trim(),
+        duration_minutes: Number(examDraft.duration_minutes) || 30,
+        cover_image_url: coverImageUrl,
+        created_by: examDraft.id ? undefined : session.user.id,
+      };
+      const result = examDraft.id
+        ? await supabase.from("exams").update(values).eq("id", examDraft.id).select().single()
+        : await supabase.from("exams").insert(values).select().single();
+      if (result.error) throw result.error;
+      setSelectedExam(result.data);
+      setEditingExam(false);
+      setExamDraft({ ...EMPTY_EXAM });
+      setExamCoverFile(null);
+      await loadQuestions(result.data.id);
+      await loadAll();
+      setAlert({ kind: "success", text: examDraft.id ? "تم تحديث بيانات الامتحان." : "تم إنشاء الامتحان. أضف أسئلته الآن." });
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ الامتحان." });
+    } finally {
+      setBusy(false);
+    }
   }
 
   function openExam(exam) {
     setSelectedExam(exam);
-    setExamDraft({ id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes });
+    setExamDraft({ id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes, cover_image_url: exam.cover_image_url || "" });
+    setExamCoverFile(null);
     setEditingExam(false);
     setQuestionDraft(EMPTY_QUESTION);
     setEditingQuestionId(null);
@@ -292,7 +310,8 @@ export default function AdminWorkspace({ session }) {
 
   function editExamDetails() {
     if (!selectedExam) return;
-    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes });
+    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "" });
+    setExamCoverFile(null);
     setEditingExam(true);
   }
 
