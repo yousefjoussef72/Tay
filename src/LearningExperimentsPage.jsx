@@ -8,7 +8,7 @@ import { supabase } from "./lib/supabase.js";
 import ExperimentSimulator from "./ExperimentSimulator.jsx";
 import "./learning-studio.css";
 
-const EMPTY = { subjects: [], units: [], lessons: [], experiments: [] };
+const EMPTY = { subjects: [], units: [], lessons: [], experiments: [], resources: [] };
 
 function lines(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
@@ -77,21 +77,30 @@ export default function LearningExperimentsPage() {
     async function load() {
       setLoading(true);
       setError("");
-      const [subjects, units, lessons, experiments, session] = await Promise.all([
+      const [subjects, units, lessons, experiments, resources, session] = await Promise.all([
         supabase.from("learning_subjects").select("id,name,slug,academic_stage,grade_level,track,description,icon,color").eq("is_published", true).order("sort_order"),
         supabase.from("learning_units").select("id,subject_id,title,slug,term,description,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_lessons").select("id,unit_id,title,slug,summary,content_json,learning_objectives,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_experiments").select("id,subject_id,unit_id,lesson_id,title,slug,description,experience_type,simulator_type,simulation_config,content_json,sort_order").eq("is_published", true).order("sort_order").order("created_at", { ascending: false }),
+        supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,subject_id,unit_id,lesson_id").eq("is_published", true).order("created_at", { ascending: false }),
         supabase.auth.getSession()
       ]);
       if (!active) return;
-      const firstError = subjects.error || units.error || lessons.error || experiments.error;
+      const firstError = subjects.error || units.error || lessons.error || experiments.error || resources.error;
       if (firstError) setError("تعذر تحميل المواد والتجارب حاليًا. حدّث الصفحة وحاول مرة أخرى.");
+      const resourceRows = await Promise.all((resources.data || []).map(async item => {
+        if (item.resource_type === "link") return { ...item, resolved_url: item.external_url || "" };
+        if (!item.file_path) return { ...item, resolved_url: "" };
+        const { data: signed, error: signedError } = await supabase.storage.from("tay-library").createSignedUrl(item.file_path, 60 * 60);
+        return { ...item, resolved_url: signedError ? "" : (signed?.signedUrl || "") };
+      }));
+      if (!active) return;
       setData({
         subjects: subjects.data || [],
         units: units.data || [],
         lessons: lessons.data || [],
-        experiments: experiments.data || []
+        experiments: experiments.data || [],
+        resources: resourceRows
       });
       setUser(session.data?.session?.user || null);
       setLoading(false);
@@ -168,6 +177,7 @@ export default function LearningExperimentsPage() {
     const subject = unit ? subjectMap.get(unit.subject_id) : null;
     const content = selectedLesson.content_json || {};
     const relatedExperiments = data.experiments.filter(item => item.lesson_id === selectedLesson.id);
+    const relatedResources = data.resources.filter(item => item.lesson_id === selectedLesson.id || (!item.lesson_id && item.unit_id === selectedLesson.unit_id) || (!item.lesson_id && !item.unit_id && item.subject_id === unit?.subject_id));
     const sections = lines(content.sections);
     const laws = lines(content.laws);
     const roadmap = lines(content.exam_roadmap);
@@ -189,6 +199,12 @@ export default function LearningExperimentsPage() {
           {laws.length > 0 && <section className="learning-content-section"><h2>القوانين والملخص</h2><div className="learning-formula-grid">{laws.map((item,index)=><div key={index}><b>{item.title}</b><strong dir="ltr">{item.formula}</strong><small>{item.note}</small></div>)}</div></section>}
           {roadmap.length > 0 && <section className="learning-content-section"><h2>خريطة الحل في الامتحان</h2><ol>{roadmap.map((item,index)=><li key={index}>{item}</li>)}</ol></section>}
           {quiz.length > 0 && <LessonQuiz items={quiz}/>}
+          {relatedResources.length > 0 && <section className="learning-content-section"><h2><Library size={18}/> ملفات ومصادر الدرس</h2><div className="learning-related-resource-grid">{relatedResources.map(item=><article className="learning-related-resource" key={item.id}>
+            <span>{item.category || "مصدر تعليمي"}</span><h3>{item.title}</h3><p>{item.description}</p>
+            {item.resource_type === "video" && item.resolved_url && <video controls playsInline preload="metadata" src={item.resolved_url}>متصفحك لا يدعم تشغيل الفيديو.</video>}
+            {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/ >}
+            {item.resolved_url ? <a href={item.resolved_url} target="_blank" rel="noreferrer">{item.resource_type === "video" ? "مشاهدة الفيديو" : item.resource_type === "link" ? "فتح المصدر الخارجي" : "فتح أو تنزيل الملف"}</a> : <small>المصدر غير متاح مؤقتًا.</small>}
+          </article>)}</div></section>}
           {relatedExperiments.length > 0 && <section className="learning-content-section"><h2><FlaskConical size={18}/> جرّب ما تعلمته</h2><div className="learning-experiment-grid">{relatedExperiments.map(experiment=><ExperimentCard key={experiment.id} experiment={experiment} subject={subject} unit={unit}/>)}</div></section>}
         </main>
       </div>
