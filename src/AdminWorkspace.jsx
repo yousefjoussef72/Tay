@@ -714,29 +714,90 @@ export default function AdminWorkspace({ session }) {
               <>
                 {selectedExam.cover_image_url && <img className="hub-exam-cover-preview" src={selectedExam.cover_image_url} alt={selectedExam.title} />}
                 <div className="hub-panel-heading"><div><h2>{selectedExam.title}</h2><small>{questions.length} سؤال · {selectedExam.duration_minutes} دقيقة</small></div><button className="hub-secondary compact" onClick={editExamDetails}><Pencil size={15} /> تعديل</button></div>
+                <section className="hub-panel hub-ai-generator">
+                  <div className="hub-panel-heading"><h3><Sparkles size={18} /> إنشاء أسئلة بالذكاء الاصطناعي</h3><span className="hub-ai-tag">AI</span></div>
+                  <p className="hub-muted">اكتب الموضوع والمستوى، وسيقترح النظام أسئلة متنوعة مع الإجابات النموذجية وعناصر تصحيح المقال. لن تُحفظ الأسئلة قبل مراجعتك.</p>
+                  <label>موضوع الأسئلة<textarea rows="2" value={aiTopic} onChange={e => setAiTopic(e.target.value)} placeholder="مثال: قوانين نيوتن وتطبيقاتها في الحركة..." /></label>
+                  <div className="hub-form-grid">
+                    <label>المادة (اختياري)<input value={aiSubject} onChange={e => setAiSubject(e.target.value)} placeholder="الفيزياء" /></label>
+                    <label>المستوى الدراسي<input value={aiLevel} onChange={e => setAiLevel(e.target.value)} placeholder="الصف أو الوحدة الدراسية" /></label>
+                    <label>عدد الأسئلة<input type="number" min="1" max="20" value={aiCount} onChange={e => setAiCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))} /></label>
+                    <label>مستوى الصعوبة<select value={aiDifficulty} onChange={e => setAiDifficulty(e.target.value)}><option value="easy">سهل</option><option value="medium">متوسط</option><option value="hard">متقدم</option><option value="mixed">متدرج ومتنوع</option></select></label>
+                  </div>
+                  <div className="hub-ai-type-picker">
+                    <strong>أنواع الأسئلة</strong>
+                    <div className="hub-ai-type-options">
+                      {[["mcq","اختيار من متعدد"],["true_false","صح أو خطأ"],["short_answer","إجابة قصيرة"],["essay","مقالي"]].map(([value,label]) => <label className="hub-check" key={value}><input type="checkbox" checked={aiQuestionTypes.includes(value)} onChange={() => setAiQuestionTypes(current => current.includes(value) ? current.filter(type => type !== value) : [...current, value])} />{label}</label>)}
+                    </div>
+                  </div>
+                  <button type="button" className="hub-primary" disabled={generatingAI || savingGenerated || !aiTopic.trim() || aiQuestionTypes.length === 0} onClick={generateExamQuestions}>
+                    <WandSparkles size={16} />{generatingAI ? "جارٍ إعداد الأسئلة..." : "ولّد أسئلة احترافية"}
+                  </button>
+                  {generatedQuestions.length > 0 && <div className="hub-ai-preview">
+                    <div className="hub-panel-heading"><h4>معاينة الأسئلة المولدة ({generatedQuestions.length})</h4><button type="button" className="hub-secondary compact" onClick={() => setGeneratedQuestions([])}>إلغاء المعاينة</button></div>
+                    {generatedQuestions.map((question,index) => <article className="hub-ai-question-preview" key={index}>
+                      <div className="hub-ai-question-preview-title"><strong>السؤال {index+1}</strong><small>{question.question_type === "mcq" ? "اختيار من متعدد" : question.question_type === "true_false" ? "صح أو خطأ" : question.question_type === "essay" ? "مقالي · تصحيح بالذكاء الاصطناعي" : "إجابة قصيرة"} · {question.points} درجة</small></div>
+                      <label>نص السؤال<textarea rows="2" value={question.prompt} onChange={e => updateGeneratedQuestion(index,"prompt",e.target.value)} /></label>
+                      {question.question_type === "mcq" && <label>الاختيارات (كل اختيار في سطر)<textarea rows="4" value={(question.options || []).join("\n")} onChange={e => updateGeneratedQuestion(index,"options",e.target.value.split("\n").map(value => value.trim()).filter(Boolean))} /></label>}
+                      <label>{question.question_type === "essay" ? "الإجابة النموذجية" : "الإجابة الصحيحة"}<textarea rows="2" value={question.correct_answer} onChange={e => updateGeneratedQuestion(index,"correct_answer",e.target.value)} /></label>
+                      {question.question_type === "essay" && <label>عناصر التصحيح<textarea rows="3" value={question.grading_rubric || ""} onChange={e => updateGeneratedQuestion(index,"grading_rubric",e.target.value)} /></label>}
+                      <label className="hub-ai-points">الدرجة<input type="number" min="1" max="100" value={question.points} onChange={e => updateGeneratedQuestion(index,"points",Number(e.target.value) || 1)} /></label>
+                    </article>)}
+                    <button type="button" className="hub-primary" disabled={savingGenerated} onClick={saveGeneratedQuestions}><Save size={16} />{savingGenerated ? "جارٍ حفظ الأسئلة..." : "أضف الأسئلة إلى الامتحان"}</button>
+                  </div>}
+                </section>
                 <form className="hub-question-form" onSubmit={saveQuestion}>
-                  <h3>{editingQuestionId ? "تعديل السؤال" : "إضافة سؤال"}</h3>
+                  <h3>{editingQuestionId ? "تعديل السؤال يدويًا" : "إضافة سؤال يدويًا"}</h3>
                   <label>نص السؤال<textarea rows="3" required value={questionDraft.prompt} onChange={e => setQuestionDraft({ ...questionDraft, prompt: e.target.value })} placeholder="اكتب السؤال بوضوح..." /></label>
                   {questionDraft.image_url && !questionImageFile && <div className="hub-image-preview"><img src={questionDraft.image_url} alt="صورة السؤال" /><button type="button" className="hub-secondary compact" onClick={() => setQuestionDraft({ ...questionDraft, image_url: "" })}>إزالة الصورة</button></div>}
                   <FilePicker file={questionImageFile} onChange={setQuestionImageFile} accept="image/*" label="إضافة صورة للسؤال (اختياري)" />
                   <div className="hub-form-grid">
-                    <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option></select></label>
+                    <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, grading_mode: e.target.value === "essay" ? "ai" : "auto", options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option><option value="essay">سؤال مقالي</option></select></label>
                     <label>الدرجة<input type="number" min="1" max="100" value={questionDraft.points} onChange={e => setQuestionDraft({ ...questionDraft, points: e.target.value })} /></label>
                   </div>
                   {questionDraft.question_type === "mcq" && <label>الاختيارات (كل اختيار في سطر)<textarea rows="4" required value={questionDraft.options_text} onChange={e => setQuestionDraft({ ...questionDraft, options_text: e.target.value })} placeholder={"الاختيار الأول\nالاختيار الثاني\nالاختيار الثالث\nالاختيار الرابع"} /></label>}
                   {questionDraft.question_type === "true_false" && <label>الإجابة الصحيحة<select value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })}><option value="">اختر الإجابة</option><option value="صحيح">صحيح</option><option value="خطأ">خطأ</option></select></label>}
-                  {questionDraft.question_type !== "true_false" && <label>الإجابة الصحيحة<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder={questionDraft.question_type === "mcq" ? "اكتب نص الاختيار الصحيح كما هو" : "الإجابة التي سيصحح النظام بناءً عليها"} /></label>}
+                  {questionDraft.question_type === "mcq" && <label>الإجابة الصحيحة<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="اكتب نص الاختيار الصحيح كما هو" /></label>}
+                  {questionDraft.question_type === "short_answer" && <label>الإجابة النموذجية<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="الإجابة التي سيصحح النظام بناءً عليها" /></label>}
+                  {questionDraft.question_type === "essay" && <>
+                    <label>طريقة التصحيح<select value={questionDraft.grading_mode} onChange={e => setQuestionDraft({ ...questionDraft, grading_mode: e.target.value })}><option value="ai">تصحيح بالذكاء الاصطناعي</option><option value="manual">مراجعة يدوية</option></select></label>
+                    <label>الإجابة النموذجية<textarea required rows="3" value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="اكتب إجابة نموذجية أو أهم الأفكار التي ينبغي أن تتضمنها الإجابة..." /></label>
+                    <label>عناصر التصحيح وتوزيع الدرجة<textarea rows="4" value={questionDraft.grading_rubric} onChange={e => setQuestionDraft({ ...questionDraft, grading_rubric: e.target.value })} placeholder="مثال: درجتان لشرح الفكرة، درجتان لصحة القانون، درجة للمثال والتطبيق..." /></label>
+                  </>}
                   <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Plus size={16} />{editingQuestionId ? "حفظ التعديل" : "إضافة السؤال"}</button>{editingQuestionId && <button type="button" className="hub-secondary" onClick={() => { setEditingQuestionId(null); setQuestionDraft(EMPTY_QUESTION); setQuestionImageFile(null); }}>إلغاء</button>}</div>
                 </form>
                 <div className="hub-question-list"><h3><ListChecks size={17} /> أسئلة الامتحان</h3>
-                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
+                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : q.question_type === "essay" ? "مقالي · " + (q.grading_mode === "ai" ? "تصحيح AI" : "مراجعة يدوية") : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
                 </div>
-                <div className="hub-attempts"><h3>نتائج الطلاب ({selectedAttempts.length})</h3>{selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div key={attempt.id}><span>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</span><strong>{attempt.score} / {attempt.max_score}</strong></div>)}</div>
+                <div className="hub-attempts">
+                  <h3>نتائج الطلاب ({selectedAttempts.length})</h3>
+                  {selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div className="hub-attempt-row" key={attempt.id}>
+                    <div><strong>{attempt.student_name}</strong><small>@{attempt.student_username} · {new Date(attempt.submitted_at).toLocaleString("ar-EG")}</small></div>
+                    <strong>{attempt.score} / {attempt.max_score}</strong>
+                    {attempt.grading_status === "pending_ai" || attempt.grading_status === "failed" ? <button className="hub-secondary compact" disabled={gradingAttemptId === attempt.id} onClick={() => gradeAttemptWithAI(attempt)}>{gradingAttemptId === attempt.id ? "جارٍ التصحيح..." : "صحّح المقالات بالذكاء الاصطناعي"}</button> : <small>{attempt.grading_status === "graded" ? "تم تصحيح المقال" : attempt.grading_status === "needs_review" ? "تحتاج مراجعة يدوية" : "اكتمل التصحيح"}</small>}
+                  </div>)}
+                </div>
                 <div className="hub-publish-note"><CheckCircle2 size={16} /> بعد الانتهاء من الأسئلة، استخدم زر النشر بجوار اسم الامتحان ليظهر للطلاب.</div>
               </>
             )}
           </section>
         </div>
+      )}
+
+      {!loading && tab === "results" && (
+        <section className="hub-panel hub-results-panel">
+          <div className="hub-panel-heading"><div><h2>نتائج الطلاب</h2><small>{attempts.length} محاولة مسجلة في آخر 500 محاولة</small></div>
+            <label className="hub-results-filter">الامتحان<select value={resultsExamFilter} onChange={e => setResultsExamFilter(e.target.value)}><option value="all">كل الامتحانات</option>{exams.map(exam => <option value={exam.id} key={exam.id}>{exam.title}</option>)}</select></label>
+          </div>
+          {visibleAttempts.length === 0 ? <div className="hub-empty">لا توجد نتائج مطابقة لهذا الاختيار حتى الآن.</div> : <div className="hub-results-list">
+            {visibleAttempts.map(attempt => <article className="hub-result-row" key={attempt.id}>
+              <div className="hub-result-student"><strong>{attempt.student_name}</strong><span dir="ltr">@{attempt.student_username}</span><small>{attempt.exam_title}</small><small>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</small></div>
+              <div className="hub-result-score"><strong>{attempt.score} / {attempt.max_score}</strong><span>{attempt.max_score > 0 ? Math.round((attempt.score / attempt.max_score) * 1000) / 10 : 0}%</span><small>{attempt.grading_status === "pending_ai" ? "مقالات تنتظر التصحيح" : attempt.grading_status === "processing" ? "جارٍ تصحيح المقال" : attempt.grading_status === "failed" ? "تعذر التصحيح، يمكن إعادة المحاولة" : attempt.grading_status === "needs_review" ? "تحتاج مراجعة يدوية" : attempt.grading_status === "graded" ? "تم تصحيح المقالات" : "تم التصحيح"}</small></div>
+              {attempt.grading_status === "pending_ai" || attempt.grading_status === "failed" ? <button className="hub-primary compact" disabled={gradingAttemptId === attempt.id} onClick={() => gradeAttemptWithAI(attempt)}><Sparkles size={15} />{gradingAttemptId === attempt.id ? "جارٍ التصحيح..." : "صحّح بالذكاء الاصطناعي"}</button> : <span className="hub-result-status"><CheckCircle2 size={15} />{attempt.grading_status === "needs_review" ? "مراجعة" : "مكتمل"}</span>}
+              {attempt.ai_feedback && Object.keys(attempt.ai_feedback).length > 0 && <details className="hub-result-feedback"><summary>عرض ملاحظات التصحيح</summary>{Object.values(attempt.ai_feedback).map((feedback,index) => <div key={index}><strong>{feedback.prompt || "السؤال المقالي"} · {feedback.score} درجة</strong><p>{feedback.feedback}</p>{feedback.strengths?.length > 0 && <small>نقاط القوة: {feedback.strengths.join("، ")}</small>}{feedback.improvements?.length > 0 && <small>ما يحتاج تحسينًا: {feedback.improvements.join("، ")}</small>}</div>)}</details>}
+            </article>)}
+          </div>}
+        </section>
       )}
 
       {!loading && tab === "site" && <SiteContentEditor />}
