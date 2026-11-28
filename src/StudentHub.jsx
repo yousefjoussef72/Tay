@@ -1,0 +1,193 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { BookOpen, FileText, Image as ImageIcon, ExternalLink, Search, ClipboardList, Clock3, ArrowRight, CheckCircle2, LockKeyhole, Download } from "lucide-react";
+import { supabase } from "./lib/supabase.js";
+import "./admin-content.css";
+
+const BUCKET = "tay-assets";
+const fileUrl = path => path ? supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : "";
+
+function PublicHubHeader() {
+  return <header className="public-hub-header"><Link to="/" className="public-hub-brand">مساحة <span>تعلم، نظّم، وتقدّم</span></Link><nav><Link to="/library">المكتبة</Link><Link to="/exams">الاختبارات</Link><Link to="/account">حسابي</Link><Link to="/">الرئيسية</Link></nav></header>;
+}
+
+export function LibraryPage() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("الكل");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      const { data, error: loadError } = await supabase
+        .from("learning_resources")
+        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,created_at")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (loadError) setError("تعذر تحميل المكتبة الآن.");
+      setItems(data || []);
+      setLoading(false);
+    }
+    load();
+    return () => { active = false; };
+  }, []);
+
+  const categories = ["الكل", ...new Set(items.map(item => item.category || "عام"))];
+  const filtered = items.filter(item =>
+    (category === "الكل" || item.category === category) &&
+    (item.title + " " + item.description).toLowerCase().includes(query.toLowerCase())
+  );
+
+  return <div className="public-hub-shell">
+    <PublicHubHeader />
+    <main className="public-hub-main">
+      <div className="public-hub-kicker">مكتبة Tay Space</div>
+      <h1>المكتبة التعليمية</h1>
+      <p className="public-hub-lead">الكتب والملخصات والملفات والصور التي يضيفها فريق الموقع.</p>
+      <div className="library-tools">
+        <label><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="ابحث عن كتاب أو ملخص..." /></label>
+        <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select>
+      </div>
+      {error && <p className="hub-alert error">{error}</p>}
+      {loading ? <div className="public-hub-empty">جارٍ تحميل الملفات...</div> : filtered.length === 0 ? <div className="public-hub-empty">لا توجد ملفات منشورة تطابق بحثك حاليًا.</div> : <div className="public-resource-grid">
+        {filtered.map(item => {
+          const url = item.resource_type === "link" ? item.external_url : fileUrl(item.file_path);
+          return <article className="public-resource-card" key={item.id}>
+            {item.resource_type === "image" ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a> : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : <BookOpen size={24} />}</div>}
+            <span className="public-resource-category">{item.category || "عام"}</span>
+            <h2>{item.title}</h2>
+            <p>{item.description || "ملف تعليمي مضاف إلى المكتبة."}</p>
+            <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? "عرض الصورة" : item.resource_type === "link" ? "فتح الرابط" : "فتح أو تحميل الملف"} <Download size={15} /></a>
+          </article>;
+        })}
+      </div>}
+    </main>
+  </div>;
+}
+
+export function ExamsPage() {
+  const { examId } = useParams();
+  const navigate = useNavigate();
+  const [exams, setExams] = useState([]);
+  const [exam, setExam] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [active, setActive] = useState(false);
+  const [answers, setAnswers] = useState({});
+  const [remaining, setRemaining] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      const [{ data: sessionData }, examResult] = await Promise.all([
+        supabase.auth.getSession(),
+        examId
+          ? supabase.from("exams").select("id,title,description,duration_minutes").eq("id", examId).eq("is_published", true).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (!alive) return;
+      setUser(sessionData.session?.user || null);
+      if (examId) {
+        if (examResult.error || !examResult.data) {
+          setError("الامتحان غير موجود أو لم يعد منشورًا.");
+        } else {
+          setExam(examResult.data);
+          const { data: qs, error: questionsError } = await supabase
+            .from("exam_questions")
+            .select("id,prompt,question_type,options,points,sort_order")
+            .eq("exam_id", examId)
+            .order("sort_order");
+          if (questionsError) setError("تعذر تحميل أسئلة الامتحان.");
+          setQuestions(qs || []);
+        }
+      } else {
+        const { data, error: examsError } = await supabase
+          .from("exams")
+          .select("id,title,description,duration_minutes,created_at")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false });
+        if (examsError) setError("تعذر تحميل قائمة الامتحانات.");
+        setExams(data || []);
+      }
+      setLoading(false);
+    }
+    load();
+    return () => { alive = false; };
+  }, [examId]);
+
+  async function submitExam() {
+    if (!exam || submitting || result) return;
+    setSubmitting(true);
+    const { data, error: submitError } = await supabase.rpc("submit_exam", {
+      p_exam_id: exam.id,
+      p_answers: answers,
+    });
+    setSubmitting(false);
+    if (submitError) {
+      setError(submitError.message === "authentication_required" ? "سجّل الدخول أولًا لإرسال إجاباتك." : "تعذر تصحيح الامتحان. تأكد من اتصالك ثم حاول مرة أخرى.");
+      setActive(false);
+      return;
+    }
+    setResult(data);
+    setActive(false);
+  }
+
+  useEffect(() => {
+    if (!active || result || submitting) return;
+    const timer = window.setInterval(() => setRemaining(value => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [active, result, submitting]);
+
+  useEffect(() => {
+    if (active && remaining === 0 && !result && !submitting) submitExam();
+  }, [active, remaining, result, submitting]);
+
+  async function beginExam() {
+    if (!user) {
+      navigate("/account");
+      return;
+    }
+    setAnswers({});
+    setResult(null);
+    setError("");
+    setRemaining((exam.duration_minutes || 30) * 60);
+    setActive(true);
+  }
+
+  const formatTime = seconds => String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+
+  return <div className="public-hub-shell">
+    <PublicHubHeader />
+    <main className="public-hub-main">
+      {!examId ? <>
+        <div className="public-hub-kicker">اختبر معلوماتك</div>
+        <h1>الامتحانات</h1>
+        <p className="public-hub-lead">اختبارات منشورة من فريق Tay Space، مع تصحيح تلقائي للأسئلة الموضوعية.</p>
+        {error && <p className="hub-alert error">{error}</p>}
+        {loading ? <div className="public-hub-empty">جارٍ تحميل الامتحانات...</div> : exams.length === 0 ? <div className="public-hub-empty">لا توجد امتحانات منشورة حتى الآن.</div> : <div className="public-exam-grid">
+          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || "اختبار تدريبي لقياس مدى استيعابك."}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} دقيقة</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>عرض الامتحان <ArrowRight size={15} /></Link></article>)}
+        </div>}
+      </> : loading ? <div className="public-hub-empty">جارٍ تحميل الامتحان...</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
+        <Link className="public-back-link" to="/exams">← العودة إلى الامتحانات</Link>
+        <div className="public-hub-kicker">امتحان تدريبي</div>
+        <h1>{exam.title}</h1>
+        <p className="public-hub-lead">{exam.description || "اقرأ الأسئلة جيدًا ثم أرسل إجاباتك للتصحيح."}</p>
+        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> مدة الامتحان: {exam.duration_minutes} دقيقة</div><div><ClipboardList size={18} /> عدد الأسئلة: {questions.length}</div><p>{user ? "لن تظهر لك الإجابات الصحيحة أثناء الحل. سيحسب النظام درجتك بعد الإرسال." : "تحتاج إلى تسجيل الدخول بحساب الطالب قبل بدء الامتحان."}</p><button className="hub-primary" onClick={beginExam}>{user ? "ابدأ الامتحان" : "تسجيل الدخول لبدء الامتحان"}</button></section>}
+        {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> الوقت المتبقي <strong>{formatTime(remaining)}</strong></div>
+          {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} درجة</span></div>
+            {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder="اكتب إجابتك هنا..." />}
+          </article>)}
+          <button className="hub-primary" disabled={submitting} onClick={() => { if (window.confirm("إرسال الإجابات وإنهاء الامتحان؟")) submitExam(); }}>{submitting ? "جارٍ التصحيح..." : "إرسال الإجابات والتصحيح"}</button>
+        </section>}
+        {result && <section className="public-result"><CheckCircle2 size={34} /><span>تم تصحيح إجاباتك</span><strong>{result.score} / {result.max_score}</strong><h2>{result.percentage}%</h2><p>تم حفظ محاولتك في سجل الامتحان.</p><Link className="hub-primary" to="/exams">العودة إلى قائمة الامتحانات</Link></section>}
+      </> : null}
+    </main>
+  </div>;
+}
