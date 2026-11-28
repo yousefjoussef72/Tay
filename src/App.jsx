@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, Route, Routes, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpLeft, ArrowUpRight, Check, Clock3, FileText,
@@ -6,9 +6,10 @@ import {
   Plus, Send, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
 } from "lucide-react";
 import { supabase, supabaseReady } from "./lib/supabase.js";
-import AdminWorkspace from "./AdminWorkspace.jsx";
-import { LibraryPage, ExamsPage } from "./StudentHub.jsx";
-import ArticlePage from "./ArticlePage.jsx";
+const AdminWorkspace = lazy(() => import("./AdminWorkspace.jsx"));
+const LibraryPage = lazy(() => import("./StudentHub.jsx").then(module => ({ default: module.LibraryPage })));
+const ExamsPage = lazy(() => import("./StudentHub.jsx").then(module => ({ default: module.ExamsPage })));
+const ArticlePage = lazy(() => import("./ArticlePage.jsx"));
 import { SiteCopyProvider, useSiteCopy } from "./siteCopy.js";
 
 const features = [
@@ -593,5 +594,14 @@ function NotFound() {
 }
 
 export default function App() {
-  return <SiteCopyProvider><Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="/articles/:slug" element={<ArticlePage />} /><Route path="*" element={<NotFound />} /></Routes></SiteCopyProvider>;
+  return <SiteCopyProvider><Routes>
+    <Route path="/" element={<SiteGate />} />
+    <Route path="/account" element={<AccountPage />} />
+    <Route path="/admin" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل لوحة الإدارة...</div>}><AdminPage /></Suspense>} />
+    <Route path="/library" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل المكتبة...</div>}><LibraryPage /></Suspense>} />
+    <Route path="/exams" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل الامتحانات...</div>}><ExamsPage /></Suspense>} />
+    <Route path="/exams/:examId" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل الامتحان...</div>}><ExamsPage /></Suspense>} />
+    <Route path="/articles/:slug" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل المقال...</div>}><ArticlePage /></Suspense>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes></SiteCopyProvider>;
 }
