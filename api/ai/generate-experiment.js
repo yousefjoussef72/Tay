@@ -57,8 +57,10 @@ function normalizeExperiment(value, requestedSimulator) {
   const experienceType = EXPERIENCE_TYPES.has(value.experience_type)
     ? value.experience_type
     : "simulation";
-  const simulatorType = SIMULATORS[requestedSimulator] ? requestedSimulator : "";
-  if (!simulatorType) return null;
+  const simulatorType = requestedSimulator === "auto"
+    ? cleanText(value.simulator_type, 60)
+    : requestedSimulator;
+  if (!SIMULATORS[simulatorType]) return null;
 
   const content = value.content && typeof value.content === "object" && !Array.isArray(value.content)
     ? value.content
