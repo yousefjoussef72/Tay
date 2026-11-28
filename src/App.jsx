@@ -525,7 +525,7 @@ function AccountPage() {
                   </label>
                 )}
                 <label>{copy.accountUsernameLabel}
-                  <input>
+                  <input
                     type="text"
                     required
                     minLength={3}
