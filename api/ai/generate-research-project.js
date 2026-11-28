@@ -61,7 +61,7 @@ function normalizePractical(value) {
 function normalizeResearch(value, subject, includePractical) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
-  const simulatorType = subject.slug === "physics" && SIMULATORS[value.simulator_type]
+  const simulatorType = includePractical && subject.slug === "physics" && SIMULATORS[value.simulator_type]
     ? value.simulator_type
     : null;
   const practical = includePractical ? normalizePractical(value.practical_experiment) : null;
