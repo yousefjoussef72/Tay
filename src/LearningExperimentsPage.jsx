@@ -2,17 +2,43 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowRight, Atom, BookOpen, CheckCircle2, ChevronLeft, Clock3,
-  FlaskConical, GraduationCap, Layers3, Library, ListChecks, Search, Sparkles
+  FlaskConical, GraduationCap, Layers3, Library, ListChecks, Search, Sparkles,
+  Landmark, Languages, BriefcaseBusiness, Cpu, Activity, Wallet, Brain
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import ExperimentSimulator from "./ExperimentSimulator.jsx";
 import "./learning-studio.css";
 
-const EMPTY = { subjects: [], units: [], lessons: [], experiments: [], resources: [] };
+const EMPTY = { tracks: [], subjects: [], units: [], lessons: [], experiments: [], resources: [] };
 
 function lines(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
+
+function SubjectIcon({ slug, icon }) {
+  if (slug?.includes("physics") || icon === "atom") return <Atom size={21}/>;
+  if (slug?.includes("english") || slug?.includes("language") || icon === "languages") return <Languages size={21}/>;
+  if (slug?.includes("history") || slug?.includes("geography") || icon === "landmark") return <Landmark size={21}/>;
+  if (slug?.includes("programming") || icon === "cpu") return <Cpu size={21}/>;
+  if (slug?.includes("business") || slug?.includes("accounting") || icon === "briefcase-business") return <BriefcaseBusiness size={21}/>;
+  if (slug?.includes("psychology") || icon === "brain") return <Brain size={21}/>;
+  if (slug?.includes("financial") || icon === "wallet") return <Wallet size={21}/>;
+  if (slug?.includes("physical") || icon === "activity") return <Activity size={21}/>;
+  return <BookOpen size={21}/>;
+}
+function TrackIcon({ slug }) {
+  if (slug === "medicine-life-sciences") return <Atom size={23}/>;
+  if (slug === "engineering-computer-science") return <Cpu size={23}/>;
+  if (slug === "business") return <BriefcaseBusiness size={23}/>;
+  return <Landmark size={23}/>;
+}
+const subjectKindLabel = kind => ({
+  core:"أساسية مشتركة",
+  specialized:"تخصصية",
+  non_counting:"لا تضاف للمجموع",
+  activity:"نشاط عملي",
+  elective:"اختيارية"
+}[kind] || "مادة دراسية");
 
 function PageHeader() {
   return (
@@ -63,6 +89,8 @@ function ExperimentCard({ experiment, subject, unit }) {
 export default function LearningExperimentsPage() {
   const { slug, lessonSlug } = useParams();
   const [data, setData] = useState(EMPTY);
+  const [selectedTrack, setSelectedTrack] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("all");
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [search, setSearch] = useState("");
@@ -80,8 +108,9 @@ export default function LearningExperimentsPage() {
     async function load() {
       setLoading(true);
       setError("");
-      const [subjects, units, lessons, experiments, resources, session] = await Promise.all([
-        supabase.from("learning_subjects").select("id,name,slug,academic_stage,grade_level,track,description,icon,color").eq("is_published", true).order("sort_order"),
+      const [tracks, subjects, units, lessons, experiments, resources, session] = await Promise.all([
+        supabase.from("learning_tracks").select("id,name,slug,description,icon,color,sort_order").eq("is_published", true).order("sort_order"),
+        supabase.from("learning_subjects").select("id,name,slug,academic_stage,grade_level,track,track_id,curriculum_year,subject_kind,choice_group,choice_rule,description,icon,color").eq("is_published", true).order("curriculum_year").order("sort_order"),
         supabase.from("learning_units").select("id,subject_id,title,slug,term,description,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_lessons").select("id,unit_id,title,slug,summary,content_json,learning_objectives,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_experiments").select("id,subject_id,unit_id,lesson_id,title,slug,description,experience_type,simulator_type,simulation_config,content_json,sort_order").eq("is_published", true).order("sort_order").order("created_at", { ascending: false }),
@@ -89,7 +118,7 @@ export default function LearningExperimentsPage() {
         supabase.auth.getSession()
       ]);
       if (!active) return;
-      const firstError = subjects.error || units.error || lessons.error || experiments.error || resources.error;
+      const firstError = tracks.error || subjects.error || units.error || lessons.error || experiments.error || resources.error;
       if (firstError) setError("تعذر تحميل المواد والتجارب حاليًا. حدّث الصفحة وحاول مرة أخرى.");
       const resourceRows = await Promise.all((resources.data || []).map(async item => {
         if (item.resource_type === "link") return { ...item, resolved_url: item.external_url || "" };
@@ -99,6 +128,7 @@ export default function LearningExperimentsPage() {
       }));
       if (!active) return;
       setData({
+        tracks: tracks.data || [],
         subjects: subjects.data || [],
         units: units.data || [],
         lessons: lessons.data || [],
@@ -117,27 +147,42 @@ export default function LearningExperimentsPage() {
   const lessonMap = useMemo(() => new Map(data.lessons.map(item => [item.id, item])), [data.lessons]);
   const selected = slug ? data.experiments.find(item => item.slug === slug) : null;
   const selectedLesson = lessonSlug ? data.lessons.find(item => item.slug === lessonSlug) : null;
+  const visibleSubjects = useMemo(() => data.subjects.filter(subject => {
+    const matchesTrack = selectedTrack === "all" || !subject.track_id || subject.track_id === selectedTrack;
+    const matchesGrade = selectedGrade === "all" || String(subject.curriculum_year || 2) === selectedGrade;
+    return matchesTrack && matchesGrade;
+  }), [data.subjects, selectedTrack, selectedGrade]);
+  const visibleSubjectIds = useMemo(() => new Set(visibleSubjects.map(subject => subject.id)), [visibleSubjects]);
   const visibleUnits = useMemo(
-    () => data.units.filter(unit => selectedSubject === "all" || unit.subject_id === selectedSubject),
-    [data.units, selectedSubject]
+    () => data.units.filter(unit => visibleSubjectIds.has(unit.subject_id) && (selectedSubject === "all" || unit.subject_id === selectedSubject)),
+    [data.units, visibleSubjectIds, selectedSubject]
   );
   const visibleLessons = useMemo(() => data.lessons.filter(item => {
     const unit = unitMap.get(item.unit_id);
-    const matchesSubject = selectedSubject === "all" || unit?.subject_id === selectedSubject;
+    const matchesSubject = !!unit && visibleSubjectIds.has(unit.subject_id) && (selectedSubject === "all" || unit.subject_id === selectedSubject);
     const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit;
     const text = (item.title + " " + item.summary).toLowerCase();
     return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
-  }), [data.lessons, unitMap, selectedSubject, selectedUnit, search]);
+  }), [data.lessons, unitMap, visibleSubjectIds, selectedSubject, selectedUnit, search]);
   const visibleExperiments = useMemo(() => data.experiments.filter(item => {
-    const matchesSubject = selectedSubject === "all" || item.subject_id === selectedSubject;
+    const matchesSubject = visibleSubjectIds.has(item.subject_id) && (selectedSubject === "all" || item.subject_id === selectedSubject);
     const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit;
     const text = (item.title + " " + item.description).toLowerCase();
     return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
-  }), [data.experiments, selectedSubject, selectedUnit, search]);
+  }), [data.experiments, visibleSubjectIds, selectedSubject, selectedUnit, search]);
+  const visibleResources = useMemo(() => data.resources.filter(item => {
+    const resourceUnit = unitMap.get(item.unit_id);
+    const resourceLesson = lessonMap.get(item.lesson_id);
+    const resourceSubjectId = item.subject_id || resourceUnit?.subject_id || unitMap.get(resourceLesson?.unit_id)?.subject_id;
+    const matchesSubject = !!resourceSubjectId && visibleSubjectIds.has(resourceSubjectId) && (selectedSubject === "all" || resourceSubjectId === selectedSubject);
+    const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit || resourceLesson?.unit_id === selectedUnit;
+    const text = (item.title + " " + (item.description || "") + " " + (item.category || "")).toLowerCase();
+    return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
+  }), [data.resources, unitMap, lessonMap, visibleSubjectIds, selectedSubject, selectedUnit, search]);
 
-  useEffect(() => {
-    setSelectedUnit("all");
-  }, [selectedSubject]);
+  const sharedSubjects = visibleSubjects.filter(subject => !subject.track_id);
+  const specialistSubjects = selectedTrack === "all" ? [] : visibleSubjects.filter(subject => subject.track_id === selectedTrack);
+  const selectedTrackInfo = data.tracks.find(track => track.id === selectedTrack);
 
   useEffect(() => {
     setNotice("");
@@ -235,7 +280,7 @@ export default function LearningExperimentsPage() {
           <Link to="/experiments" className="learning-back-link"><ArrowRight size={15}/> العودة إلى قائمة التجارب</Link>
           <div className="learning-detail-title">
             <div className="learning-breadcrumb">{subject?.name || "المادة"}{unit?.title ? " / " + unit.title : ""}{lesson?.title ? " / " + lesson.title : ""}</div>
-            <span className="learning-public-kicker"><FlaskConical size={15}/> معمل تفاعلي</span>
+            <span className="learning-public-kicker"><FlaskConical size={15}/>{selected.simulator_type ? "معمل ومحاكاة تفاعلية" : "نشاط تعليمي"}</span>
             <h1>{selected.title}</h1>
             <p>{selected.description}</p>
           </div>
@@ -264,20 +309,129 @@ export default function LearningExperimentsPage() {
       <PageHeader/>
       <main className="learning-public-main">
         <div className="learning-list-hero">
-          <span className="learning-public-kicker"><GraduationCap size={15}/> الصف الثاني من البكالوريا المصرية</span>
-          <h1>المواد والتجارب التفاعلية</h1>
-          <p>اختر المادة والوحدة، افتح التجربة، غيّر القيم، واكتشف بنفسك كيف تعمل القوانين.</p>
-          <div className="learning-list-stats"><span><BookOpen size={16}/>{data.subjects.length} مادة</span><span><Layers3 size={16}/>{data.units.length} وحدة</span><span><BookOpen size={16}/>{data.lessons.length} درس</span><span><FlaskConical size={16}/>{data.experiments.length} تجربة</span></div>
+          <span className="learning-public-kicker"><GraduationCap size={15}/> البكالوريا المصرية · أربعة مسارات تعليمية</span>
+          <h1>مساحتك التعليمية لكل مسار</h1>
+          <p>استكشف المسارات والمواد المشتركة والتخصصية، ثم افتح الوحدات والدروس والملفات والأنشطة والاختبارات المرتبطة بكل مادة.</p>
+          <div className="learning-list-stats">
+            <span><Layers3 size={16}/>{data.tracks.length} مسارات</span>
+            <span><BookOpen size={16}/>{data.subjects.length} مساحات مواد</span>
+            <span><BookOpen size={16}/>{data.lessons.length} درس منشور</span>
+            <span><FlaskConical size={16}/>{data.experiments.length} نشاط وتجربة</span>
+          </div>
         </div>
-        <div className="learning-list-tools">
-          <label><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="ابحث عن مادة أو درس أو تجربة..."/></label>
-          <select value={selectedSubject} onChange={event=>setSelectedSubject(event.target.value)}><option value="all">كل المواد</option>{data.subjects.map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
-          <select value={selectedUnit} onChange={event=>setSelectedUnit(event.target.value)}><option value="all">كل الوحدات</option>{visibleUnits.map(unit=><option key={unit.id} value={unit.id}>{unit.title}</option>)}</select>
+        <div className="learning-list-tools learning-track-filters">
+          <label><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="ابحث عن مادة أو درس أو موضوع..."/></label>
+          <select value={selectedTrack} onChange={event=>setSelectedTrack(event.target.value)}><option value="all">كل المسارات</option>{data.tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select>
+          <select value={selectedGrade} onChange={event=>setSelectedGrade(event.target.value)}><option value="all">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
+          <select value={selectedSubject} onChange={event=>setSelectedSubject(event.target.value)}><option value="all">كل المواد</option>{visibleSubjects.map(subject=><option key={subject.id} value={subject.id}>{subject.name} · {subject.grade_level}</option>)}</select>
+          <select value={selectedUnit} onChange={event=>setSelectedUnit(event.target.value)}><option value="all">كل الوحدات</option>{visibleUnits.map(unit=><option value={unit.id} key={unit.id}>{unit.title}</option>)}</select>
         </div>
+        {!loading && <>
+          <section className="learning-subjects-section">
+            <div className="learning-list-section-head">
+              <h2><Layers3 size={18}/> المسارات التعليمية</h2>
+              <span>{data.tracks.length} مسارات متاحة</span>
+            </div>
+            <div className="learning-track-grid">
+              {data.tracks.map(track => {
+                const trackSubjects = data.subjects.filter(subject =>
+                  subject.track_id === track.id &&
+                  (selectedGrade === "all" || String(subject.curriculum_year || 2) === selectedGrade)
+                );
+                const active = selectedTrack === track.id;
+                return (
+                  <button type="button" key={track.id} className={"learning-track-card" + (active ? " active" : "")}
+                    aria-pressed={active}
+                    onClick={() => { setSelectedTrack(active ? "all" : track.id); setSelectedSubject("all"); setSelectedUnit("all"); setSearch(""); }}>
+                    <span className={"learning-track-icon track-" + track.slug}><TrackIcon slug={track.slug}/></span>
+                    <span className="learning-subject-status">{active ? "المسار المحدد" : "مسار البكالوريا"}</span>
+                    <strong>{track.name}</strong>
+                    <small>{track.description}</small>
+                    <span className="learning-subject-counts">
+                      <span>{trackSubjects.length} مادة تخصصية</span>
+                      <span>{trackSubjects.filter(subject=>subject.curriculum_year===2).length} للصف الثاني</span>
+                      <span>{trackSubjects.filter(subject=>subject.curriculum_year===3).length} للصف الثالث</span>
+                    </span>
+                    <span className="learning-subject-action">{active ? "إظهار كل المسارات" : "افتح المسار"} <ChevronLeft size={15}/></span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+          {sharedSubjects.length > 0 && <section className="learning-subjects-section learning-common-subjects">
+            <div className="learning-list-section-head">
+              <h2><BookOpen size={18}/> المواد المشتركة بين المسارات</h2>
+              <span>{sharedSubjects.length} مواد</span>
+            </div>
+            <div className="learning-subject-grid">
+              {sharedSubjects.map(subject => {
+                const active = selectedSubject === subject.id;
+                const subjectUnits = data.units.filter(item => item.subject_id === subject.id);
+                const subjectLessons = data.lessons.filter(item => subjectUnits.some(unit => unit.id === item.unit_id));
+                const subjectResources = data.resources.filter(item => item.subject_id === subject.id);
+                return (
+                  <button type="button" key={subject.id} className={"learning-subject-card" + (active ? " active" : "")}
+                    aria-pressed={active}
+                    onClick={() => { setSelectedSubject(active ? "all" : subject.id); setSearch(""); }}>
+                    <span className="learning-subject-icon"><SubjectIcon slug={subject.slug} icon={subject.icon}/></span>
+                    <span className="learning-subject-status">{subjectKindLabel(subject.subject_kind)}</span>
+                    <strong>{subject.name}</strong>
+                    <small>{subject.description || "مساحة مادة مشتركة قابلة لإضافة المحتوى."}</small>
+                    <span className="learning-subject-counts">
+                      <span>{subjectUnits.length} وحدة</span><span>{subjectLessons.length} درس</span><span>{subjectResources.length} ملف</span>
+                    </span>
+                    <span className="learning-subject-action">{active ? "إلغاء التحديد" : "افتح المادة"} <ChevronLeft size={15}/></span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>}
+          <section className="learning-subjects-section learning-specialist-subjects">
+            <div className="learning-list-section-head">
+              <h2><Atom size={18}/> مواد التخصص</h2>
+              <span>{selectedTrackInfo ? selectedTrackInfo.name : "اختر مسارًا لعرض المواد التخصصية"}</span>
+            </div>
+            {specialistSubjects.length === 0 ? <div className="learning-inline-empty">اختر أحد المسارات الأربعة بالأعلى لعرض مواده التخصصية للصفين الثاني والثالث.</div> : <div className="learning-subject-grid">
+              {specialistSubjects.map(subject => {
+                const active = selectedSubject === subject.id;
+                const subjectUnits = data.units.filter(item => item.subject_id === subject.id);
+                const subjectLessons = data.lessons.filter(item => subjectUnits.some(unit => unit.id === item.unit_id));
+                const subjectResources = data.resources.filter(item => item.subject_id === subject.id);
+                const choiceLabel = subject.choice_rule === "choose_one" ? "اختر مادة واحدة من المجموعة" : subject.choice_rule === "all_required" ? "مادتان تخصصيتان مطلوبتان" : subjectKindLabel(subject.subject_kind);
+                return (
+                  <button type="button" key={subject.id} className={"learning-subject-card" + (active ? " active" : "")}
+                    aria-pressed={active}
+                    onClick={() => { setSelectedSubject(active ? "all" : subject.id); setSearch(""); }}>
+                    <span className="learning-subject-icon"><SubjectIcon slug={subject.slug} icon={subject.icon}/></span>
+                    <span className="learning-subject-status">{subject.grade_level} · {choiceLabel}</span>
+                    <strong>{subject.name}</strong>
+                    <small>{subject.description || "مساحة تخصصية قابلة لإضافة الوحدات والدروس والملفات."}</small>
+                    <span className="learning-subject-counts">
+                      <span>{subjectUnits.length} وحدة</span><span>{subjectLessons.length} درس</span><span>{subjectResources.length} ملف</span>
+                    </span>
+                    <span className="learning-subject-action">{active ? "إلغاء التحديد" : "افتح المادة"} <ChevronLeft size={15}/></span>
+                  </button>
+                );
+              })}
+            </div>}
+          </section>
+          {selectedSubject !== "all" && <button type="button" className="learning-all-subjects" onClick={() => {setSelectedSubject("all");setSelectedUnit("all")}}>عرض جميع المواد المحددة</button>}
+        </>}
         {error && <div className="learning-error">{error}</div>}
         {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>
           <section className="learning-list-section"><div className="learning-list-section-head"><h2><BookOpen size={18}/> الدروس</h2><span>{visibleLessons.length} درس</span></div>
             {visibleLessons.length === 0 ? <div className="learning-inline-empty">لا توجد دروس منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleLessons.map(lesson=>{const unit=unitMap.get(lesson.unit_id);const subject=unit?subjectMap.get(unit.subject_id):null;return <Link className="learning-experiment-card learning-lesson-card" key={lesson.id} to={"/lessons/"+lesson.slug}><div className="learning-experiment-card-icon"><BookOpen size={20}/></div><div className="learning-experiment-meta"><span>{subject?.name||"مادة تعليمية"}</span>{unit?.title&&<span>{unit.title}</span>}</div><h3>{lesson.title}</h3><p>{lesson.summary}</p><div className="learning-experiment-card-foot"><span>شرح وقوانين</span><span>افتح الدرس <ChevronLeft size={15}/></span></div></Link>})}</div>}
+          </section>
+          <section className="learning-list-section"><div className="learning-list-section-head"><h2><Library size={18}/> الملفات والمصادر</h2><span>{visibleResources.length} ملف أو مصدر</span></div>
+            {visibleResources.length === 0 ? <div className="learning-inline-empty">لا توجد ملفات مضافة لهذه المادة بعد. يمكنك ربط ملفاتها من تبويب المكتبة والملفات في لوحة الإدارة.</div> : <div className="learning-resource-grid">{visibleResources.map(item => (
+              <article className="learning-resource-card" key={item.id}>
+                <div className="learning-resource-icon">{item.resource_type === "video" ? <FlaskConical size={19}/> : item.resource_type === "image" ? <BookOpen size={19}/> : <Library size={19}/>}</div>
+                <div className="learning-resource-copy"><span>{item.category || "مصدر تعليمي"}</span><h3>{item.title}</h3><p>{item.description || "ملف تعليمي مرتبط بالمادة."}</p></div>
+                {item.resource_type === "video" && item.resolved_url && <video controls playsInline preload="metadata" src={item.resolved_url}>متصفحك لا يدعم تشغيل الفيديو.</video>}
+                {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/>}
+                {item.resolved_url ? <a href={item.resolved_url} target="_blank" rel="noreferrer">{item.resource_type === "video" ? "مشاهدة الفيديو" : item.resource_type === "link" ? "فتح المصدر" : "فتح أو تنزيل الملف"} <ArrowRight size={14}/></a> : <small>المصدر غير متاح مؤقتًا.</small>}
+              </article>
+            ))}</div>}
           </section>
           <section className="learning-list-section"><div className="learning-list-section-head"><h2><FlaskConical size={18}/> التجارب والمحاكاة</h2><span>{visibleExperiments.length} تجربة</span></div>
             {visibleExperiments.length === 0 ? <div className="learning-inline-empty">لا توجد تجارب منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleExperiments.map(item=><ExperimentCard key={item.id} experiment={item} subject={subjectMap.get(item.subject_id)} unit={unitMap.get(item.unit_id)}/>)}</div>}
