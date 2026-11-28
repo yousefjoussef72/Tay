@@ -85,3 +85,7 @@
   .site-editor-preview { align-items:flex-start; flex-direction:column; }
   .site-editor-preview img { width:100%; height:140px; }
 }
+
+.site-editor-load-error { min-height:230px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:25px; background:#fff; border:1px solid #e4e5de; color:#8f5144; text-align:center; }
+.site-editor-load-error strong { color:#34464e; font-size:13px; }
+.site-editor-load-error p { color:#859194; font-size:10px; line-height:1.9; }
