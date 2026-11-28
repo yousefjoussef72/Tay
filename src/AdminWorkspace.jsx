@@ -10,6 +10,7 @@ import "./admin-content.css";
 import SiteContentEditor from "./SiteContentEditor.jsx";
 
 const BUCKET = "tay-assets";
+const LIBRARY_BUCKET = "tay-library";
 const TABS = [
   { id: "articles", label: "المقالات", icon: FileText },
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
@@ -74,6 +75,7 @@ export default function AdminWorkspace({ session }) {
   const [articleCover, setArticleCover] = useState(null);
   const [resourceDraft, setResourceDraft] = useState(EMPTY_RESOURCE);
   const [resourceFile, setResourceFile] = useState(null);
+  const [resourcePreviewUrl, setResourcePreviewUrl] = useState("");
   const [examDraft, setExamDraft] = useState(EMPTY_EXAM);
   const [examCoverFile, setExamCoverFile] = useState(null);
   const [selectedExam, setSelectedExam] = useState(null);
@@ -104,17 +106,25 @@ export default function AdminWorkspace({ session }) {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  async function uploadAsset(file, folder) {
+  async function uploadAsset(file, folder, targetBucket = BUCKET) {
     if (!file) return null;
     if (file.size > 50 * 1024 * 1024) throw new Error("حجم الملف أكبر من الحد الأقصى (50 ميجابايت).");
-    const allowed = [
-      "application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif",
-      "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const libraryTypes = [
+      ...imageTypes,
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
-    if (!allowed.includes(file.type)) throw new Error("نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word.");
+    const allowed = targetBucket === LIBRARY_BUCKET ? libraryTypes : imageTypes;
+    if (!allowed.includes(file.type)) {
+      throw new Error(targetBucket === LIBRARY_BUCKET
+        ? "نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word."
+        : "صور الموقع تقبل JPEG أو PNG أو WebP أو GIF فقط.");
+    }
     const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(-100) || "file";
     const path = folder + "/" + Date.now() + "-" + safeName;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    const { error } = await supabase.storage.from(targetBucket).upload(path, file, {
       cacheControl: "3600",
       upsert: false,
       contentType: file.type,
@@ -181,12 +191,21 @@ export default function AdminWorkspace({ session }) {
     else { await loadAll(); setAlert({ kind: "success", text: next ? "تم نشر المقال." : "تم إلغاء نشر المقال." }); }
   }
 
-  function resetResource() { setResourceDraft(EMPTY_RESOURCE); setResourceFile(null); }
+  function resetResource() {
+    setResourceDraft(EMPTY_RESOURCE);
+    setResourceFile(null);
+    setResourcePreviewUrl("");
+  }
 
-  function editResource(resource) {
+  async function editResource(resource) {
     setResourceDraft({ ...resource });
     setResourceFile(null);
+    setResourcePreviewUrl("");
     setAlert(null);
+    if (resource.file_path) {
+      const { data, error } = await supabase.storage.from(LIBRARY_BUCKET).createSignedUrl(resource.file_path, 60 * 60);
+      if (!error) setResourcePreviewUrl(data?.signedUrl || "");
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -202,7 +221,7 @@ export default function AdminWorkspace({ session }) {
     setBusy(true); setAlert(null);
     let newPath = null;
     try {
-      if (resourceFile) newPath = await uploadAsset(resourceFile, "library");
+      if (resourceFile) newPath = await uploadAsset(resourceFile, "library", LIBRARY_BUCKET);
       const values = {
         title: resourceDraft.title.trim(),
         description: resourceDraft.description.trim(),
@@ -220,11 +239,11 @@ export default function AdminWorkspace({ session }) {
         ? await supabase.from("learning_resources").update(values).eq("id", resourceDraft.id)
         : await supabase.from("learning_resources").insert(values);
       if (result.error) throw result.error;
-      if (newPath && resourceDraft.file_path) await supabase.storage.from(BUCKET).remove([resourceDraft.file_path]);
+      if (newPath && resourceDraft.file_path) await supabase.storage.from(LIBRARY_BUCKET).remove([resourceDraft.file_path]);
       resetResource(); await loadAll();
       setAlert({ kind: "success", text: "تم حفظ المورد في المكتبة." });
     } catch (error) {
-      if (newPath) await supabase.storage.from(BUCKET).remove([newPath]);
+      if (newPath) await supabase.storage.from(LIBRARY_BUCKET).remove([newPath]);
       setAlert({ kind: "error", text: error.message || "تعذر حفظ المورد." });
     } finally { setBusy(false); }
   }
@@ -232,7 +251,7 @@ export default function AdminWorkspace({ session }) {
   async function removeResource(resource) {
     if (!window.confirm("حذف «" + resource.title + "» من المكتبة؟")) return;
     if (resource.file_path) {
-      const { error: storageError } = await supabase.storage.from(BUCKET).remove([resource.file_path]);
+      const { error: storageError } = await supabase.storage.from(LIBRARY_BUCKET).remove([resource.file_path]);
       if (storageError) return setAlert({ kind: "error", text: "تعذر حذف الملف من التخزين." });
     }
     const { error } = await supabase.from("learning_resources").delete().eq("id", resource.id);
@@ -497,7 +516,7 @@ export default function AdminWorkspace({ session }) {
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
             {resourceDraft.resource_type === "link" ? <label>الرابط الخارجي<input type="url" required value={resourceDraft.external_url} onChange={e => setResourceDraft({ ...resourceDraft, external_url: e.target.value })} placeholder="https://..." dir="ltr" /></label> : <>
-              {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}<a href={publicFileUrl(resourceDraft.file_path)} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a></div>}
+              {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}{resourcePreviewUrl && <a href={resourcePreviewUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>}</div>}
               <FilePicker file={resourceFile} onChange={setResourceFile} accept={resourceDraft.resource_type === "image" ? "image/*" : resourceDraft.resource_type === "pdf" ? ".pdf,application/pdf" : ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"} label="اختر ملفًا من هاتفك أو الكمبيوتر" />
             </>}
             <label className="hub-check"><input type="checkbox" checked={resourceDraft.is_published} onChange={e => setResourceDraft({ ...resourceDraft, is_published: e.target.checked })} />نشر المورد للطلاب فور الحفظ</label>
@@ -509,7 +528,7 @@ export default function AdminWorkspace({ session }) {
               <div className="hub-row" key={resource.id}>
                 <div className="hub-row-icon">{resource.resource_type === "image" ? <ImageIcon size={19} /> : resource.resource_type === "link" ? <LinkIcon size={19} /> : <FileText size={19} />}</div>
                 <div className="hub-row-main"><strong>{resource.title}</strong><small>{resource.category} · {resource.is_published ? "منشور" : "مخفي"}{resource.file_size ? " · " + humanSize(resource.file_size) : ""}</small></div>
-                <div className="hub-row-actions">{resource.file_path && <a href={publicFileUrl(resource.file_path)} target="_blank" rel="noreferrer" title="فتح الملف"><ExternalLink size={16} /></a>}<button onClick={() => editResource(resource)} title="تعديل"><Pencil size={16} /></button><button onClick={() => toggleResource(resource)} title="تغيير النشر">{resource.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeResource(resource)} title="حذف"><Trash2 size={16} /></button></div>
+                <div className="hub-row-actions"><button onClick={() => editResource(resource)} title="تعديل وفتح الملف"><Pencil size={16} /></button><button onClick={() => toggleResource(resource)} title="تغيير النشر">{resource.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeResource(resource)} title="حذف"><Trash2 size={16} /></button></div>
               </div>
             ))}
           </section>
