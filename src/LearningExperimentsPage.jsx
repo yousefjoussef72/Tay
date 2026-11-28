@@ -181,7 +181,7 @@ export default function LearningExperimentsPage() {
   }), [data.resources, unitMap, lessonMap, visibleSubjectIds, selectedSubject, selectedUnit, search]);
 
   const sharedSubjects = visibleSubjects.filter(subject => !subject.track_id);
-  const specialistSubjects = visibleSubjects.filter(subject => subject.track_id && (selectedTrack === "all" || subject.track_id === selectedTrack));
+  const specialistSubjects = selectedTrack === "all" ? [] : visibleSubjects.filter(subject => subject.track_id === selectedTrack);
   const selectedTrackInfo = data.tracks.find(track => track.id === selectedTrack);
 
   useEffect(() => {
@@ -364,7 +364,7 @@ export default function LearningExperimentsPage() {
               {sharedSubjects.map(subject => {
                 const active = selectedSubject === subject.id;
                 const subjectUnits = data.units.filter(item => item.subject_id === subject.id);
-                const subjectLessons = data.lessons.filter(item => subjectUnits.some(unit => unit.id === item.id));
+                const subjectLessons = data.lessons.filter(item => subjectUnits.some(unit => unit.id === item.unit_id));
                 const subjectResources = data.resources.filter(item => item.subject_id === subject.id);
                 return (
                   <button type="button" key={subject.id} className={"learning-subject-card" + (active ? " active" : "")}
