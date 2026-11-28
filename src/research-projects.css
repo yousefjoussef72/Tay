@@ -140,3 +140,29 @@
 .research-length-choice b { color:#365b55; font-size:11px; }
 .research-length-choice span { color:#087c70; font-size:12px; font-weight:800; }
 .research-length-choice small { color:#7b9189; font-size:10px; line-height:1.8; }
+
+/* Interactive experiment lab */
+.experiment-hero .research-hero-points { gap:10px 22px; }
+.experiment-scope-note { margin:-4px 0 15px; color:#758b85; font-size:10px; line-height:1.9; }
+.experiment-builder-note { display:grid; gap:5px; padding:13px 15px; border:1px solid #d7e9df; border-radius:11px; background:#f4faf6; }
+.experiment-builder-note b { color:#087c70; font-size:11px; }
+.experiment-builder-note span { color:#758b85; font-size:10px; line-height:1.9; }
+.experiment-result { border-color:#cfe4d9; }
+.experiment-simulator-badge { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:99px; background:#eaf7ef; color:#137e70; font-size:10px; font-weight:700; white-space:nowrap; }
+.experiment-intro { margin-top:16px; padding:13px 15px; border-radius:11px; background:#f4faf6; }
+.experiment-intro p { margin:0; color:#56716b; font-size:11px; line-height:2; }
+.experiment-simulator-panel { margin-top:18px; padding:13px; border:1px solid #cde5d9; border-radius:13px; background:#f8fcf9; }
+.experiment-section { margin-top:18px; }
+.experiment-section h3 { display:flex; align-items:center; gap:7px; margin:0 0 9px; color:#26494b; font-size:13px; }
+.experiment-section p,.experiment-section li { color:#566f70; font-size:11px; line-height:2; }
+.experiment-section ul,.experiment-section ol { display:grid; gap:5px; margin:0; padding-right:21px; }
+.experiment-model-note { margin-top:17px; padding:11px 13px; border-right:3px solid #9ebbae; border-radius:8px; background:#f2f7f4; color:#73867f; font-size:10px; line-height:1.9; }
+.experiment-safety { padding:12px 14px; border:1px solid #f0dfc9; border-radius:10px; background:#fffaf3; }
+.generic-simulator-card .simulator-card-head p { max-width:580px; }
+.generic-sim-controls { margin-top:12px; }
+.generic-sim-controls .sim-control { width:100%; }
+@media(max-width:600px) {
+  .experiment-simulator-badge { align-self:flex-start; }
+  .experiment-result .research-document-top { align-items:flex-start; }
+  .experiment-simulator-panel { padding:9px; }
+}
