@@ -333,8 +333,23 @@ export function ExamsPage() {
         <h1>{copy.examsTitle}</h1>
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
-        {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
-          {exams.map(item => <article className="public-exam-card" key={item.id}>{item.cover_image_url ? <img className="public-exam-card-cover" src={item.cover_image_url} alt={item.title} /> : <div className="public-resource-symbol"><ClipboardList size={24} /></div>}<h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
+        <div className="library-tools exam-curriculum-filters">
+          <select value={trackFilter} onChange={e=>setTrackFilter(e.target.value)}>
+            <option value="ALL">كل المسارات</option>
+            {tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+          </select>
+          <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
+            <option value="ALL">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+          </select>
+        </div>
+        {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : visibleExams.length === 0 ? <div className="public-hub-empty">لا توجد اختبارات منشورة لهذا المسار أو الصف بعد.</div> : <div className="public-exam-grid">
+          {visibleExams.map(item => <article className="public-exam-card" key={item.id}>
+            {item.cover_image_url ? <img className="public-exam-card-cover" src={item.cover_image_url} alt={item.title} /> : <div className="public-resource-symbol"><ClipboardList size={24} /></div>}
+            {(trackMap.get(item.track_id)?.name || subjectMap.get(item.subject_id)?.name || item.grade_level) && <div className="public-exam-curriculum">{[trackMap.get(item.track_id)?.name,subjectMap.get(item.subject_id)?.name,item.grade_level].filter(Boolean).join(" · ")}</div>}
+            <h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p>
+            <div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div>
+            <Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link>
+          </article>)}
         </div>}
       </> : loading ? <div className="public-hub-empty">{copy.examLoading}</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
