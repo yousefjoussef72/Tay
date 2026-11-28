@@ -165,6 +165,7 @@ export function ExamsPage() {
   const [subjects, setSubjects] = useState([]);
   const [trackFilter, setTrackFilter] = useState("ALL");
   const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [subjectFilter, setSubjectFilter] = useState("ALL");
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +230,8 @@ export function ExamsPage() {
   const subjectMap = new Map(subjects.map(item => [item.id, item]));
   const visibleExams = exams.filter(item =>
     (trackFilter === "ALL" || !item.track_id || item.track_id === trackFilter) &&
-    (gradeFilter === "ALL" || !item.curriculum_year || String(item.curriculum_year) === gradeFilter)
+    (gradeFilter === "ALL" || !item.curriculum_year || String(item.curriculum_year) === gradeFilter) &&
+    (subjectFilter === "ALL" || item.subject_id === subjectFilter)
   );
 
   async function submitExam() {
@@ -343,12 +345,16 @@ export function ExamsPage() {
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
         <div className="library-tools exam-curriculum-filters">
-          <select value={trackFilter} onChange={e=>setTrackFilter(e.target.value)}>
+          <select value={trackFilter} onChange={e=>{setTrackFilter(e.target.value);setSubjectFilter("ALL")}}>
             <option value="ALL">كل المسارات</option>
             {tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
           </select>
-          <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}>
-            <option value="ALL">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+          <select value={gradeFilter} onChange={e=>{setGradeFilter(e.target.value);setSubjectFilter("ALL")}}>
+            <option value="ALL">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+          </select>
+          <select value={subjectFilter} onChange={e=>setSubjectFilter(e.target.value)}>
+            <option value="ALL">كل المواد</option>
+            {subjects.filter(subject=>(trackFilter==="ALL"||!subject.track_id||subject.track_id===trackFilter)&&(gradeFilter==="ALL"||String(subject.curriculum_year||2)===gradeFilter)).map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}
           </select>
         </div>
         {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : visibleExams.length === 0 ? <div className="public-hub-empty">لا توجد اختبارات منشورة لهذا المسار أو الصف بعد.</div> : <div className="public-exam-grid">
