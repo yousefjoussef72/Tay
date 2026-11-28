@@ -74,14 +74,19 @@ function LessonQuiz({ items }) {
 }
 
 function ExperimentCard({ experiment, subject, unit }) {
-  const icon = experiment.experience_type === "virtual_lab" ? <FlaskConical size={20}/> : <Atom size={20}/>;
+  const icon = experiment.simulator_type
+    ? (experiment.experience_type === "virtual_lab" ? <FlaskConical size={20}/> : <Atom size={20}/>)
+    : <BookOpen size={20}/>;
+  const activityLabel = experiment.simulator_type
+    ? "محاكاة تفاعلية"
+    : experiment.experience_type === "interactive_demo" ? "عرض تفاعلي" : "نشاط تعليمي";
   return (
     <Link className="learning-experiment-card" to={"/experiments/" + experiment.slug}>
       <div className="learning-experiment-card-icon">{icon}</div>
       <div className="learning-experiment-meta"><span>{subject?.name || "مادة تعليمية"}</span>{unit?.title && <span>{unit.title}</span>}</div>
       <h3>{experiment.title}</h3>
-      <p>{experiment.description || "تجربة تفاعلية لفهم الفكرة وتطبيق القوانين."}</p>
-      <div className="learning-experiment-card-foot"><span>{experiment.simulator_type ? "محاكاة تفاعلية" : "نشاط تعليمي"}</span><span>ابدأ التجربة <ChevronLeft size={15}/></span></div>
+      <p>{experiment.description || "نشاط تعليمي لفهم الموضوع وممارسة مهاراته."}</p>
+      <div className="learning-experiment-card-foot"><span>{activityLabel}</span><span>افتح النشاط <ChevronLeft size={15}/></span></div>
     </Link>
   );
 }
@@ -434,7 +439,17 @@ export default function LearningExperimentsPage() {
             {visibleResources.length === 0 ? <div className="learning-inline-empty">لا توجد ملفات مضافة لهذه المادة بعد. يمكنك ربط ملفاتها من تبويب المكتبة والملفات في لوحة الإدارة.</div> : <div className="learning-resource-grid">{visibleResources.map(item => (
               <article className="learning-resource-card" key={item.id}>
                 <div className="learning-resource-icon">{item.resource_type === "video" ? <FlaskConical size={19}/> : item.resource_type === "image" ? <BookOpen size={19}/> : <Library size={19}/>}</div>
-                <div className="learning-resource-copy"><span>{item.category || "مصدر تعليمي"}</span><h3>{item.title}</h3><p>{item.description || "ملف تعليمي مرتبط بالمادة."}</p></div>
+                <div className="learning-resource-copy">
+                  <span>{item.category || "مصدر تعليمي"}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.description || "ملف تعليمي مرتبط بالمادة أو المسار."}</p>
+                  <small className="learning-resource-curriculum">{[
+                    data.tracks.find(track=>track.id===(item.track_id||subjectMap.get(item.subject_id)?.track_id))?.name,
+                    item.grade_level||subjectMap.get(item.subject_id)?.grade_level,
+                    subjectMap.get(item.subject_id)?.name,
+                    unitMap.get(item.unit_id)?.title
+                  ].filter(Boolean).join(" · ")}</small>
+                </div>
                 {item.resource_type === "video" && item.resolved_url && <video controls playsInline preload="metadata" src={item.resolved_url}>متصفحك لا يدعم تشغيل الفيديو.</video>}
                 {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/>}
                 {item.resolved_url ? <a href={item.resolved_url} target="_blank" rel="noreferrer">{item.resource_type === "video" ? "مشاهدة الفيديو" : item.resource_type === "link" ? "فتح المصدر" : "فتح أو تنزيل الملف"} <ArrowRight size={14}/></a> : <small>المصدر غير متاح مؤقتًا.</small>}
