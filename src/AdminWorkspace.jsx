@@ -3,11 +3,12 @@ import {
   FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare, Video,
   Plus, Pencil, Trash2, Eye, EyeOff, Upload, ExternalLink, Save, X,
   Clock3, CheckCircle2, AlertCircle, File, Link as LinkIcon, ArrowRight,
-  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award
+  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award, FlaskConical
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
 import SiteContentEditor from "./SiteContentEditor.jsx";
+import LearningStudioAdmin from "./LearningStudioAdmin.jsx";
 
 const BUCKET = "tay-assets";
 const LIBRARY_BUCKET = "tay-library";
@@ -18,11 +19,12 @@ const TABS = [
   { id: "results", label: "نتائج الطلاب", icon: Award },
   { id: "moderators", label: "إدارة المشرفين", icon: Users },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
+  { id: "studio", label: "المواد والتجارب", icon: FlaskConical },
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
 
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
-const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", external_url: "", file_path: "", file_name: "", is_published: false };
+const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", subject_id: "", unit_id: "", lesson_id: "", external_url: "", file_path: "", file_name: "", is_published: false };
 const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
 const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", grading_mode: "ai", grading_rubric: "", points: 1, image_url: "" };
 
@@ -66,6 +68,9 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [tab, setTab] = useState("articles");
   const [articles, setArticles] = useState([]);
   const [resources, setResources] = useState([]);
+  const [curriculumSubjects, setCurriculumSubjects] = useState([]);
+  const [curriculumUnits, setCurriculumUnits] = useState([]);
+  const [curriculumLessons, setCurriculumLessons] = useState([]);
   const [exams, setExams] = useState([]);
   const [messages, setMessages] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -107,15 +112,21 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [articleResult, resourceResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
+    const [articleResult, resourceResult, subjectResult, unitResult, lessonResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
-      supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,subject_id,unit_id,lesson_id,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("learning_subjects").select("id,name,sort_order").order("sort_order").order("name"),
+      supabase.from("learning_units").select("id,subject_id,title,sort_order").order("sort_order").order("title"),
+      supabase.from("learning_lessons").select("id,unit_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
       supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
     ]);
     const attemptRows = attemptResult.data || [];
+    setCurriculumSubjects(subjectResult.data || []);
+    setCurriculumUnits(unitResult.data || []);
+    setCurriculumLessons(lessonResult.data || []);
     const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
     const profileResult = userIds.length
       ? await supabase.from("profiles").select("id,display_name,username").in("id", userIds)
@@ -127,10 +138,13 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       question.exam_id,
       (manualMaxByExam.get(question.exam_id) || 0) + (Number(question.points) || 0)
     ));
-    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
+    const firstError = articleResult.error || resourceResult.error || subjectResult.error || unitResult.error || lessonResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
     if (firstError) setAlert({ kind: "error", text: "تعذر تحميل بعض بيانات اللوحة. حدّث الصفحة، وإذا استمرت المشكلة راجع صلاحيات قاعدة البيانات." });
     setArticles(articleResult.data || []);
     setResources(resourceResult.data || []);
+    setCurriculumSubjects(subjectResult.data || []);
+    setCurriculumUnits(unitResult.data || []);
+    setCurriculumLessons(lessonResult.data || []);
     setExams(examResult.data || []);
     setMessages(messageResult.data || []);
     setAttempts(attemptRows.map(attempt => {
@@ -353,6 +367,9 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
         mime_type: resourceDraft.resource_type === "link" ? null : (resourceFile?.type || resourceDraft.mime_type),
         file_size: resourceDraft.resource_type === "link" ? null : (resourceFile?.size || resourceDraft.file_size),
         is_published: resourceDraft.is_published,
+        subject_id: resourceDraft.subject_id || null,
+        unit_id: resourceDraft.unit_id || null,
+        lesson_id: resourceDraft.lesson_id || null,
         created_by: resourceDraft.id ? undefined : session.user.id,
       };
       const result = resourceDraft.id
@@ -786,6 +803,27 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
               <label>نوع المورد<select value={resourceDraft.resource_type} onChange={e => setResourceDraft({ ...resourceDraft, resource_type: e.target.value })}><option value="pdf">كتاب أو ملف PDF</option><option value="image">صورة</option><option value="document">مستند Word</option><option value="video">فيديو</option><option value="link">رابط خارجي</option></select></label>
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
+            <div className="hub-form-grid">
+              <label>ربط بالمادة
+                <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
+                  <option value="">مورد عام في المكتبة</option>
+                  {curriculumSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                </select>
+              </label>
+              <label>ربط بالوحدة
+                <select value={resourceDraft.unit_id || ""} disabled={!resourceDraft.subject_id} onChange={e => setResourceDraft({ ...resourceDraft, unit_id: e.target.value, lesson_id: "" })}>
+                  <option value="">بدون وحدة</option>
+                  {curriculumUnits.filter(unit => unit.subject_id === resourceDraft.subject_id).map(unit => <option key={unit.id} value={unit.id}>{unit.title}</option>)}
+                </select>
+              </label>
+              <label>ربط بالدرس
+                <select value={resourceDraft.lesson_id || ""} disabled={!resourceDraft.unit_id} onChange={e => setResourceDraft({ ...resourceDraft, lesson_id: e.target.value })}>
+                  <option value="">بدون درس</option>
+                  {curriculumLessons.filter(lesson => lesson.unit_id === resourceDraft.unit_id).map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
+                </select>
+              </label>
+            </div>
+            <small className="hub-form-hint">اربط الملف بالمادة أو الوحدة أو الدرس ليظهر بجوار المحتوى المرتبط به. اترك الاختيارات فارغة لإبقائه في المكتبة العامة.</small>
             {resourceDraft.resource_type === "link" ? <label>الرابط الخارجي<input type="url" required value={resourceDraft.external_url} onChange={e => setResourceDraft({ ...resourceDraft, external_url: e.target.value })} placeholder="https://..." dir="ltr" /></label> : <>
               {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}{resourcePreviewUrl && (resourceDraft.resource_type === "video" ? <video className="hub-library-video-preview" controls preload="metadata" src={resourcePreviewUrl} /> : <a href={resourcePreviewUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>)}</div>}
               <FilePicker file={resourceFile} onChange={setResourceFile} accept={resourceDraft.resource_type === "image" ? "image/*" : resourceDraft.resource_type === "pdf" ? ".pdf,application/pdf" : resourceDraft.resource_type === "video" ? ".mp4,.webm,.mov,.ogg,video/mp4,video/webm,video/quicktime,video/ogg" : ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"} label={resourceDraft.resource_type === "video" ? "اختر فيديو من هاتفك أو الكمبيوتر" : "اختر ملفًا من هاتفك أو الكمبيوتر"} />
@@ -798,7 +836,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             {resources.length === 0 ? <div className="hub-empty">المكتبة فارغة. أضف أول كتاب أو صورة.</div> : resources.map(resource => (
               <div className="hub-row" key={resource.id}>
                 <div className="hub-row-icon">{resource.resource_type === "image" ? <ImageIcon size={19} /> : resource.resource_type === "video" ? <Video size={19} /> : resource.resource_type === "link" ? <LinkIcon size={19} /> : <FileText size={19} />}</div>
-                <div className="hub-row-main"><strong>{resource.title}</strong><small>{resource.category} · {resource.is_published ? "منشور" : "مخفي"}{resource.file_size ? " · " + humanSize(resource.file_size) : ""}</small></div>
+                <div className="hub-row-main"><strong>{resource.title}</strong><small>{resource.category} · {curriculumSubjects.find(item => item.id === resource.subject_id)?.name || "مكتبة عامة"}{resource.lesson_id ? " · " + (curriculumLessons.find(item => item.id === resource.lesson_id)?.title || "درس") : ""} · {resource.is_published ? "منشور" : "مخفي"}{resource.file_size ? " · " + humanSize(resource.file_size) : ""}</small></div>
                 <div className="hub-row-actions"><button onClick={() => editResource(resource)} title="تعديل وفتح الملف"><Pencil size={16} /></button><button onClick={() => toggleResource(resource)} title="تغيير النشر">{resource.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeResource(resource)} title="حذف"><Trash2 size={16} /></button></div>
               </div>
             ))}
@@ -950,6 +988,8 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
           <div className="hub-moderator-note"><CheckCircle2 size={17} /><div><strong>حدود الصلاحيات</strong><p>الحساب الرئيسي syznstwr وحده يستطيع إنشاء المشرفين أو سحب صلاحياتهم. سحب الصلاحية لا يحذف حساب الشخص أو نتائجه أو المحتوى الذي أنشأه.</p></div></div>
         </div>
       )}
+
+      {!loading && tab === "studio" && <LearningStudioAdmin session={session} />}
 
       {!loading && tab === "site" && <SiteContentEditor />}
 

@@ -22,7 +22,7 @@ function safeHubHref(value, fallback = "/") {
 function PublicHubHeader() {
   const { copy } = useSiteCopy();
   if (copy.showHeader === false) return null;
-  return <header className="public-hub-header"><a href={safeHubHref(copy.navHomeUrl, "/")} className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></a><nav><a href={safeHubHref(copy.navLibraryUrl, "/library")}>{copy.navLibrary}</a><a href={safeHubHref(copy.navExamsUrl, "/exams")}>{copy.navExams}</a><a href={safeHubHref(copy.navAccountUrl, "/account")}>{copy.navAccount}</a><a href={safeHubHref(copy.navHomeUrl, "/")}>{copy.navHome}</a></nav></header>;
+  return <header className="public-hub-header"><a href={safeHubHref(copy.navHomeUrl, "/")} className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></a><nav><a href="/experiments">المواد والتجارب</a><a href={safeHubHref(copy.navLibraryUrl, "/library")}>{copy.navLibrary}</a><a href={safeHubHref(copy.navExamsUrl, "/exams")}>{copy.navExams}</a><a href={safeHubHref(copy.navAccountUrl, "/account")}>{copy.navAccount}</a><a href={safeHubHref(copy.navHomeUrl, "/")}>{copy.navHome}</a></nav></header>;
 }
 
 export function LibraryPage() {
@@ -38,7 +38,7 @@ export function LibraryPage() {
     async function load() {
       const { data, error: loadError } = await supabase
         .from("learning_resources")
-        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,created_at")
+        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,subject_id,unit_id,lesson_id,created_at")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (loadError) {
@@ -48,8 +48,20 @@ export function LibraryPage() {
         setLoading(false);
         return;
       }
+      const [subjectResult, unitResult, lessonResult] = await Promise.all([
+        supabase.from("learning_subjects").select("id,name,slug"),
+        supabase.from("learning_units").select("id,title,slug"),
+        supabase.from("learning_lessons").select("id,title,slug")
+      ]);
+      const subjectMap = new Map((subjectResult.data || []).map(item => [item.id, item]));
+      const unitMap = new Map((unitResult.data || []).map(item => [item.id, item]));
+      const lessonMap = new Map((lessonResult.data || []).map(item => [item.id, item]));
       const resolvedItems = await Promise.all((data || []).map(async item => ({
         ...item,
+        subject_name: subjectMap.get(item.subject_id)?.name || "",
+        unit_title: unitMap.get(item.unit_id)?.title || "",
+        lesson_title: lessonMap.get(item.lesson_id)?.title || "",
+        lesson_slug: lessonMap.get(item.lesson_id)?.slug || "",
         resolved_url: item.resource_type === "link"
           ? item.external_url
           : await signedLibraryUrl(item.file_path),
@@ -91,6 +103,8 @@ export function LibraryPage() {
             <span className="public-resource-category">{item.category || copy.libraryGeneralCategory}</span>
             <h2>{item.title}</h2>
             <p>{item.description || copy.libraryFileFallback}</p>
+            {(item.subject_name || item.unit_title) && <p className="public-resource-curriculum">{[item.subject_name, item.unit_title].filter(Boolean).join(" · ")}</p>}
+            {item.lesson_slug && <Link className="public-resource-related" to={"/lessons/" + item.lesson_slug}>افتح الدرس المرتبط: {item.lesson_title} <ArrowRight size={13}/></Link>}
             {url ? <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "video" ? (copy.libraryVideoOpen || "مشاهدة الفيديو") : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a> : <span className="public-resource-open">{copy.libraryFileUnavailable}</span>}
           </article>;
         })}

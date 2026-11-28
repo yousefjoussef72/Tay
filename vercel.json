@@ -9,5 +9,17 @@
     "api/ai/*.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/physics-lab",
+      "destination": "/experiments",
+      "permanent": true
+    },
+    {
+      "source": "/physics-lab/:path*",
+      "destination": "/experiments",
+      "permanent": true
+    }
+  ]
 }
