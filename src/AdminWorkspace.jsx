@@ -62,7 +62,7 @@ function FilePicker({ file, onChange, accept = ".pdf,.doc,.docx,image/*", label 
   );
 }
 
-export default function AdminWorkspace({ session, isMasterAdmin = false, staffRole = "admin" }) {
+export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [tab, setTab] = useState("articles");
   const [articles, setArticles] = useState([]);
   const [resources, setResources] = useState([]);
@@ -164,7 +164,6 @@ export default function AdminWorkspace({ session, isMasterAdmin = false, staffRo
 
   useEffect(() => {
     if (isMasterAdmin) loadModerators();
-    else if (tab === "moderators") setTab("articles");
   }, [isMasterAdmin]);
 
   async function createModerator(event) {
@@ -723,7 +722,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false, staffRo
   return (
     <div className="hub-dashboard">
       <div className="hub-page-heading">
-        <div><span className="admin-label">إدارة Tay Space</span><h1>مركز إدارة المحتوى</h1><p>أضف وعدّل وانشر المحتوى والملفات والاختبارات من مكان واحد.</p></div>
+        <div><span className="admin-label">{isMasterAdmin ? "المدير الرئيسي" : "مشرف Tay Space"}</span><h1>مركز إدارة المحتوى</h1><p>أضف وعدّل وانشر المحتوى والملفات والاختبارات من مكان واحد.</p></div>
         <button className="hub-refresh" onClick={loadAll} title="تحديث البيانات"><RotateCw size={17} /></button>
       </div>
       <div className="hub-stats">
