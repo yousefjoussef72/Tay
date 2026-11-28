@@ -12,24 +12,9 @@ import ArticlePage from "./ArticlePage.jsx";
 import { SiteCopyProvider, useSiteCopy } from "./siteCopy.js";
 
 const features = [
-  {
-    icon: Layers3,
-    number: "01",
-    title: "هيكل مرن",
-    body: "أساس منظم يسهل تطويره وتغيير صفحاته عندما تتحدد فكرة الموقع.",
-  },
-  {
-    icon: ShieldCheck,
-    number: "02",
-    title: "بيانات محمية",
-    body: "قاعدة PostgreSQL مع صلاحيات وصول منفصلة وسياسات حماية على مستوى الصفوف.",
-  },
-  {
-    icon: Sparkles,
-    number: "03",
-    title: "جاهز للنمو",
-    body: "إمكانية إضافة صفحات ومقالات وحسابات وخصائص جديدة دون إعادة البناء من الصفر.",
-  },
+  { icon: Layers3, number: "01", titleKey: "feature1Title", bodyKey: "feature1Body", imageKey: "feature1ImageUrl" },
+  { icon: ShieldCheck, number: "02", titleKey: "feature2Title", bodyKey: "feature2Body", imageKey: "feature2ImageUrl" },
+  { icon: Sparkles, number: "03", titleKey: "feature3Title", bodyKey: "feature3Body", imageKey: "feature3ImageUrl" },
 ];
 
 function Header() {
