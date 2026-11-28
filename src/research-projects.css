@@ -110,3 +110,16 @@
   .research-practical summary { align-items:flex-start; }
 }
 @media(prefers-reduced-motion:reduce) { .research-subject-card { transition:none; } }
+
+
+.research-document-actions { display:flex; flex-wrap:wrap; gap:8px; }
+@media print {
+  @page { margin:16mm; }
+  body { background:#fff!important; }
+  body * { visibility:hidden!important; }
+  .research-document,.research-document * { visibility:visible!important; }
+  .research-document { position:absolute!important; top:0!important; right:0!important; width:100%!important; margin:0!important; padding:0!important; border:0!important; border-radius:0!important; box-shadow:none!important; }
+  .research-document-actions,.research-copy-notice { display:none!important; }
+  .research-practical .research-practical-body { display:grid!important; }
+  .research-paper-section,.research-paper-chapters article,.research-practical { break-inside:avoid; }
+}
