@@ -205,6 +205,7 @@ function Home() {
         </section>}
         {renderCustomBlocks("afterFeatures")}
 
+        {renderCustomBlocks("beforeArticles")}
         {copy.showArticles !== false && (articles.length > 0 || loadingArticles) && (
           <section className="articles-section section-pad">
             <div className="container">
@@ -222,7 +223,6 @@ function Home() {
             </div>
           </section>
         )}
-        {renderCustomBlocks("beforeArticles")}
         {renderCustomBlocks("beforeContact")}
 
         {copy.showContact !== false && <section className="contact-section section-pad" id="contact">
@@ -246,7 +246,7 @@ function Home() {
               {!supabaseReady && <span className="form-hint">الحفظ الفعلي سيتاح بعد ربط Supabase.</span>}
             </form>
           </div>
-        </section>
+        </section>}
       </main>
       <footer className="site-footer">
         <div className="container footer-inner">
