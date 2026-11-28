@@ -3,7 +3,7 @@ import {
   FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare,
   Plus, Pencil, Trash2, Eye, EyeOff, Upload, ExternalLink, Save, X,
   Clock3, CheckCircle2, AlertCircle, File, Link as LinkIcon, ArrowRight,
-  RotateCw, ListChecks, Users
+  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
@@ -15,6 +15,7 @@ const TABS = [
   { id: "articles", label: "المقالات", icon: FileText },
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
   { id: "exams", label: "الامتحانات", icon: ClipboardList },
+  { id: "results", label: "نتائج الطلاب", icon: Award },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
@@ -22,7 +23,7 @@ const TABS = [
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
 const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", external_url: "", file_path: "", file_name: "", is_published: false };
 const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
-const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1, image_url: "" };
+const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", grading_mode: "ai", grading_rubric: "", points: 1, image_url: "" };
 
 function slugFor(title) {
   const normalized = title.toLowerCase().trim()
@@ -84,6 +85,17 @@ export default function AdminWorkspace({ session }) {
   const [questionImageFile, setQuestionImageFile] = useState(null);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editingExam, setEditingExam] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiSubject, setAiSubject] = useState("");
+  const [aiLevel, setAiLevel] = useState("");
+  const [aiCount, setAiCount] = useState(8);
+  const [aiDifficulty, setAiDifficulty] = useState("mixed");
+  const [aiQuestionTypes, setAiQuestionTypes] = useState(["mcq", "true_false", "short_answer", "essay"]);
+  const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [savingGenerated, setSavingGenerated] = useState(false);
+  const [gradingAttemptId, setGradingAttemptId] = useState(null);
+  const [resultsExamFilter, setResultsExamFilter] = useState("all");
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -92,15 +104,30 @@ export default function AdminWorkspace({ session }) {
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
-      supabase.from("exam_attempts").select("id,exam_id,user_id,score,max_score,submitted_at").order("submitted_at", { ascending: false }).limit(200),
+      supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
     ]);
-    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error;
+    const attemptRows = attemptResult.data || [];
+    const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
+    const profileResult = userIds.length
+      ? await supabase.from("profiles").select("id,display_name,username").in("id", userIds)
+      : { data: [], error: null };
+    const profileMap = new Map((profileResult.data || []).map(profile => [profile.id, profile]));
+    const examMap = new Map((examResult.data || []).map(exam => [exam.id, exam.title]));
+    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error;
     if (firstError) setAlert({ kind: "error", text: "تعذر تحميل بعض بيانات اللوحة. حدّث الصفحة، وإذا استمرت المشكلة راجع صلاحيات قاعدة البيانات." });
     setArticles(articleResult.data || []);
     setResources(resourceResult.data || []);
     setExams(examResult.data || []);
     setMessages(messageResult.data || []);
-    setAttempts(attemptResult.data || []);
+    setAttempts(attemptRows.map(attempt => {
+      const profile = profileMap.get(attempt.user_id);
+      return {
+        ...attempt,
+        student_name: profile?.display_name || "اسم غير مسجل",
+        student_username: profile?.username || "بدون اسم مستخدم",
+        exam_title: examMap.get(attempt.exam_id) || "امتحان محذوف",
+      };
+    }));
     setLoading(false);
   }, []);
 
@@ -267,15 +294,19 @@ export default function AdminWorkspace({ session }) {
 
   async function loadQuestions(examId) {
     const [questionResult, answerResult] = await Promise.all([
-      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url").eq("exam_id", examId).order("sort_order").order("created_at"),
-      supabase.from("exam_answer_keys").select("question_id,correct_answer"),
+      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url,grading_mode").eq("exam_id", examId).order("sort_order").order("created_at"),
+      supabase.from("exam_answer_keys").select("question_id,correct_answer,grading_rubric"),
     ]);
     if (questionResult.error || answerResult.error) {
       setAlert({ kind: "error", text: "تعذر تحميل أسئلة الامتحان." });
       return;
     }
-    const answers = new Map((answerResult.data || []).map(row => [row.question_id, row.correct_answer]));
-    setQuestions((questionResult.data || []).map(q => ({ ...q, correct_answer: answers.get(q.id) || "" })));
+    const answers = new Map((answerResult.data || []).map(row => [row.question_id, row]));
+    setQuestions((questionResult.data || []).map(q => ({
+      ...q,
+      correct_answer: answers.get(q.id)?.correct_answer || "",
+      grading_rubric: answers.get(q.id)?.grading_rubric || "",
+    })));
   }
 
   async function saveExam(event) {
@@ -338,7 +369,10 @@ export default function AdminWorkspace({ session }) {
     event.preventDefault();
     if (!selectedExam) return;
     if (!questionDraft.prompt.trim() || !questionDraft.correct_answer.trim()) {
-      return setAlert({ kind: "error", text: "اكتب نص السؤال والإجابة الصحيحة." });
+      return setAlert({ kind: "error", text: "اكتب نص السؤال والإجابة النموذجية." });
+    }
+    if (questionDraft.question_type === "essay" && questionDraft.grading_mode === "ai" && !questionDraft.grading_rubric.trim()) {
+      return setAlert({ kind: "error", text: "أضف عناصر التصحيح حتى يستطيع الذكاء الاصطناعي توزيع الدرجة بعدل." });
     }
     let options = [];
     if (questionDraft.question_type === "mcq") {
@@ -362,6 +396,7 @@ export default function AdminWorkspace({ session }) {
         exam_id: selectedExam.id,
         prompt: questionDraft.prompt.trim(),
         question_type: questionDraft.question_type,
+        grading_mode: questionDraft.question_type === "essay" ? questionDraft.grading_mode : "auto",
         options,
         points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
         image_url: imageUrl,
@@ -381,6 +416,7 @@ export default function AdminWorkspace({ session }) {
         const keyResult = await supabase.from("exam_answer_keys").upsert({
           question_id: questionId,
           correct_answer: questionDraft.correct_answer.trim(),
+          grading_rubric: questionDraft.grading_rubric.trim(),
           updated_at: new Date().toISOString(),
         }, { onConflict: "question_id" });
         questionError = keyResult.error;
@@ -409,6 +445,8 @@ export default function AdminWorkspace({ session }) {
       question_type: question.question_type,
       options_text: (question.options || []).join("\n"),
       correct_answer: question.correct_answer,
+      grading_mode: question.grading_mode || "ai",
+      grading_rubric: question.grading_rubric || "",
       points: question.points,
       image_url: question.image_url || "",
     });
@@ -457,6 +495,119 @@ export default function AdminWorkspace({ session }) {
   }
 
   const selectedAttempts = selectedExam ? attempts.filter(a => a.exam_id === selectedExam.id) : [];
+  const visibleAttempts = resultsExamFilter === "all" ? attempts : attempts.filter(attempt => attempt.exam_id === resultsExamFilter);
+
+  async function generateExamQuestions() {
+    if (!selectedExam || !aiTopic.trim() || aiQuestionTypes.length === 0) {
+      return setAlert({ kind: "error", text: "اكتب الموضوع واختر نوع سؤال واحدًا على الأقل." });
+    }
+    if (!session?.access_token) return setAlert({ kind: "error", text: "انتهت جلسة الإدارة. سجّل الدخول مرة أخرى." });
+    setGeneratingAI(true);
+    setAlert(null);
+    setGeneratedQuestions([]);
+    try {
+      const response = await fetch("/api/ai/generate-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
+        body: JSON.stringify({
+          topic: aiTopic,
+          subject: aiSubject,
+          level: aiLevel,
+          count: aiCount,
+          difficulty: aiDifficulty,
+          types: aiQuestionTypes,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.message || "تعذر توليد الأسئلة.");
+      setGeneratedQuestions(data.questions || []);
+      setAlert({ kind: "success", text: "تم توليد " + (data.questions || []).length + " سؤالًا. راجعها ثم أضفها للامتحان." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر الاتصال بخدمة الذكاء الاصطناعي." });
+    } finally {
+      setGeneratingAI(false);
+    }
+  }
+
+  function updateGeneratedQuestion(index, field, value) {
+    setGeneratedQuestions(current => current.map((question, i) => i === index ? { ...question, [field]: value } : question));
+  }
+
+  async function saveGeneratedQuestions() {
+    if (!selectedExam || generatedQuestions.length === 0) return;
+    setSavingGenerated(true);
+    setAlert(null);
+    const insertedIds = [];
+    try {
+      for (const [index, question] of generatedQuestions.entries()) {
+        const values = {
+          exam_id: selectedExam.id,
+          prompt: question.prompt.trim(),
+          question_type: question.question_type,
+          grading_mode: question.question_type === "essay" ? "ai" : "auto",
+          options: question.question_type === "mcq"
+            ? (question.options || []).map(value => String(value).trim()).filter(Boolean)
+            : question.question_type === "true_false" ? ["صحيح", "خطأ"] : [],
+          points: Math.max(1, Math.min(100, Number(question.points) || 1)),
+          sort_order: questions.length + index,
+        };
+        if (!values.prompt || !question.correct_answer?.trim()) throw new Error("أحد الأسئلة لا يحتوي على نص أو إجابة نموذجية.");
+        const { data, error } = await supabase.from("exam_questions").insert(values).select("id").single();
+        if (error || !data?.id) throw error || new Error("تعذر حفظ السؤال.");
+        insertedIds.push(data.id);
+        const { error: keyError } = await supabase.from("exam_answer_keys").upsert({
+          question_id: data.id,
+          correct_answer: question.correct_answer.trim(),
+          grading_rubric: String(question.grading_rubric || "").trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "question_id" });
+        if (keyError) throw keyError;
+      }
+      setGeneratedQuestions([]);
+      await loadQuestions(selectedExam.id);
+      await loadAll();
+      setAlert({ kind: "success", text: "تمت إضافة الأسئلة المولدة إلى الامتحان بنجاح." });
+    } catch (error) {
+      if (insertedIds.length) await supabase.from("exam_questions").delete().in("id", insertedIds);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ الأسئلة المولدة." });
+    } finally {
+      setSavingGenerated(false);
+    }
+  }
+
+  async function gradeAttemptWithAI(attempt) {
+    if (!session?.access_token) return setAlert({ kind: "error", text: "انتهت جلسة الإدارة. سجّل الدخول مرة أخرى." });
+    setGradingAttemptId(attempt.id);
+    setAlert(null);
+    try {
+      const response = await fetch("/api/ai/grade-essay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
+        body: JSON.stringify({ attempt_id: attempt.id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.message || "تعذر تصحيح المقالات.");
+      setAttempts(current => current.map(item => item.id === attempt.id ? {
+        ...item,
+        ...data.attempt,
+        exam_title: item.exam_title,
+        student_name: item.student_name,
+        student_username: item.student_username,
+      } : item));
+      setAlert({ kind: "success", text: "تم تصحيح المقالات بالذكاء الاصطناعي وحفظ الدرجة الجديدة." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر تصحيح هذه المحاولة." });
+      await loadAll();
+    } finally {
+      setGradingAttemptId(null);
+    }
+  }
 
   return (
     <div className="hub-dashboard">
