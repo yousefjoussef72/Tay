@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Save, RotateCcw, ImagePlus, Upload, Trash2, Plus, Eye, EyeOff,
   ArrowUp, ArrowDown, ExternalLink, Layers3, Type, Image as ImageIcon,
@@ -9,6 +9,7 @@ import {
   DEFAULT_SITE_COPY, useSiteCopy
 } from "./siteCopy.js";
 import "./site-content-editor.css";
+import { supabase } from "./lib/supabase.js";
 
 const BUCKET = "tay-assets";
 const PLACEMENTS = [
@@ -42,7 +43,7 @@ function ImageAssetEditor({ field, value, onChange }) {
     setError("");
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(-90) || "image";
     const path = "site-content/" + Date.now() + "-" + safeName;
-    const { error: uploadError } = await window.__taySupabase.storage.from(BUCKET).upload(path, file, {
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, {
       upsert: false,
       cacheControl: "3600",
       contentType: file.type,
@@ -52,7 +53,7 @@ function ImageAssetEditor({ field, value, onChange }) {
       setError(uploadError.message || "تعذر رفع الصورة.");
       return;
     }
-    const url = window.__taySupabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
     onChange(url);
     setFile(null);
   }
@@ -110,9 +111,8 @@ export default function SiteContentEditor() {
   const [activeBlock, setActiveBlock] = useState(null);
 
   // Keep the editor in sync after a fresh settings load, but do not overwrite unsaved work.
-  useMemo(() => {
+  useEffect(() => {
     if (!dirty) setDraft(copy);
-    return null;
   }, [copy, dirty]);
 
   function update(key, value) {
