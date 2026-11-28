@@ -3,11 +3,12 @@ import {
   FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare, Video,
   Plus, Pencil, Trash2, Eye, EyeOff, Upload, ExternalLink, Save, X,
   Clock3, CheckCircle2, AlertCircle, File, Link as LinkIcon, ArrowRight,
-  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award
+  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award, FlaskConical
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
 import SiteContentEditor from "./SiteContentEditor.jsx";
+import LearningStudioAdmin from "./LearningStudioAdmin.jsx";
 
 const BUCKET = "tay-assets";
 const LIBRARY_BUCKET = "tay-library";
@@ -18,6 +19,7 @@ const TABS = [
   { id: "results", label: "نتائج الطلاب", icon: Award },
   { id: "moderators", label: "إدارة المشرفين", icon: Users },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
+  { id: "studio", label: "المواد والتجارب", icon: FlaskConical },
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
 
@@ -950,6 +952,8 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
           <div className="hub-moderator-note"><CheckCircle2 size={17} /><div><strong>حدود الصلاحيات</strong><p>الحساب الرئيسي syznstwr وحده يستطيع إنشاء المشرفين أو سحب صلاحياتهم. سحب الصلاحية لا يحذف حساب الشخص أو نتائجه أو المحتوى الذي أنشأه.</p></div></div>
         </div>
       )}
+
+      {!loading && tab === "studio" && <LearningStudioAdmin session={session} />}
 
       {!loading && tab === "site" && <SiteContentEditor />}
 
