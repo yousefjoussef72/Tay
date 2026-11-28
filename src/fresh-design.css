@@ -834,3 +834,240 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   .public-hub-shell .public-hub-main,
   .learning-public-shell .learning-public-main { width: calc(100% - 28px); }
 }
+
+
+/* Four distinct, empty-ready curriculum spaces */
+.learning-public-shell .learning-subjects-section {
+  margin: 27px 0 34px;
+  padding: 23px;
+  border: 1px solid #deebe5;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #f0f8f4, #f9fcfa);
+}
+.learning-public-shell .learning-subjects-section > .learning-list-section-head { margin-bottom: 16px; }
+.learning-subject-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+}
+.learning-subject-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 225px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid #dcebe4;
+  border-radius: 17px;
+  background: #fff;
+  color: #173f3b;
+  text-align: right;
+  cursor: pointer;
+  box-shadow: 0 7px 20px rgba(20,75,64,.035);
+  transition: transform .18s, border-color .18s, box-shadow .18s, background .18s;
+}
+.learning-subject-card:hover,
+.learning-subject-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: #9bd7c3;
+  box-shadow: 0 14px 28px rgba(20,75,64,.08);
+  outline: none;
+}
+.learning-subject-card.active {
+  border: 2px solid #168879;
+  padding: 17px;
+  background: #f2faf6;
+  box-shadow: 0 10px 25px rgba(20,115,99,.09);
+}
+.learning-subject-icon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #e7f5ed;
+  color: #128477;
+}
+.learning-subject-icon.subject-english { background: #eaf2fb; color: #4779a4; }
+.learning-subject-icon.subject-history { background: #fff3e5; color: #b77932; }
+.learning-subject-icon.subject-physics { background: #e8f5f2; color: #13796d; }
+.learning-subject-status {
+  position: absolute;
+  top: 21px;
+  left: 14px;
+  max-width: 125px;
+  overflow: hidden;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f0f7f3;
+  color: #718b80;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learning-subject-card.active .learning-subject-status { background: #dff3e9; color: #0e766b; }
+.learning-subject-card > strong { margin: 16px 0 5px; color: #19443f; font-size: 14px; }
+.learning-subject-card > small { min-height: 42px; color: #718780; font-size: 9px; line-height: 1.9; }
+.learning-subject-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.learning-subject-counts span {
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: #f1f7f3;
+  color: #668078;
+  font-size: 8px;
+}
+.learning-subject-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #edf3ef;
+  color: #0d8175;
+  font-size: 9px;
+  font-weight: 700;
+}
+.learning-all-subjects {
+  display: inline-flex;
+  margin-top: 13px;
+  padding: 8px 13px;
+  border: 1px solid #d5e9df;
+  border-radius: 9px;
+  background: #fff;
+  color: #0e8175;
+  font-size: 9px;
+  cursor: pointer;
+}
+.learning-resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; }
+.learning-resource-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 9px;
+  padding: 17px;
+  border: 1px solid #dfece5;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(20,75,64,.03);
+}
+.learning-resource-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #e9f6ef;
+  color: #128477;
+}
+.learning-resource-copy > span { color: #128477; font-size: 8px; }
+.learning-resource-copy h3 { margin: 4px 0; color: #19443f; font-size: 12px; }
+.learning-resource-copy p { margin: 0; color: #718780; font-size: 9px; line-height: 1.9; }
+.learning-resource-card > video, .learning-resource-card > img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 9px;
+  background: #f0f6f3;
+}
+.learning-resource-card > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 9px;
+  color: #0d8175;
+  font-size: 9px;
+  font-weight: 700;
+}
+.learning-resource-card > small { color: #a08070; font-size: 8px; }
+.learning-inline-empty { line-height: 2; }
+@media (max-width: 980px) {
+  .learning-subject-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .learning-resource-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 650px) {
+  .learning-public-shell .learning-subjects-section { padding: 15px; margin: 20px 0 26px; }
+  .learning-subject-grid, .learning-resource-grid { grid-template-columns: 1fr; }
+  .learning-subject-card { min-height: 195px; }
+}
+
+
+/* Baccalaureate tracks and their curriculum cards */
+.learning-track-filters {
+  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(125px, 1fr));
+  align-items: stretch;
+}
+.learning-track-filters select { min-width: 0; }
+.learning-track-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+}
+.learning-track-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 228px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 18px;
+  border: 1px solid #dcebe4;
+  border-radius: 18px;
+  background: #fff;
+  color: #173f3b;
+  text-align: right;
+  cursor: pointer;
+  box-shadow: 0 8px 23px rgba(20,75,64,.035);
+  transition: transform .18s, border-color .18s, box-shadow .18s, background .18s;
+}
+.learning-track-card:hover, .learning-track-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: #9bd7c3;
+  box-shadow: 0 14px 29px rgba(20,75,64,.08);
+  outline: none;
+}
+.learning-track-card.active {
+  border: 2px solid #168879;
+  padding: 17px;
+  background: #f2faf6;
+  box-shadow: 0 10px 25px rgba(20,115,99,.09);
+}
+.learning-track-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e7f5ed;
+  color: #128477;
+}
+.learning-track-icon.track-engineering-computer-science { background: #eaf2fb; color: #4779a4; }
+.learning-track-icon.track-business { background: #fff3e5; color: #b77932; }
+.learning-track-icon.track-arts-humanities { background: #f2edfa; color: #8063a6; }
+.learning-track-card > strong { margin: 16px 0 5px; color: #19443f; font-size: 13px; }
+.learning-track-card > small { min-height: 55px; color: #718780; font-size: 9px; line-height: 1.9; }
+.learning-track-card .learning-subject-counts span { font-size: 7px; }
+.learning-common-subjects { margin-top: 20px; }
+.learning-specialist-subjects { margin-top: 20px; }
+.learning-subjects-section .learning-list-section-head > span { color: #6f8980; font-size: 9px; }
+.learning-subject-card > small { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.learning-track-filters select:focus { outline: 3px solid rgba(28,153,137,.18); outline-offset: 2px; }
+@media (max-width: 1100px) {
+  .learning-track-filters { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .learning-track-filters label { grid-column: 1/-1; }
+  .learning-track-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 650px) {
+  .learning-track-filters { grid-template-columns: 1fr 1fr; }
+  .learning-track-filters label { grid-column: 1/-1; }
+  .learning-track-grid { grid-template-columns: 1fr; }
+  .learning-track-card { min-height: 205px; }
+}

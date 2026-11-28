@@ -24,9 +24,9 @@ const TABS = [
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
 
-const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
+const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", track_id: "", subject_id: "", grade_level: "", curriculum_year: "", is_published: false };
 const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", subject_id: "", unit_id: "", lesson_id: "", external_url: "", file_path: "", file_name: "", is_published: false };
-const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
+const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "", track_id: "", subject_id: "", grade_level: "", curriculum_year: "" };
 const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", grading_mode: "ai", grading_rubric: "", points: 1, image_url: "" };
 
 function slugFor(title) {
@@ -78,6 +78,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [articles, setArticles] = useState([]);
   const [resources, setResources] = useState([]);
   const [curriculumSubjects, setCurriculumSubjects] = useState([]);
+  const [curriculumTracks, setCurriculumTracks] = useState([]);
   const [curriculumUnits, setCurriculumUnits] = useState([]);
   const [curriculumLessons, setCurriculumLessons] = useState([]);
   const [exams, setExams] = useState([]);
@@ -122,19 +123,21 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [articleResult, resourceResult, subjectResult, unitResult, lessonResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
-      supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
+    const [articleResult, resourceResult, subjectResult, trackResult, unitResult, lessonResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
+      supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,track_id,subject_id,grade_level,curriculum_year,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,subject_id,unit_id,lesson_id,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("learning_subjects").select("id,name,sort_order").order("sort_order").order("name"),
+      supabase.from("learning_subjects").select("id,name,sort_order,track_id,curriculum_year,grade_level,subject_kind").order("curriculum_year").order("sort_order").order("name"),
+      supabase.from("learning_tracks").select("id,name,slug,sort_order").order("sort_order"),
       supabase.from("learning_units").select("id,subject_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("learning_lessons").select("id,unit_id,title,sort_order").order("sort_order").order("title"),
-      supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,track_id,subject_id,grade_level,curriculum_year,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,attachments,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
       supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
     ]);
     const attemptRows = attemptResult.data || [];
     setCurriculumSubjects(subjectResult.data || []);
+    setCurriculumTracks(trackResult.data || []);
     setCurriculumUnits(unitResult.data || []);
     setCurriculumLessons(lessonResult.data || []);
     const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
@@ -148,11 +151,12 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       question.exam_id,
       (manualMaxByExam.get(question.exam_id) || 0) + (Number(question.points) || 0)
     ));
-    const firstError = articleResult.error || resourceResult.error || subjectResult.error || unitResult.error || lessonResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
+    const firstError = articleResult.error || resourceResult.error || subjectResult.error || trackResult.error || unitResult.error || lessonResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
     if (firstError) setAlert({ kind: "error", text: "تعذر تحميل بعض بيانات اللوحة. حدّث الصفحة، وإذا استمرت المشكلة راجع صلاحيات قاعدة البيانات." });
     setArticles(articleResult.data || []);
     setResources(resourceResult.data || []);
     setCurriculumSubjects(subjectResult.data || []);
+    setCurriculumTracks(trackResult.data || []);
     setCurriculumUnits(unitResult.data || []);
     setCurriculumLessons(lessonResult.data || []);
     setExams(examResult.data || []);
@@ -298,6 +302,14 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
         excerpt: articleDraft.excerpt.trim(),
         content: articleDraft.content.trim(),
         cover_url: coverUrl,
+        track_id: articleDraft.subject_id ? (curriculumSubjects.find(item => item.id === articleDraft.subject_id)?.track_id || null) : (articleDraft.track_id || null),
+        subject_id: articleDraft.subject_id || null,
+        grade_level: articleDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === articleDraft.subject_id)?.grade_level || "")
+          : (articleDraft.grade_level || ""),
+        curriculum_year: articleDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === articleDraft.subject_id)?.curriculum_year || null)
+          : (articleDraft.curriculum_year ? Number(articleDraft.curriculum_year) : null),
         is_published: publish || articleDraft.is_published,
         published_at: publish ? new Date().toISOString() : articleDraft.published_at || null,
         created_by: articleDraft.id ? undefined : session.user.id,
@@ -446,6 +458,16 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
         description: examDraft.description.trim(),
         duration_minutes: Number(examDraft.duration_minutes) || 30,
         cover_image_url: coverImageUrl,
+        track_id: examDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === examDraft.subject_id)?.track_id || null)
+          : (examDraft.track_id || null),
+        subject_id: examDraft.subject_id || null,
+        grade_level: examDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === examDraft.subject_id)?.grade_level || "")
+          : (examDraft.grade_level || ""),
+        curriculum_year: examDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === examDraft.subject_id)?.curriculum_year || null)
+          : (examDraft.curriculum_year ? Number(examDraft.curriculum_year) : null),
         created_by: examDraft.id ? undefined : session.user.id,
       };
       const result = examDraft.id
@@ -469,7 +491,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
 
   function openExam(exam) {
     setSelectedExam(exam);
-    setExamDraft({ id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes, cover_image_url: exam.cover_image_url || "" });
+    setExamDraft({ ...EMPTY_EXAM, id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes, cover_image_url: exam.cover_image_url || "", track_id: exam.track_id || "", subject_id: exam.subject_id || "", grade_level: exam.grade_level || "", curriculum_year: exam.curriculum_year || "" });
     setExamCoverFile(null);
     setEditingExam(false);
     setQuestionDraft(EMPTY_QUESTION);
@@ -480,7 +502,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
 
   function editExamDetails() {
     if (!selectedExam) return;
-    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "" });
+    setExamDraft({ ...EMPTY_EXAM, id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "", track_id: selectedExam.track_id || "", subject_id: selectedExam.subject_id || "", grade_level: selectedExam.grade_level || "", curriculum_year: selectedExam.curriculum_year || "" });
     setExamCoverFile(null);
     setEditingExam(true);
   }
@@ -825,7 +847,29 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             <div className="hub-panel-heading"><h2>{articleDraft.id ? "تعديل المقال" : "كتابة مقال جديد"}</h2>{articleDraft.id && <button type="button" className="hub-icon-btn" onClick={resetArticle}><X size={17} /></button>}</div>
             <label>عنوان المقال<input required value={articleDraft.title} onChange={e => setArticleDraft({ ...articleDraft, title: e.target.value })} placeholder="اكتب عنوانًا واضحًا" /></label>
             <label>وصف مختصر<textarea rows="2" value={articleDraft.excerpt} onChange={e => setArticleDraft({ ...articleDraft, excerpt: e.target.value })} placeholder="ملخص يظهر في صفحة الموقع" /></label>
-            <label>محتوى المقال<textarea rows="9" value={articleDraft.content} onChange={e => setArticleDraft({ ...articleDraft, content: e.target.value })} placeholder="اكتب المقال أو الدرس هنا..." /></label>
+            <label>محتوى المقال<textarea rows="9" value={articleDraft.content} onChange={e => setArticleDraft({ ...articleDraft, content: e.target.value })} placeholder="اكتب شرحًا تعليميًا أو موضوعًا إثرائيًا..." /></label>
+            <div className="hub-form-grid">
+              <label>المسار
+                <select value={articleDraft.track_id || ""} onChange={e=>setArticleDraft({...articleDraft,track_id:e.target.value,subject_id:"",curriculum_year:"",grade_level:""})}>
+                  <option value="">محتوى عام أو مشترك</option>
+                  {curriculumTracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+                </select>
+              </label>
+              <label>المادة
+                <select value={articleDraft.subject_id || ""} onChange={e=>{
+                  const subject=curriculumSubjects.find(item=>item.id===e.target.value);
+                  setArticleDraft({...articleDraft,subject_id:e.target.value,track_id:subject?.track_id||"",curriculum_year:subject?.curriculum_year||"",grade_level:subject?.grade_level||""});
+                }}>
+                  <option value="">موضوع عام للمسار</option>
+                  {curriculumSubjects.filter(subject=>!articleDraft.track_id || !subject.track_id || subject.track_id===articleDraft.track_id).map(subject=><option key={subject.id} value={subject.id}>{subject.name} · {subject.grade_level}</option>)}
+                </select>
+              </label>
+              <label>الصف الدراسي
+                <select value={articleDraft.curriculum_year || ""} onChange={e=>setArticleDraft({...articleDraft,curriculum_year:e.target.value,grade_level:e.target.value==="2"?"الصف الثاني":e.target.value==="3"?"الصف الثالث":""})}>
+                  <option value="">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+                </select>
+              </label>
+            </div>
             <div className="hub-subtitle">صورة غلاف (اختياري)</div>
             {articleDraft.cover_url && !articleCover && <img className="hub-cover-preview" src={articleDraft.cover_url} alt="غلاف المقال الحالي" />}
             <FilePicker file={articleCover} onChange={setArticleCover} accept="image/png,image/jpeg,image/webp,image/gif" label="ارفع صورة الغلاف" />
@@ -915,7 +959,29 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             {!selectedExam && !editingExam ? <div className="hub-empty hub-empty-tall"><ClipboardList size={30} /><strong>اختر امتحانًا أو أنشئ امتحانًا جديدًا</strong><span>بعد الإنشاء، أضف الأسئلة وحدد الإجابات الصحيحة ثم انشره للطلاب.</span></div> : editingExam ? (
               <form className="hub-editor" onSubmit={saveExam}>
                 <div className="hub-panel-heading"><h2>{examDraft.id ? "تعديل بيانات الامتحان" : "إنشاء امتحان جديد"}</h2><button type="button" className="hub-icon-btn" onClick={() => { setEditingExam(false); if (!examDraft.id) setSelectedExam(null); }}><X size={17} /></button></div>
-                <label>اسم الامتحان<input required value={examDraft.title} onChange={e => setExamDraft({ ...examDraft, title: e.target.value })} placeholder="امتحان الوحدة الأولى" /></label>
+                <label>اسم الامتحان<input required value={examDraft.title} onChange={e => setExamDraft({ ...examDraft, title: e.target.value })} placeholder="اختبار تدريبي في موضوع الدرس" /></label>
+                <div className="hub-form-grid">
+                  <label>المسار
+                    <select value={examDraft.track_id || ""} onChange={e => setExamDraft({...examDraft,track_id:e.target.value,subject_id:"",curriculum_year:"",grade_level:""})}>
+                      <option value="">كل المسارات / مشترك</option>
+                      {curriculumTracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+                    </select>
+                  </label>
+                  <label>المادة
+                    <select value={examDraft.subject_id || ""} onChange={e => {
+                      const subject=curriculumSubjects.find(item=>item.id===e.target.value);
+                      setExamDraft({...examDraft,subject_id:e.target.value,track_id:subject?.track_id||"",curriculum_year:subject?.curriculum_year||"",grade_level:subject?.grade_level||""});
+                    }}>
+                      <option value="">امتحان عام للمسار</option>
+                      {curriculumSubjects.filter(subject=>!examDraft.track_id || !subject.track_id || subject.track_id===examDraft.track_id).map(subject=><option key={subject.id} value={subject.id}>{subject.name} · {subject.grade_level}</option>)}
+                    </select>
+                  </label>
+                  <label>الصف الدراسي
+                    <select value={examDraft.curriculum_year || ""} onChange={e=>setExamDraft({...examDraft,curriculum_year:e.target.value,grade_level:e.target.value==="2"?"الصف الثاني":e.target.value==="3"?"الصف الثالث":""})}>
+                      <option value="">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+                    </select>
+                  </label>
+                </div>
                 <label>تعليمات أو وصف<textarea rows="3" value={examDraft.description} onChange={e => setExamDraft({ ...examDraft, description: e.target.value })} placeholder="اكتب تعليمات الامتحان..." /></label>
                 <label>مدة الامتحان بالدقائق<input type="number" min="1" max="300" required value={examDraft.duration_minutes} onChange={e => setExamDraft({ ...examDraft, duration_minutes: e.target.value })} /></label>
                 {examDraft.cover_image_url && !examCoverFile && <div className="hub-image-preview"><img src={examDraft.cover_image_url} alt="غلاف الامتحان" /><button type="button" className="hub-secondary compact" onClick={() => setExamDraft({ ...examDraft, cover_image_url: "" })}>إزالة الغلاف</button></div>}
