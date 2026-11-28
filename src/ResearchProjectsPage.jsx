@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, FlaskConical,
-  GraduationCap, Lightbulb, Microscope, RotateCcw, Sparkles, Target,
+  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, FlaskConical, GraduationCap,
+  Lightbulb, Microscope, MessageCircle, Send, Sparkles, Target,
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import ExperimentSimulator from "./ExperimentSimulator.jsx";
@@ -10,17 +10,22 @@ import "./research-projects.css";
 
 const asList = value => Array.isArray(value) ? value.filter(Boolean) : [];
 
+function isExperimentSubject(subject) {
+  const value = [subject?.name, subject?.slug].filter(Boolean).join(" ").toLowerCase();
+  return /فيزياء|physics|رياضيات|mathematics|\\bmath\\b|كيمياء|chemistry/.test(value);
+}
+
 function Header() {
   return (
     <header className="research-header">
       <Link to="/" className="research-brand">
         <span className="research-brand-icon"><GraduationCap size={20}/></span>
-        <span><b>Tay Space</b><small>مختبر التجارب التفاعلي</small></span>
+        <span><b>Tay Space</b><small>مختبر التجارب والمساعد الدراسي</small></span>
       </Link>
       <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
-        <Link to="/research">مختبر التجارب</Link>
+        <Link to="/research">المختبر والمساعد الذكي</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
         <Link to="/account">حساب الطالب</Link>
@@ -90,6 +95,9 @@ export default function ResearchProjectsPage() {
   const [loadingExperiments,setLoadingExperiments] = useState(false);
   const [generating,setGenerating] = useState(false);
   const [notice,setNotice] = useState("");
+  const [question,setQuestion] = useState("");
+  const [questionHistory,setQuestionHistory] = useState([]);
+  const [answering,setAnswering] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -151,8 +159,64 @@ export default function ResearchProjectsPage() {
   useEffect(() => {
     setSelectedExperimentId("");
     setTopic("");
+    setQuestion("");
+    setQuestionHistory([]);
     setNotice("");
   },[subjectSlug]);
+
+  async function askCurriculumQuestion(event) {
+    event.preventDefault();
+    setNotice("");
+    if (!selectedSubject || isExperimentSubject(selectedSubject)) {
+      setNotice("هذا المسار مخصص للأسئلة في المواد غير الفيزياء والرياضيات والكيمياء.");
+      return;
+    }
+    if (question.trim().length < 2) {
+      setNotice("اكتب سؤالك أولًا.");
+      return;
+    }
+    if (!supabase) {
+      setNotice("خدمة المساعد الدراسي غير متاحة حاليًا.");
+      return;
+    }
+    const { data: sessionData,error:sessionError } = await supabase.auth.getSession();
+    const activeSession = sessionData?.session;
+    if (sessionError || !activeSession) {
+      setNotice("سجّل الدخول أولًا لاستخدام المساعد الدراسي.");
+      return;
+    }
+
+    const currentQuestion = question.trim();
+    setAnswering(true);
+    setQuestion("");
+    try {
+      const response = await fetch("/api/ai/answer-curriculum-question",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:"Bearer "+activeSession.access_token,
+        },
+        body:JSON.stringify({
+          subject_id:selectedSubject.id,
+          question:currentQuestion,
+          history:questionHistory.slice(-6).map(item=>({
+            question:item.question,
+            answer:item.answer?.answer || "",
+          })),
+        }),
+      });
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok || !data.ok || !data.answer) {
+        throw new Error(data.message || "تعذر الحصول على الإجابة. حاول مرة أخرى.");
+      }
+      setQuestionHistory(current=>[...current,{question:currentQuestion,answer:data.answer}]);
+    } catch (error) {
+      setQuestion(currentQuestion);
+      setNotice(error.message || "حدث خطأ أثناء الإجابة.");
+    } finally {
+      setAnswering(false);
+    }
+  }
 
   async function generateExperiment(event) {
     event.preventDefault();
@@ -206,28 +270,28 @@ export default function ResearchProjectsPage() {
       <main className="research-page-main">
         <Link to="/experiments" className="research-back-link"><ArrowRight size={15}/> العودة إلى المواد والتجارب</Link>
         <section className="research-hero experiment-hero">
-          <span className="research-kicker"><Sparkles size={15}/> مختبر التجارب بالذكاء الاصطناعي</span>
-          <h1>{selectedSubject ? "مختبر " + selectedSubject.name : "مختبر التجارب التفاعلي"}</h1>
-          <p>اكتب فكرة أي تجربة علمية آمنة، حتى لو كانت خارج المنهج. سيختار الذكاء الاصطناعي نموذجًا مناسبًا ويحوّلها إلى محاكاة تفاعلية تستكشفها بنفسك، بدل إنشاء بحث طويل.</p>
+          <span className="research-kicker"><Sparkles size={15}/> مساعد Tay Space الذكي</span>
+          <h1>{selectedSubject ? (isExperimentSubject(selectedSubject) ? "مختبر " + selectedSubject.name : "مساعد " + selectedSubject.name) : "اختر المادة لبدء المساعدة الذكية"}</h1>
+          <p>{selectedSubject ? (isExperimentSubject(selectedSubject) ? "أنشئ تجارب ومحاكاة تفاعلية في الفيزياء والرياضيات والكيمياء، داخل المنهج أو خارجه." : "اسأل عن أي نقطة في منهج البكالوريا المصري لهذه المادة، واطلب شرحًا أو حلًا خطوة بخطوة أو مراجعة مفهوم.") : "الفيزياء والرياضيات والكيمياء لها مختبر تجارب ومحاكاة. أما بقية المواد فلها مساعد دراسي يجيب عن أسئلتك داخل منهج البكالوريا."}</p>
           <div className="research-hero-points">
-            <span><FlaskConical size={15}/> تجارب من داخل المنهج وخارجه</span>
-            <span><Microscope size={15}/> محاكاة تفاعلية قابلة للتغيير</span>
-            <span><BookOpen size={15}/> خطوات وملاحظات محفوظة بحسابك</span>
+            <span><FlaskConical size={15}/> محاكاة للفيزياء والرياضيات والكيمياء</span>
+            <span><MessageCircle size={15}/> أسئلة وإجابات لبقية المواد</span>
+            <span><BookOpen size={15}/> مراعاة الصف والمسار الدراسي</span>
           </div>
         </section>
 
         {notice && <div className="research-notice" role="status">{notice}</div>}
         {loading ? <div className="research-empty">جارٍ تحميل المجالات...</div> : !subjectSlug ? (
           <section className="research-subject-picker">
-            <div className="research-section-head"><div><span>اختر تصنيفًا فقط</span><h2>في أي مجال تريد إجراء التجربة؟</h2></div><b>{subjects.length} مجالًا</b></div>
-            <p className="experiment-scope-note">اختيار المجال لتنظيم تجاربك المحفوظة فقط، ولا يلزم أن تكون التجربة من المنهج الدراسي لهذا المجال.</p>
+            <div className="research-section-head"><div><span>اختر المادة</span><h2>ماذا تريد أن تتعلم اليوم؟</h2></div><b>{subjects.length} مادة</b></div>
+            <p className="experiment-scope-note">الفيزياء والرياضيات والكيمياء تفتح مختبر التجارب. وكل مادة أخرى تفتح مساعد الأسئلة الخاص بها.</p>
             <div className="research-subject-grid">
               {subjects.map(subject=><Link to={"/research/"+subject.slug} className="research-subject-card" key={subject.id}>
-                <span className="research-subject-icon"><FlaskConical size={20}/></span>
-                <small>{subject.grade_level} · {subject.track || "مجال عام"}</small>
+                <span className="research-subject-icon">{isExperimentSubject(subject) ? <FlaskConical size={20}/> : <MessageCircle size={20}/>}</span>
+                <small>{subject.grade_level} · {subject.track || "جميع المسارات"}</small>
                 <strong>{subject.name}</strong>
-                <p>{subject.description || "استخدم هذا المجال لتنظيم تجاربك التفاعلية."}</p>
-                <span className="research-subject-action">ابدأ تجربة <ChevronLeft size={15}/></span>
+                <p>{isExperimentSubject(subject) ? "مختبر تجارب ومحاكاة تفاعلية، حتى خارج المنهج." : "اسأل المساعد الذكي عن الدروس والمفاهيم داخل منهج البكالوريا."}</p>
+                <span className="research-subject-action">{isExperimentSubject(subject) ? "افتح مختبر التجارب" : "اسأل المساعد الذكي"} <ChevronLeft size={15}/></span>
               </Link>)}
             </div>
           </section>
@@ -235,34 +299,87 @@ export default function ResearchProjectsPage() {
           <div className="research-empty"><h2>المجال غير موجود أو غير منشور</h2><Link to="/research">اختر مجالًا آخر</Link></div>
         ) : (
           <>
-            <section className="research-workspace">
-              <div className="research-workspace-intro">
-                <div><span>{selectedSubject.grade_level} · {selectedSubject.track || "جميع المسارات"}</span><h2>{selectedSubject.name}</h2></div>
-                <Link to="/research" className="research-change-subject">تغيير المجال</Link>
-              </div>
-              <form className="research-form" onSubmit={generateExperiment}>
-                <label className="research-topic-label">ما التجربة التي تريد محاكاتها؟
-                  <textarea required minLength={3} maxLength={240} rows={3} value={topic} onChange={event=>setTopic(event.target.value)} placeholder="مثال: كيف تنتشر الحرارة في جسم معدني؟ أو كيف تنمو جماعة من الكائنات في بيئة محدودة؟"/>
-                </label>
-                <div className="experiment-builder-note">
-                  <b>اكتب أي فكرة آمنة تريد استكشافها</b>
-                  <span>ليس مطلوبًا أن تكون في المنهج أو حتى مرتبطة بالمادة المختارة. سيختار النظام محاكيًا متخصصًا أو نموذجًا رياضيًا تفاعليًا عامًا، ويوضح حدود النموذج.</span>
-                </div>
-                {!session && <div className="research-login-reminder">لإنشاء التجربة وحفظها، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
-                <button className="research-generate-button" type="submit" disabled={generating || !topic.trim()}>
-                  <Sparkles size={17}/>{generating ? "جارٍ بناء المحاكاة..." : "أنشئ المحاكاة التفاعلية"}
-                </button>
-                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء محاكاة خلال 24 ساعة. المحاولة الفاشلة لا تُخصم، والتجارب الناجحة تظل محفوظة في حسابك.</p>
-              </form>
-            </section>
+            {isExperimentSubject(selectedSubject) ? (
+              <>
+                <section className="research-workspace">
+                  <div className="research-workspace-intro">
+                    <div><span>{selectedSubject.grade_level} · {selectedSubject.track || "جميع المسارات"}</span><h2>مختبر {selectedSubject.name}</h2></div>
+                    <Link to="/research" className="research-change-subject">تغيير المادة</Link>
+                  </div>
+                  <form className="research-form" onSubmit={generateExperiment}>
+                    <label className="research-topic-label">ما التجربة التي تريد محاكاتها؟
+                      <textarea required minLength={3} maxLength={240} rows={3} value={topic} onChange={event=>setTopic(event.target.value)} placeholder="مثال: كيف تؤثر زاوية الإطلاق في مدى المقذوف؟ أو كيف يتغير معدل التفاعل مع درجة الحرارة؟"/>
+                    </label>
+                    <div className="experiment-builder-note">
+                      <b>مختبر مخصص للفيزياء والرياضيات والكيمياء</b>
+                      <span>يمكن أن تكون الفكرة من المنهج أو خارجه. سيختار النظام محاكيًا متخصصًا أو نموذجًا رياضيًا مبسطًا، ويشرح حدود النموذج.</span>
+                    </div>
+                    {!session && <div className="research-login-reminder">لإنشاء التجربة وحفظها، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
+                    <button className="research-generate-button" type="submit" disabled={generating || !topic.trim()}>
+                      <Sparkles size={17}/>{generating ? "جارٍ بناء المحاكاة..." : "أنشئ المحاكاة التفاعلية"}
+                    </button>
+                    <p className="research-form-hint">لديك حتى 5 محاولات إنشاء خلال 24 ساعة. المحاولة الفاشلة لا تُخصم، والتجارب الناجحة تحفظ في حسابك.</p>
+                  </form>
+                </section>
 
-            {subjectExperiments.length > 0 && <section className="research-saved-section">
-              <div className="research-section-head"><div><span>مكتبتك الخاصة</span><h2>تجاربك المحفوظة في {selectedSubject.name}</h2></div><b>{subjectExperiments.length} تجربة</b></div>
-              <div className="research-saved-list">{subjectExperiments.map(item=><button type="button" key={item.id} className={selectedExperiment?.id===item.id?"active":""} onClick={()=>setSelectedExperimentId(item.id)}><span>{item.title}</span><small>{new Date(item.created_at).toLocaleDateString("ar-EG")}</small></button>)}</div>
-            </section>}
-            {loadingExperiments && session && <div className="research-empty">جارٍ تحميل تجاربك المحفوظة...</div>}
-            {selectedExperiment && <ExperimentResult experiment={selectedExperiment} subjectName={subjectMap.get(selectedExperiment.subject_id)?.name}/>}
-            {!loadingExperiments && session && subjectExperiments.length===0 && <div className="research-empty"><FlaskConical size={22}/><span>لم تحفظ تجربة في هذا المجال بعد. اكتب فكرتك بالأعلى وابدأ الاستكشاف.</span></div>}
+                {subjectExperiments.length > 0 && <section className="research-saved-section">
+                  <div className="research-section-head"><div><span>مكتبتك الخاصة</span><h2>تجاربك المحفوظة في {selectedSubject.name}</h2></div><b>{subjectExperiments.length} تجربة</b></div>
+                  <div className="research-saved-list">{subjectExperiments.map(item=><button type="button" key={item.id} className={selectedExperiment?.id===item.id?"active":""} onClick={()=>setSelectedExperimentId(item.id)}><span>{item.title}</span><small>{new Date(item.created_at).toLocaleDateString("ar-EG")}</small></button>)}</div>
+                </section>}
+                {loadingExperiments && session && <div className="research-empty">جارٍ تحميل تجاربك المحفوظة...</div>}
+                {selectedExperiment && <ExperimentResult experiment={selectedExperiment} subjectName={subjectMap.get(selectedExperiment.subject_id)?.name}/>}
+                {!loadingExperiments && session && subjectExperiments.length===0 && <div className="research-empty"><FlaskConical size={22}/><span>لم تحفظ تجربة في هذا المجال بعد. اكتب فكرتك بالأعلى وابدأ الاستكشاف.</span></div>}
+                <div className="research-academic-note"><b>مهم:</b> النماذج تفاعلية تعليمية مبسطة وليست بديلًا عن القياس المعملي. التجارب الخطرة لا تُنفذ خارج الشاشة.</div>
+              </>
+            ) : (
+              <>
+                <section className="research-workspace curriculum-chat-workspace">
+                  <div className="research-workspace-intro">
+                    <div><span>{selectedSubject.academic_stage || "البكالوريا المصرية"} · {selectedSubject.grade_level} · {selectedSubject.track || "جميع المسارات"}</span><h2>اسأل عن {selectedSubject.name}</h2></div>
+                    <Link to="/research" className="research-change-subject">تغيير المادة</Link>
+                  </div>
+                  <div className="curriculum-chat-intro">
+                    <MessageCircle size={21}/>
+                    <p>اسأل عن درس، قاعدة، مصطلح، سؤال امتحان، أو اطلب حل مسألة وشرحها خطوة بخطوة. المساعد يراعي صفك ومسارك.</p>
+                  </div>
+                  {!session && <div className="research-login-reminder">لاستخدام المساعد، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
+                  <div className="curriculum-chat-messages" aria-live="polite">
+                    {questionHistory.length===0 && <div className="curriculum-chat-empty">
+                      <b>ابدأ بسؤال مثل:</b>
+                      <span>اشرح لي الفكرة الأساسية في هذا الدرس.</span>
+                      <span>حل السؤال ده خطوة بخطوة مع توضيح القانون.</span>
+                      <span>ما الفرق بين المصطلحين؟</span>
+                    </div>}
+                    {questionHistory.map((item,index)=>(
+                      <article className="curriculum-chat-pair" key={index}>
+                        <div className="curriculum-user-question"><b>سؤالك</b><p>{item.question}</p></div>
+                        <div className="curriculum-ai-answer">
+                          <span className="curriculum-ai-label"><Sparkles size={14}/> مساعد Tay Space</span>
+                          <div className="curriculum-answer-body">{item.answer.answer}</div>
+                          {asList(item.answer.steps).length>0 && <div className="curriculum-answer-list"><b>خطوات الشرح والحل</b><ol>{item.answer.steps.map((step,i)=><li key={i}>{step}</li>)}</ol></div>}
+                          {asList(item.answer.key_points).length>0 && <div className="curriculum-answer-list"><b>خلاصة مهمة</b><ul>{item.answer.key_points.map((point,i)=><li key={i}>{point}</li>)}</ul></div>}
+                          <div className={"curriculum-scope-note scope-"+item.answer.curriculum_status}>
+                            {item.answer.curriculum_status==="within_scope" ? "مرتبط بالمحتوى الدراسي المتاح" : item.answer.curriculum_status==="outside_scope" ? "يبدو خارج نطاق المنهج المحدد" : "لم نتحقق من مطابقته للمنهج"}
+                            {item.answer.curriculum_note && <p>{item.answer.curriculum_note}</p>}
+                          </div>
+                          {item.answer.follow_up_question && <p className="curriculum-follow-up">{item.answer.follow_up_question}</p>}
+                        </div>
+                      </article>
+                    ))}
+                    {answering && <div className="curriculum-thinking" role="status"><Sparkles size={15}/> جارٍ فهم السؤال وإعداد الإجابة...</div>}
+                  </div>
+                  <form className="research-form curriculum-question-form" onSubmit={askCurriculumQuestion}>
+                    <label className="research-topic-label">اكتب سؤالك
+                      <textarea required minLength={2} maxLength={1400} rows={3} value={question} onChange={event=>setQuestion(event.target.value)} placeholder={"اكتب سؤالك في "+selectedSubject.name+"..."} />
+                    </label>
+                    <button className="research-generate-button" type="submit" disabled={answering || !question.trim() || !session}>
+                      <Send size={17}/>{answering ? "جارٍ إعداد الإجابة..." : "إرسال السؤال"}
+                    </button>
+                    <p className="research-form-hint">الإجابة موجهة إلى منهج البكالوريا والصف والمسار المختارين. إذا لم تتوفر مادة منشورة تؤكد نقطة معينة، سيخبرك المساعد بذلك.</p>
+                  </form>
+                </section>
+              </>
+            )}
           </>
         )}
 
