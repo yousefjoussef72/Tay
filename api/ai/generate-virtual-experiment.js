@@ -52,7 +52,7 @@ const SPECIAL_CONFIGS = {
 
 function isExperimentSubject(subject) {
   const value = [subject?.name, subject?.slug].filter(Boolean).join(" ").toLowerCase();
-  return /فيزياء|physics|رياضيات|mathematics|\\bmath\\b|كيمياء|chemistry/.test(value);
+  return /فيزياء|physics|رياضيات|mathematics|\bmath\b|كيمياء|chemistry/.test(value);
 }
 
 function cleanText(value, max = 600) {
