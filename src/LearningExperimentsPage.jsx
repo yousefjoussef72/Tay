@@ -114,7 +114,7 @@ export default function LearningExperimentsPage() {
         supabase.from("learning_units").select("id,subject_id,title,slug,term,description,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_lessons").select("id,unit_id,title,slug,summary,content_json,learning_objectives,sort_order").eq("is_published", true).order("sort_order"),
         supabase.from("learning_experiments").select("id,subject_id,unit_id,lesson_id,title,slug,description,experience_type,simulator_type,simulation_config,content_json,sort_order").eq("is_published", true).order("sort_order").order("created_at", { ascending: false }),
-        supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,subject_id,unit_id,lesson_id").eq("is_published", true).order("created_at", { ascending: false }),
+        supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,track_id,grade_level,curriculum_year,subject_id,unit_id,lesson_id").eq("is_published", true).order("created_at", { ascending: false }),
         supabase.auth.getSession()
       ]);
       if (!active) return;
@@ -174,11 +174,19 @@ export default function LearningExperimentsPage() {
     const resourceUnit = unitMap.get(item.unit_id);
     const resourceLesson = lessonMap.get(item.lesson_id);
     const resourceSubjectId = item.subject_id || resourceUnit?.subject_id || unitMap.get(resourceLesson?.unit_id)?.subject_id;
-    const matchesSubject = !!resourceSubjectId && visibleSubjectIds.has(resourceSubjectId) && (selectedSubject === "all" || resourceSubjectId === selectedSubject);
+    const resourceSubject = subjectMap.get(resourceSubjectId);
+    const resourceTrackId = item.track_id || resourceSubject?.track_id || null;
+    const resourceYear = item.curriculum_year || resourceSubject?.curriculum_year || null;
+    const matchesSubject = !resourceSubjectId || (
+      visibleSubjectIds.has(resourceSubjectId) &&
+      (selectedSubject === "all" || resourceSubjectId === selectedSubject)
+    );
+    const matchesTrack = selectedTrack === "all" || !resourceTrackId || resourceTrackId === selectedTrack;
+    const matchesGrade = selectedGrade === "all" || !resourceYear || String(resourceYear) === selectedGrade;
     const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit || resourceLesson?.unit_id === selectedUnit;
     const text = (item.title + " " + (item.description || "") + " " + (item.category || "")).toLowerCase();
-    return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
-  }), [data.resources, unitMap, lessonMap, visibleSubjectIds, selectedSubject, selectedUnit, search]);
+    return matchesSubject && matchesTrack && matchesGrade && matchesUnit && text.includes(search.trim().toLowerCase());
+  }), [data.resources, unitMap, lessonMap, subjectMap, visibleSubjectIds, selectedTrack, selectedGrade, selectedSubject, selectedUnit, search]);
 
   const sharedSubjects = visibleSubjects.filter(subject => !subject.track_id);
   const specialistSubjects = selectedTrack === "all" ? [] : visibleSubjects.filter(subject => subject.track_id === selectedTrack);
