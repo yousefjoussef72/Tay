@@ -9,7 +9,8 @@ import "./learning-studio-admin.css";
 
 const SUBJECT_EMPTY = {
   id:null,name:"",slug:"",academic_stage:"البكالوريا المصرية",grade_level:"الصف الثاني",
-  track:"مسار الطب وعلوم الحياة",term:"",description:"",icon:"book-open",color:"teal",
+  track_id:"",track:"جميع المسارات",curriculum_year:2,subject_kind:"core",
+  choice_group:"",choice_rule:"none",term:"",description:"",icon:"book-open",color:"teal",
   is_published:false,sort_order:0
 };
 const UNIT_EMPTY = { id:null,subject_id:"",title:"",slug:"",term:"",description:"",is_published:false,sort_order:0 };
@@ -63,6 +64,7 @@ function Notice({ notice }) {
 export default function LearningStudioAdmin({ session }) {
   const [tab,setTab]=useState("subjects");
   const [subjects,setSubjects]=useState([]);
+  const [tracks,setTracks]=useState([]);
   const [units,setUnits]=useState([]);
   const [lessons,setLessons]=useState([]);
   const [experiments,setExperiments]=useState([]);
@@ -81,16 +83,18 @@ export default function LearningStudioAdmin({ session }) {
 
   const loadData=useCallback(async()=>{
     setLoading(true);
-    const [s,u,l,e,a]=await Promise.all([
-      supabase.from("learning_subjects").select("*").order("sort_order").order("name"),
+    const [s,t,u,l,e,a]=await Promise.all([
+      supabase.from("learning_subjects").select("*").order("curriculum_year").order("sort_order").order("name"),
+      supabase.from("learning_tracks").select("*").order("sort_order").order("name"),
       supabase.from("learning_units").select("*").order("sort_order").order("created_at"),
       supabase.from("learning_lessons").select("*").order("sort_order").order("created_at"),
       supabase.from("learning_experiments").select("*").order("sort_order").order("created_at",{ascending:false}),
       supabase.from("learning_experiment_attempts").select("experiment_id,user_id,is_completed,completed_at").order("completed_at",{ascending:false}).limit(1000)
     ]);
-    const failure=s.error||u.error||l.error||e.error||a.error;
+    const failure=s.error||t.error||u.error||l.error||e.error||a.error;
     if(failure) setNotice({kind:"error",text:"تعذر تحميل بعض بيانات الاستوديو. راجع اتصال قاعدة البيانات وصلاحيات الإدارة."});
     setSubjects(s.data||[]);
+    setTracks(t.data||[]);
     setUnits(u.data||[]);
     setLessons(l.data||[]);
     setExperiments(e.data||[]);
@@ -121,7 +125,18 @@ export default function LearningStudioAdmin({ session }) {
 
   async function saveSubject(event){
     event.preventDefault();setSaving(true);setNotice(null);
-    const values={...subjectDraft,name:subjectDraft.name.trim(),slug:subjectDraft.slug.trim()||slugify(subjectDraft.name,"subject"),updated_at:new Date().toISOString()};
+    const selectedTrack=tracks.find(item=>item.id===subjectDraft.track_id);
+    const values={
+      ...subjectDraft,
+      name:subjectDraft.name.trim(),
+      slug:subjectDraft.slug.trim()||slugify(subjectDraft.name,"subject"),
+      track: selectedTrack?.name || "جميع المسارات",
+      track_id: selectedTrack?.id || null,
+      curriculum_year:Number(subjectDraft.curriculum_year)||2,
+      grade_level:subjectDraft.grade_level || (Number(subjectDraft.curriculum_year)===3?"الصف الثالث":"الصف الثاني"),
+      choice_group:subjectDraft.choice_group.trim(),
+      updated_at:new Date().toISOString()
+    };
     const result=values.id
       ? await supabase.from("learning_subjects").update(values).eq("id",values.id).select().single()
       : await supabase.from("learning_subjects").insert({...values,created_by:session?.user?.id}).select().single();
@@ -258,7 +273,7 @@ export default function LearningStudioAdmin({ session }) {
   return (
     <div className="studio-dashboard">
       <div className="studio-heading">
-        <div><span className="studio-kicker">منهجك ومحتواك في مكان واحد</span><h2>استوديو المواد والتجارب</h2><p>أنشئ المواد والوحدات والدروس، ثم ابنِ التجارب والمحاكاة وانشرها للطلاب.</p></div>
+        <div><span className="studio-kicker">منهجك ومحتواك في مكان واحد</span><h2>استوديو المواد والتجارب</h2><p>أدر مسارات البكالوريا والصفوف والمواد المشتركة والتخصصية، ثم أضف الوحدات والدروس والأنشطة لكل مادة.</p></div>
         <button type="button" className="studio-refresh" onClick={loadData}>تحديث البيانات</button>
       </div>
       <div className="studio-stat-row">
@@ -282,7 +297,11 @@ export default function LearningStudioAdmin({ session }) {
             <div className="studio-field-grid">
               <Field label="المرحلة"><input value={subjectDraft.academic_stage} onChange={e=>setSubjectDraft({...subjectDraft,academic_stage:e.target.value})}/></Field>
               <Field label="الصف"><input value={subjectDraft.grade_level} onChange={e=>setSubjectDraft({...subjectDraft,grade_level:e.target.value})}/></Field>
-              <Field label="المسار"><input value={subjectDraft.track} onChange={e=>setSubjectDraft({...subjectDraft,track:e.target.value})}/></Field>
+              <Field label="المسار"><select value={subjectDraft.track_id||""} onChange={e=>setSubjectDraft({...subjectDraft,track_id:e.target.value})}><option value="">مشتركة بين جميع المسارات</option>{tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></Field>
+              <Field label="الصف الدراسي"><select value={subjectDraft.curriculum_year||2} onChange={e=>setSubjectDraft({...subjectDraft,curriculum_year:Number(e.target.value),grade_level:Number(e.target.value)===3?"الصف الثالث":"الصف الثاني"})}><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select></Field>
+              <Field label="تصنيف المادة"><select value={subjectDraft.subject_kind||"core"} onChange={e=>setSubjectDraft({...subjectDraft,subject_kind:e.target.value})}><option value="core">مادة أساسية مشتركة</option><option value="specialized">مادة تخصصية</option><option value="non_counting">مادة لا تضاف للمجموع</option><option value="activity">نشاط عملي</option><option value="elective">مادة اختيارية</option></select></Field>
+              <Field label="مجموعة الاختيار (اختياري)"><input value={subjectDraft.choice_group||""} onChange={e=>setSubjectDraft({...subjectDraft,choice_group:e.target.value})} placeholder="مثال: تخصص الصف الثاني"/></Field>
+              <Field label="قاعدة الاختيار"><select value={subjectDraft.choice_rule||"none"} onChange={e=>setSubjectDraft({...subjectDraft,choice_rule:e.target.value})}><option value="none">لا يوجد اختيار خاص</option><option value="choose_one">اختيار مادة واحدة من المجموعة</option><option value="all_required">كل مواد المجموعة مطلوبة</option></select></Field>
               <Field label="الفصل الدراسي"><input value={subjectDraft.term} onChange={e=>setSubjectDraft({...subjectDraft,term:e.target.value})} placeholder="اختياري"/></Field>
             </div>
             <Field label="وصف المادة"><textarea rows="3" value={subjectDraft.description} onChange={e=>setSubjectDraft({...subjectDraft,description:e.target.value})}/></Field>
@@ -292,7 +311,7 @@ export default function LearningStudioAdmin({ session }) {
           <section className="studio-panel">
             <div className="studio-panel-head"><h3>المواد الحالية</h3><span>{subjects.length} مادة</span></div>
             {subjects.length===0?<div className="studio-empty">لم تتم إضافة مواد بعد.</div>:subjects.map(item=><article className={"studio-list-row "+(subjectDraft.id===item.id?"selected":"")} key={item.id}>
-              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{units.filter(unit=>unit.subject_id===item.id).length} وحدة · {lessons.filter(lesson=>units.some(unit=>unit.id===lesson.unit_id && unit.subject_id===item.id)).length} درس · {experiments.filter(experiment=>experiment.subject_id===item.id).length} نشاط · {item.is_published?"ظاهرة للطلاب":"مخفية"}</small></div>
+              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{item.grade_level} · {item.track || "جميع المسارات"} · {item.subject_kind==="specialized"?"تخصصية":item.subject_kind==="non_counting"?"لا تضاف للمجموع":item.subject_kind==="activity"?"نشاط":"أساسية"} · {units.filter(unit=>unit.subject_id===item.id).length} وحدة · {lessons.filter(lesson=>units.some(unit=>unit.id===lesson.unit_id && unit.subject_id===item.id)).length} درس · {item.is_published?"ظاهرة للطلاب":"مخفية"}</small></div>
               <div className="studio-row-actions"><button type="button" onClick={()=>setSubjectDraft(subjectForm(item))} title="تعديل"><Pencil size={15}/></button><button type="button" onClick={()=>deleteSubject(item)} title="حذف"><Trash2 size={15}/></button></div>
             </article>)}
           </section>
