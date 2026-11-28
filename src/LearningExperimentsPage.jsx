@@ -252,7 +252,7 @@ export default function LearningExperimentsPage() {
           <Link to="/experiments" className="learning-back-link"><ArrowRight size={15}/> العودة إلى قائمة التجارب</Link>
           <div className="learning-detail-title">
             <div className="learning-breadcrumb">{subject?.name || "المادة"}{unit?.title ? " / " + unit.title : ""}{lesson?.title ? " / " + lesson.title : ""}</div>
-            <span className="learning-public-kicker"><FlaskConical size={15}/> معمل تفاعلي</span>
+            <span className="learning-public-kicker"><FlaskConical size={15}/>{selected.simulator_type ? "معمل ومحاكاة تفاعلية" : "نشاط تعليمي"}</span>
             <h1>{selected.title}</h1>
             <p>{selected.description}</p>
           </div>
@@ -283,7 +283,7 @@ export default function LearningExperimentsPage() {
         <div className="learning-list-hero">
           <span className="learning-public-kicker"><GraduationCap size={15}/> الصف الثاني من البكالوريا المصرية</span>
           <h1>المواد والتجارب التفاعلية</h1>
-          <p>اختر المادة والوحدة، افتح التجربة، غيّر القيم، واكتشف بنفسك كيف تعمل القوانين.</p>
+          <p>اختر المادة التي تريدها، واستعرض وحداتها ودروسها وملفاتها وأنشطتها في مساحة مستقلة.</p>
           <div className="learning-list-stats"><span><BookOpen size={16}/>{data.subjects.length} مادة</span><span><Layers3 size={16}/>{data.units.length} وحدة</span><span><BookOpen size={16}/>{data.lessons.length} درس</span><span><FlaskConical size={16}/>{data.experiments.length} تجربة</span></div>
         </div>
         <div className="learning-list-tools">
