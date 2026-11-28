@@ -21,17 +21,30 @@ export default function ArticlePage() {
 
       const { data, error } = await supabase
         .from("articles")
-        .select("title,slug,excerpt,content,cover_url,published_at,created_at")
+        .select("title,slug,excerpt,content,cover_url,track_id,subject_id,grade_level,curriculum_year,published_at,created_at")
         .eq("slug", slug)
         .eq("is_published", true)
         .maybeSingle();
+
+      let enriched = data;
+      if (data) {
+        const [trackResult, subjectResult] = await Promise.all([
+          data.track_id ? supabase.from("learning_tracks").select("name").eq("id", data.track_id).maybeSingle() : Promise.resolve({ data: null }),
+          data.subject_id ? supabase.from("learning_subjects").select("name").eq("id", data.subject_id).maybeSingle() : Promise.resolve({ data: null }),
+        ]);
+        enriched = {
+          ...data,
+          track_name: trackResult.data?.name || "",
+          subject_name: subjectResult.data?.name || "",
+        };
+      }
 
       if (!active) return;
       if (error || !data) {
         setArticle(null);
         setNotFound(true);
       } else {
-        setArticle(data);
+        setArticle(enriched);
       }
       setLoading(false);
     }
@@ -65,6 +78,7 @@ export default function ArticlePage() {
       </div>
       <article className="article-page-card">
         <span className="article-page-label">{copy.articlePageLabel}</span>
+        {(article.track_name || article.subject_name || article.grade_level) && <div className="article-page-curriculum">{[article.track_name,article.subject_name,article.grade_level].filter(Boolean).join(" · ")}</div>}
         <h1>{article.title}</h1>
         {article.published_at && (
           <div className="article-page-date">
