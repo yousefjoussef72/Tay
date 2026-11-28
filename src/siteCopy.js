@@ -157,6 +157,7 @@ export const SITE_COPY_GROUPS = [
       { key: "librarySearchPlaceholder", label: "مربع البحث", value: "ابحث عن كتاب أو ملخص..." },
       { key: "libraryEmpty", label: "حالة المكتبة الفارغة", value: "لا توجد ملفات منشورة تطابق بحثك حاليًا." },
       { key: "libraryOpenFile", label: "فتح/تحميل الملف", value: "فتح أو تحميل الملف" },
+      { key: "libraryFileUnavailable", label: "رسالة عدم توفر رابط الملف", value: "تعذر تجهيز رابط هذا الملف، حدّث الصفحة وحاول مرة أخرى." },
       { key: "libraryNavLibrary", label: "رابط المكتبة", value: "المكتبة" },
       { key: "libraryGeneralCategory", label: "التصنيف العام الافتراضي", value: "عام" },
     ],
