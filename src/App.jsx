@@ -33,13 +33,13 @@ function Header() {
           {menuOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
         <nav className={menuOpen ? "nav-links open" : "nav-links"}>
-          <a href={copy.navHomeUrl || "/#home"} onClick={close}>{copy.navHome}</a>
-          <a href={copy.navAboutUrl || "/#about"} onClick={close}>{copy.navAbout}</a>
-          <a href={copy.navFeaturesUrl || "/#features"} onClick={close}>{copy.navFeatures}</a>
-          <a href={copy.navContactUrl || "/#contact"} onClick={close}>{copy.navContact}</a>
-          <Link to={copy.navLibraryUrl || "/library"} onClick={close}>{copy.navLibrary}</Link>
-          <Link to={copy.navExamsUrl || "/exams"} onClick={close}>{copy.navExams}</Link>
-          <Link to={copy.navAccountUrl || "/account"} onClick={close}>{copy.navAccount}</Link>
+          <a href={safeSiteHref(copy.navHomeUrl, "/#home")} onClick={close}>{copy.navHome}</a>
+          <a href={safeSiteHref(copy.navAboutUrl, "/#about")} onClick={close}>{copy.navAbout}</a>
+          <a href={safeSiteHref(copy.navFeaturesUrl, "/#features")} onClick={close}>{copy.navFeatures}</a>
+          <a href={safeSiteHref(copy.navContactUrl, "/#contact")} onClick={close}>{copy.navContact}</a>
+          <a href={safeSiteHref(copy.navLibraryUrl, "/library")} onClick={close}>{copy.navLibrary}</a>
+          <a href={safeSiteHref(copy.navExamsUrl, "/exams")} onClick={close}>{copy.navExams}</a>
+          <a href={safeSiteHref(copy.navAccountUrl, "/account")} onClick={close}>{copy.navAccount}</a>
         </nav>
         <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> {copy.navAdmin}</Link>
       </div>
