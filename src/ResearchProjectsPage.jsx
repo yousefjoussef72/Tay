@@ -53,7 +53,7 @@ function ExperimentResult({ experiment, subjectName }) {
       {simulatorType ? (
         <section className="experiment-simulator-panel">
           <div className="research-simulator-heading"><Microscope size={17}/> المحاكي التفاعلي</div>
-          <ExperimentSimulator simulatorType={simulatorType} config={config}/>
+          <ExperimentSimulator key={experiment.id} simulatorType={simulatorType} config={config}/>
         </section>
       ) : (
         <div className="research-no-simulator">لم يتم تحديد محاكاة مناسبة لهذا الطلب.</div>
