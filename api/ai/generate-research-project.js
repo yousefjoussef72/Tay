@@ -190,7 +190,7 @@ function createSimulatorPractical(simulatorType, topic) {
 function createGeneralResearchActivity(subjectName, topic) {
   return {
     title: "نشاط تحليلي مرتبط بموضوع البحث",
-    purpose: "تحويل سؤال البحث إلى نشاط قابل للملاحظة والمقارنة باستخدام مصادر تعليمية موثوقة.",
+    purpose: "تطبيق سؤال البحث في مادة " + subjectName + " عبر الملاحظة والمقارنة باستخدام مصادر تعليمية موثوقة.",
     hypothesis: "اكتب توقعًا مبدئيًا يمكن مراجعته في ضوء المعلومات التي تجمعها.",
     materials: ["مصدران تعليميان موثوقان على الأقل", "ورقة لتسجيل الملاحظات والمقارنة"],
     steps: [
@@ -212,11 +212,15 @@ function createGeneralResearchActivity(subjectName, topic) {
 
 async function refundReservation(client, reservation) {
   if (!reservation?.id) return;
-  const { error } = await client.rpc("refund_learning_research_generation", {
-    p_reservation_id: reservation.id
-  });
-  if (error) {
-    console.error("research_quota_refund_failed", { code: error.code || "unknown" });
+  try {
+    const { error } = await client.rpc("refund_learning_research_generation", {
+      p_reservation_id: reservation.id
+    });
+    if (error) {
+      console.error("research_quota_refund_failed", { code: error.code || "unknown" });
+    }
+  } catch (error) {
+    console.error("research_quota_refund_failed", { code: error?.code || "network_error" });
   }
 }
 
