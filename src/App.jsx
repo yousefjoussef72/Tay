@@ -588,7 +588,8 @@ function SiteGate() {
 }
 
 function NotFound() {
-  return <NotFound />;
+  const { copy } = useSiteCopy();
+  return <div className="not-found"><span>404</span><h1>{copy.notFoundTitle}</h1><Link to="/" className="button button-primary">{copy.notFoundBack} <ArrowLeft size={17} /></Link></div>;
 }
 
 export default function App() {
