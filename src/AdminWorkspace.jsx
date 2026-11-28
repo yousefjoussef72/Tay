@@ -326,6 +326,12 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   async function saveResource(event) {
     event.preventDefault();
     if (!resourceDraft.title.trim()) return setAlert({ kind: "error", text: "اكتب اسم الملف أو المورد." });
+    if (resourceFile && resourceDraft.resource_type === "video" && !resourceFile.type.startsWith("video/")) {
+      return setAlert({ kind: "error", text: "اختر ملف فيديو بصيغة MP4 أو WebM أو MOV أو OGG." });
+    }
+    if (resourceFile && resourceDraft.resource_type !== "video" && resourceFile.type.startsWith("video/")) {
+      return setAlert({ kind: "error", text: "غيّر نوع المورد إلى «فيديو» قبل رفع هذا الملف." });
+    }
     if (resourceDraft.resource_type === "link" && !/^https:\/\//i.test(resourceDraft.external_url.trim())) {
       return setAlert({ kind: "error", text: "أدخل رابطًا يبدأ بـ https://." });
     }
