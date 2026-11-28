@@ -322,7 +322,7 @@ export default function ResearchProjectsPage() {
                 <button className="research-generate-button" type="submit" disabled={generating || !topic.trim()}>
                   <Sparkles size={17}/>{generating ? "جارٍ إعداد البحث وحفظه..." : "أنشئ البحث بالذكاء الاصطناعي"}
                 </button>
-                <p className="research-form-hint">يمكنك إنشاء حتى 5 أبحاث خلال 24 ساعة. الأبحاث التي تنشئها تظل محفوظة في حسابك.</p>
+                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء بحث خلال 24 ساعة. الأبحاث التي تنشئها تظل محفوظة في حسابك.</p>
               </form>
             </section>
 
