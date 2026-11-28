@@ -182,10 +182,9 @@ export default function LearningExperimentsPage() {
     const resourceSubject = subjectMap.get(resourceSubjectId);
     const resourceTrackId = item.track_id || resourceSubject?.track_id || null;
     const resourceYear = item.curriculum_year || resourceSubject?.curriculum_year || null;
-    const matchesSubject = !resourceSubjectId || (
-      visibleSubjectIds.has(resourceSubjectId) &&
-      (selectedSubject === "all" || resourceSubjectId === selectedSubject)
-    );
+    const matchesSubject = selectedSubject === "all"
+      ? (!resourceSubjectId || visibleSubjectIds.has(resourceSubjectId))
+      : resourceSubjectId === selectedSubject;
     const matchesTrack = selectedTrack === "all" || !resourceTrackId || resourceTrackId === selectedTrack;
     const matchesGrade = selectedGrade === "all" || !resourceYear || String(resourceYear) === selectedGrade;
     const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit || resourceLesson?.unit_id === selectedUnit;
