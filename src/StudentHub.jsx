@@ -10,7 +10,8 @@ const fileUrl = path => path ? supabase.storage.from(BUCKET).getPublicUrl(path).
 
 function PublicHubHeader() {
   const { copy } = useSiteCopy();
-  return <header className="public-hub-header"><Link to="/" className="public-hub-brand">{copy.brandName} <span>{copy.publicHubTagline}</span></Link><nav><Link to="/library">{copy.navLibrary}</Link><Link to="/exams">{copy.navExams}</Link><Link to="/account">{copy.navAccount}</Link><Link to="/">{copy.navHome}</Link></nav></header>;
+  if (copy.showHeader === false) return null;
+  return <header className="public-hub-header"><Link to="/" className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></Link><nav><Link to={copy.navLibraryUrl || "/library"}>{copy.navLibrary}</Link><Link to={copy.navExamsUrl || "/exams"}>{copy.navExams}</Link><Link to={copy.navAccountUrl || "/account"}>{copy.navAccount}</Link><Link to={copy.navHomeUrl || "/"}>{copy.navHome}</Link></nav></header>;
 }
 
 export function LibraryPage() {
@@ -38,7 +39,7 @@ export function LibraryPage() {
     return () => { active = false; };
   }, []);
 
-  const categories = ["ALL", ...new Set(items.map(item => item.category || "عام"))];
+  const categories = ["ALL", ...new Set(items.map(item => item.category || copy.libraryGeneralCategory))];
   const filtered = items.filter(item =>
     (category === "ALL" || item.category === category) &&
     (item.title + " " + item.description).toLowerCase().includes(query.toLowerCase())
@@ -60,7 +61,7 @@ export function LibraryPage() {
           const url = item.resource_type === "link" ? item.external_url : fileUrl(item.file_path);
           return <article className="public-resource-card" key={item.id}>
             {item.resource_type === "image" ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a> : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : <BookOpen size={24} />}</div>}
-            <span className="public-resource-category">{item.category || "عام"}</span>
+            <span className="public-resource-category">{item.category || copy.libraryGeneralCategory}</span>
             <h2>{item.title}</h2>
             <p>{item.description || copy.libraryFileFallback}</p>
             <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a>
@@ -176,14 +177,14 @@ export function ExamsPage() {
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
         {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
-          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} دقيقة</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
+          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
         </div>}
       </> : loading ? <div className="public-hub-empty">{copy.examLoading}</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
         <div className="public-hub-kicker">{copy.examTrainingLabel}</div>
         <h1>{exam.title}</h1>
         <p className="public-hub-lead">{exam.description || copy.examDetailFallback}</p>
-        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} دقيقة</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
+        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} {copy.examMinuteUnit}</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
         {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
             {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
