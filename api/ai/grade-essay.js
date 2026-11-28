@@ -109,6 +109,8 @@ export default async function handler(req, res) {
         ? Math.max(0, Math.min(max, Math.round(Number(grade.score))))
         : 0;
       gradeMap.set(id, {
+        question_id: id,
+        prompt: essayItems.find(item => item.question_id === id)?.prompt || "",
         score,
         feedback: safeString(grade.feedback, 1600),
         strengths: Array.isArray(grade.strengths) ? grade.strengths.map(value => safeString(value, 500)).slice(0, 5) : [],
