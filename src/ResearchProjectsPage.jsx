@@ -1,80 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, ClipboardList, Copy, Printer,
-  FlaskConical, GraduationCap, Lightbulb, Microscope, Search, Sparkles, Target
+  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, FlaskConical,
+  GraduationCap, Lightbulb, Microscope, RotateCcw, Sparkles, Target,
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import ExperimentSimulator from "./ExperimentSimulator.jsx";
 import "./research-projects.css";
 
-function list(value) {
-  return Array.isArray(value) ? value.filter(Boolean) : [];
-}
-
-function getInlineSimulator(subject, topic, includePractical) {
-  if (!includePractical || !subject) return null;
-  const isPhysics = subject.slug?.includes("physics") || /فيزياء|physics/i.test(subject.name || "");
-  if (!isPhysics) return null;
-
-  const normalized = String(topic || "").toLowerCase()
-    .replace(/[أإآ]/g, "ا")
-    .replace(/[ًٌٍَُِّْـ]/g, "");
-
-  if (/بندول|pendulum/.test(normalized)) {
-    return {
-      type: "simple_pendulum",
-      title: "محاكي البندول البسيط",
-      description: "غيّر طول البندول ولاحظ أثره في الزمن الدوري، مع تثبيت الكتلة وزاوية الإزاحة.",
-      config: { length: 0.8, mass: 0.3, max_angle_deg: 12 },
-    };
-  }
-  if (/زنبرك|نابض|حركة توافقية بسيطة|spring/.test(normalized)) {
-    return {
-      type: "harmonic_spring",
-      title: "محاكي الكتلة والنابض",
-      description: "غيّر الكتلة أو ثابت النابض، متغيرًا واحدًا كل مرة، ولاحظ أثر ذلك في الاهتزاز.",
-      config: { mass: 0.3, stiffness: 80, amplitude_cm: 6 },
-    };
-  }
-  if (/موجة|الموجات|انتشار الموج|wave/.test(normalized)) {
-    return {
-      type: "wave_motion",
-      title: "محاكي الموجات",
-      description: "غيّر السعة أو التردد ولاحظ كيف يتغير شكل الموجة.",
-      config: { amplitude: 2, frequency: 1.5 },
-    };
-  }
-  if (/مقذوف|المقذوفات|القذف|قذيفة|projectile/.test(normalized)) {
-    return {
-      type: "projectile_motion",
-      title: "محاكي حركة المقذوفات",
-      description: "جرّب زوايا وسرعات مختلفة ولاحظ أثرها في المدى والارتفاع.",
-      config: { speed: 12, angle_deg: 45, height: 0 },
-    };
-  }
-  if (/السقوط الحر|سقوط حر|free.?fall|تسارع الجاذبية/.test(normalized)) {
-    return {
-      type: "free_fall",
-      title: "محاكي السقوط الحر",
-      description: "غيّر ارتفاع السقوط ولاحظ أثره في زمن السقوط والسرعة.",
-      config: { height: 20 },
-    };
-  }
-  return null;
-}
+const asList = value => Array.isArray(value) ? value.filter(Boolean) : [];
 
 function Header() {
   return (
     <header className="research-header">
       <Link to="/" className="research-brand">
         <span className="research-brand-icon"><GraduationCap size={20}/></span>
-        <span><b>Tay Space</b><small>مساحة البحث والاكتشاف</small></span>
+        <span><b>Tay Space</b><small>مختبر التجارب التفاعلي</small></span>
       </Link>
       <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
-        <Link to="/research">المشاريع البحثية</Link>
+        <Link to="/research">مختبر التجارب</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
         <Link to="/account">حساب الطالب</Link>
@@ -83,122 +29,67 @@ function Header() {
   );
 }
 
-function makePlainText(project) {
-  const content = project?.content_json || {};
-  const out = [
-    project?.title || content.title || "بحث علمي",
-    "المادة: " + (project?.subject_name || ""),
-    "الملخص",
-    content.abstract,
-    "مشكلة البحث",
-    content.research_problem,
-    "أسئلة البحث",
-    ...list(content.research_questions).map((item, index) => (index + 1) + ". " + item),
-    "أهداف البحث",
-    ...list(content.objectives).map((item, index) => (index + 1) + ". " + item),
-    "أهمية البحث",
-    content.importance,
-    "المقدمة",
-    content.introduction,
-    ...list(content.sections).flatMap(section => [section.heading, section.body]),
-    "المنهجية",
-    content.methodology?.approach,
-    ...list(content.methodology?.steps).map((item, index) => (index + 1) + ". " + item),
-    "النتائج المتوقعة",
-    content.expected_results,
-    "المناقشة",
-    content.discussion,
-    "الخاتمة",
-    content.conclusion,
-    "التوصيات",
-    ...list(content.recommendations),
-    "مصادر مقترحة للتحقق",
-    ...list(content.references),
-  ];
-  return out.filter(Boolean).join("\n\n");
-}
-
-function ResearchDocument({ project, subject }) {
-  const [copyNotice, setCopyNotice] = useState("");
-  if (!project) return null;
-  const content = project.content_json || {};
-  const practical = content.practical_experiment;
-  const simulatorType = project.simulator_type || content.simulator_type;
-  const simulatorConfig = project.simulation_config || content.simulation_config || {};
-
-  async function copyResearch() {
-    try {
-      await navigator.clipboard.writeText(makePlainText({ ...project, subject_name: subject?.name }));
-      setCopyNotice("تم نسخ نص البحث.");
-    } catch {
-      setCopyNotice("تعذر النسخ من هذا المتصفح. يمكنك تحديد النص ونسخه يدويًا.");
-    }
-  }
+function ExperimentResult({ experiment, subjectName }) {
+  if (!experiment) return null;
+  const content = experiment.content_json || {};
+  const simulatorType = experiment.simulator_type || content.simulator_type;
+  const config = experiment.simulation_config || content.simulation_config || {};
+  const variables = content.variables || {};
 
   return (
-    <article className="research-document">
+    <article className="research-document experiment-result">
       <div className="research-document-top">
         <div>
-          <span className="research-document-kicker"><CheckCircle2 size={14}/> بحث محفوظ في حسابك</span>
-          <h2>{project.title}</h2>
-          <p>{subject?.name || "المادة"} · {new Date(project.created_at).toLocaleDateString("ar-EG")}</p>
+          <span className="research-document-kicker"><CheckCircle2 size={14}/> محاكاة محفوظة في حسابك</span>
+          <h2>{experiment.title || content.title}</h2>
+          <p>{subjectName || "تجربة حرة"} · {new Date(experiment.created_at).toLocaleDateString("ar-EG")}</p>
         </div>
-        <div className="research-document-actions"><button type="button" className="research-copy-button" onClick={copyResearch}><Copy size={15}/> نسخ البحث</button><button type="button" className="research-copy-button" onClick={() => window.print()}><Printer size={15}/> طباعة / حفظ PDF</button></div>
+        <span className="experiment-simulator-badge"><Microscope size={14}/> تجربة تفاعلية</span>
       </div>
-      {copyNotice && <p className="research-copy-notice" role="status">{copyNotice}</p>}
 
-      {content.abstract && <section className="research-paper-section research-abstract"><h3>ملخص البحث</h3><p>{content.abstract}</p>{list(content.keywords).length > 0 && <div className="research-keywords">{list(content.keywords).map((item,index)=><span key={index}>{item}</span>)}</div>}</section>}
-      {content.research_problem && <section className="research-paper-section"><h3><Target size={17}/> مشكلة البحث</h3><p>{content.research_problem}</p></section>}
-      {list(content.research_questions).length > 0 && <section className="research-paper-section"><h3>أسئلة البحث</h3><ol>{list(content.research_questions).map((item,index)=><li key={index}>{item}</li>)}</ol></section>}
-      {list(content.objectives).length > 0 && <section className="research-paper-section"><h3><CheckCircle2 size={17}/> أهداف البحث</h3><ul>{list(content.objectives).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
-      {content.importance && <section className="research-paper-section"><h3><Lightbulb size={17}/> أهمية البحث</h3><p>{content.importance}</p></section>}
-      {content.introduction && <section className="research-paper-section"><h3>المقدمة</h3><p>{content.introduction}</p></section>}
-      {list(content.sections).length > 0 && <section className="research-paper-section"><h3><BookOpen size={17}/> محاور البحث</h3><div className="research-paper-chapters">{list(content.sections).map((section,index)=><article key={index}><span>المحور {index+1}</span><h4>{section.heading}</h4><p>{section.body}</p></article>)}</div></section>}
-      {(content.methodology?.approach || list(content.methodology?.steps).length > 0) && <section className="research-paper-section"><h3><ClipboardList size={17}/> منهجية البحث</h3>{content.methodology?.approach && <p>{content.methodology.approach}</p>}{list(content.methodology?.steps).length > 0 && <ol>{list(content.methodology.steps).map((item,index)=><li key={index}>{item}</li>)}</ol>}</section>}
-      {content.expected_results && <section className="research-paper-section"><h3>النتائج المتوقعة</h3><p>{content.expected_results}</p><small>هذه توقعات بحثية وليست نتائج تجربة تم تنفيذها أو قياسها.</small></section>}
-      {content.discussion && <section className="research-paper-section"><h3>المناقشة والتحليل</h3><p>{content.discussion}</p></section>}
-      {content.conclusion && <section className="research-paper-section"><h3>الخاتمة</h3><p>{content.conclusion}</p></section>}
-      {list(content.recommendations).length > 0 && <section className="research-paper-section"><h3>التوصيات</h3><ul>{list(content.recommendations).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
-      {list(content.limitations).length > 0 && <section className="research-paper-section"><h3>حدود البحث</h3><ul>{list(content.limitations).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
-      {list(content.references).length > 0 && <section className="research-paper-section"><h3>مصادر ومراجع مقترحة للتحقق</h3><ul>{list(content.references).map((item,index)=><li key={index}>{item}</li>)}</ul><small>راجع المصدر بنفسك قبل إدراجه في النسخة النهائية. لا تعتبر هذه القائمة توثيقًا لمعلومات لم تتحقق منها.</small></section>}
+      {content.description && <section className="experiment-intro"><p>{content.description}</p></section>}
+      {content.hypothesis && <section className="experiment-section"><h3><Lightbulb size={17}/> الفرضية</h3><p>{content.hypothesis}</p></section>}
 
-      {practical && <details className="research-practical" open={Boolean(simulatorType)}>
-        <summary><FlaskConical size={17}/> اعرض التجربة العملية المرتبطة بالبحث <span>اختياري</span></summary>
-        <div className="research-practical-body">
-          <h3>{practical.title}</h3>
-          {practical.purpose && <p>{practical.purpose}</p>}
-          {practical.hypothesis && <p><b>الفرضية:</b> {practical.hypothesis}</p>}
-          {simulatorType ? <div className="research-simulator-wrap"><div className="research-simulator-heading"><Microscope size={17}/> المحاكي التفاعلي</div><ExperimentSimulator simulatorType={simulatorType} config={simulatorConfig}/></div> : <div className="research-no-simulator">هذا النشاط مناسب للتطبيق أو التحليل العملي، لكن لا يوجد محاكي تفاعلي معتمد لهذا النوع من الموضوعات في الموقع حاليًا.</div>}
-          {list(practical.materials).length > 0 && <div><b>الأدوات أو المصادر:</b><ul>{list(practical.materials).map((item,index)=><li key={index}>{item}</li>)}</ul></div>}
-          {list(practical.steps).length > 0 && <div><b>خطوات التنفيذ:</b><ol>{list(practical.steps).map((item,index)=><li key={index}>{item}</li>)}</ol></div>}
-          {(practical.variables?.independent || practical.variables?.dependent || list(practical.variables?.controlled).length > 0) && <div><b>متغيرات الدراسة:</b><ul>{practical.variables?.independent && <li>المتغير المستقل: {practical.variables.independent}</li>}{practical.variables?.dependent && <li>المتغير التابع: {practical.variables.dependent}</li>}{list(practical.variables?.controlled).map((item,index)=><li key={index}>متغير ثابت: {item}</li>)}</ul></div>}
-          {list(practical.expected_observations).length > 0 && <div><b>ملاحظات متوقعة:</b><ul>{list(practical.expected_observations).map((item,index)=><li key={index}>{item}</li>)}</ul></div>}
-          {list(practical.analysis_questions).length > 0 && <div><b>أسئلة لتحليل التجربة:</b><ol>{list(practical.analysis_questions).map((item,index)=><li key={index}>{item}</li>)}</ol></div>}
-          {list(practical.safety_notes).length > 0 && <div><b>تنبيهات السلامة:</b><ul>{list(practical.safety_notes).map((item,index)=><li key={index}>{item}</li>)}</ul></div>}
-        </div>
-      </details>}
+      {simulatorType ? (
+        <section className="experiment-simulator-panel">
+          <div className="research-simulator-heading"><Microscope size={17}/> المحاكي التفاعلي</div>
+          <ExperimentSimulator key={experiment.id} simulatorType={simulatorType} config={config}/>
+        </section>
+      ) : (
+        <div className="research-no-simulator">لم يتم تحديد محاكاة مناسبة لهذا الطلب.</div>
+      )}
 
-      <div className="research-integrity-note">استخدم هذا البحث كنقطة بداية: راجع المعلومات، أضف ملاحظاتك ومصادرك الأصلية، واكتب النسخة النهائية بأسلوبك. لا تنسب تجربة إلى نفسك قبل تنفيذها فعليًا.</div>
+      {(variables.independent || variables.dependent || asList(variables.controlled).length > 0) && (
+        <section className="experiment-section">
+          <h3><Target size={17}/> متغيرات التجربة</h3>
+          <ul>
+            {variables.independent && <li><b>المتغير المستقل:</b> {variables.independent}</li>}
+            {variables.dependent && <li><b>المتغير التابع:</b> {variables.dependent}</li>}
+            {asList(variables.controlled).map((item,index)=><li key={index}><b>متغير ثابت:</b> {item}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {asList(content.steps).length > 0 && <section className="experiment-section"><h3><CheckCircle2 size={17}/> خطوات التجربة داخل المحاكي</h3><ol>{asList(content.steps).map((item,index)=><li key={index}>{item}</li>)}</ol></section>}
+      {asList(content.expected_observations).length > 0 && <section className="experiment-section"><h3>ماذا تلاحظ؟</h3><ul>{asList(content.expected_observations).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
+      {asList(content.analysis_questions).length > 0 && <section className="experiment-section"><h3>أسئلة للتفكير</h3><ol>{asList(content.analysis_questions).map((item,index)=><li key={index}>{item}</li>)}</ol></section>}
+      {content.model_limitations && <p className="experiment-model-note"><b>حدود النموذج:</b> {content.model_limitations}</p>}
+      {asList(content.safety_notes).length > 0 && <section className="experiment-section experiment-safety"><h3>تنبيهات السلامة</h3><ul>{asList(content.safety_notes).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
     </article>
   );
 }
 
 export default function ResearchProjectsPage() {
   const { subjectSlug } = useParams();
-  const [subjects, setSubjects] = useState([]);
-  const [tracks, setTracks] = useState([]);
-  const [session, setSession] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [topic, setTopic] = useState("");
-  const [detailLevel, setDetailLevel] = useState("deep");
-  const [includePractical, setIncludePractical] = useState(true);
-  const [selectedTrack, setSelectedTrack] = useState("all");
-  const [selectedGrade, setSelectedGrade] = useState("all");
+  const [subjects,setSubjects] = useState([]);
+  const [session,setSession] = useState(null);
+  const [experiments,setExperiments] = useState([]);
+  const [selectedExperimentId,setSelectedExperimentId] = useState("");
+  const [topic,setTopic] = useState("");
+  const [loading,setLoading] = useState(true);
+  const [loadingExperiments,setLoadingExperiments] = useState(false);
+  const [generating,setGenerating] = useState(false);
+  const [notice,setNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -209,192 +100,173 @@ export default function ResearchProjectsPage() {
         setLoading(false);
         return;
       }
-      const [subjectResult, trackResult, sessionResult] = await Promise.all([
+      const [subjectResult,sessionResult] = await Promise.all([
         supabase.from("learning_subjects")
-          .select("id,name,slug,academic_stage,grade_level,track,track_id,curriculum_year,subject_kind,description,is_published")
-          .eq("is_published", true)
-          .order("curriculum_year")
+          .select("id,name,slug,academic_stage,grade_level,track,description,is_published")
+          .eq("is_published",true)
           .order("sort_order"),
-        supabase.from("learning_tracks").select("id,name,slug").eq("is_published", true).order("sort_order"),
         supabase.auth.getSession(),
       ]);
       if (!active) return;
-      if (subjectResult.error || trackResult.error) {
-        setNotice("تعذر تحميل المواد حاليًا. حدّث الصفحة وحاول مرة أخرى.");
-      }
+      if (subjectResult.error) setNotice("تعذر تحميل المجالات حاليًا. حدّث الصفحة وحاول مرة أخرى.");
       setSubjects(subjectResult.data || []);
-      setTracks(trackResult.data || []);
       setSession(sessionResult.data?.session || null);
       setLoading(false);
     }
     load();
     return () => { active = false; };
-  }, []);
+  },[]);
 
   useEffect(() => {
     let active = true;
-    async function loadProjects() {
+    async function loadSaved() {
       if (!session?.user?.id || !supabase) {
-        setProjects([]);
+        setExperiments([]);
         return;
       }
-      setLoadingProjects(true);
-      const { data, error } = await supabase.from("learning_research_projects")
+      setLoadingExperiments(true);
+      const { data,error } = await supabase.from("learning_research_projects")
         .select("id,subject_id,topic,title,content_json,simulator_type,simulation_config,created_at")
-        .order("created_at", { ascending: false })
-        .limit(40);
+        .order("created_at",{ascending:false})
+        .limit(60);
       if (!active) return;
-      if (error) setNotice("تعذر تحميل الأبحاث المحفوظة. يمكنك إنشاء بحث جديد ثم المحاولة مرة أخرى.");
-      else setProjects(data || []);
-      setLoadingProjects(false);
+      if (error) setNotice("تعذر تحميل تجاربك المحفوظة. يمكنك إنشاء تجربة جديدة.");
+      else setExperiments((data || []).filter(item => item.content_json?.kind === "virtual_experiment"));
+      setLoadingExperiments(false);
     }
-    loadProjects();
+    loadSaved();
     return () => { active = false; };
-  }, [session?.user?.id]);
+  },[session?.user?.id]);
 
-  const selectedSubject = subjects.find(subject => subject.slug === subjectSlug) || null;
-  const visibleSubjects = useMemo(() => subjects.filter(subject => {
-    const trackMatches = selectedTrack === "all" || !subject.track_id || subject.track_id === selectedTrack;
-    const gradeMatches = selectedGrade === "all" || String(subject.curriculum_year || 2) === selectedGrade;
-    return trackMatches && gradeMatches;
-  }), [subjects, selectedTrack, selectedGrade]);
-  const subjectProjects = selectedSubject
-    ? projects.filter(project => project.subject_id === selectedSubject.id)
+  const selectedSubject = subjects.find(item => item.slug === subjectSlug) || null;
+  const subjectExperiments = selectedSubject
+    ? experiments.filter(item => item.subject_id === selectedSubject.id)
     : [];
-  const selectedProject = subjectProjects.find(project => project.id === selectedProjectId) || subjectProjects[0] || null;
+  const selectedExperiment = subjectExperiments.find(item => item.id === selectedExperimentId)
+    || subjectExperiments[0]
+    || null;
+
+  const subjectMap = useMemo(() => new Map(subjects.map(item => [item.id,item])),[subjects]);
 
   useEffect(() => {
-    setSelectedProjectId("");
+    setSelectedExperimentId("");
     setTopic("");
     setNotice("");
-  }, [subjectSlug]);
+  },[subjectSlug]);
 
-  async function generateProject(event) {
+  async function generateExperiment(event) {
     event.preventDefault();
     setNotice("");
     if (!selectedSubject) {
-      setNotice("اختر المادة أولًا.");
+      setNotice("اختر مجالًا لتنظيم التجربة أولًا.");
       return;
     }
     if (topic.trim().length < 3) {
-      setNotice("اكتب موضوعًا واضحًا للبحث.");
+      setNotice("اكتب فكرة التجربة بصورة أوضح.");
       return;
     }
     if (!supabase) {
-      setNotice("خدمة إنشاء الأبحاث غير متاحة حاليًا.");
+      setNotice("خدمة إنشاء المحاكاة غير متاحة حاليًا.");
       return;
     }
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData,error:sessionError } = await supabase.auth.getSession();
     const activeSession = sessionData?.session;
     if (sessionError || !activeSession) {
-      setNotice("سجّل الدخول أولًا حتى نحفظ البحث في حسابك.");
+      setNotice("سجّل الدخول أولًا حتى نحفظ المحاكاة في حسابك.");
       return;
     }
 
     setGenerating(true);
     try {
-      const response = await fetch("/api/ai/generate-research-project", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + activeSession.access_token,
+      const response = await fetch("/api/ai/generate-virtual-experiment",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:"Bearer "+activeSession.access_token,
         },
-        body: JSON.stringify({
-          subject_id: selectedSubject.id,
-          topic: topic.trim(),
-          detail_level: detailLevel,
-          include_practical: includePractical,
-        }),
+        body:JSON.stringify({subject_id:selectedSubject.id,topic:topic.trim()}),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok || !data.project) {
-        throw new Error(data.message || "تعذر إنشاء البحث. حاول مرة أخرى.");
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok || !data.ok || !data.experiment) {
+        throw new Error(data.message || "تعذر إنشاء المحاكاة. حاول مرة أخرى.");
       }
-      setProjects(current => [data.project, ...current.filter(item => item.id !== data.project.id)]);
-      setSelectedProjectId(data.project.id);
-      setNotice("تم إنشاء البحث وحفظه في حسابك بنجاح.");
+      setExperiments(current => [data.experiment,...current.filter(item=>item.id!==data.experiment.id)]);
+      setSelectedExperimentId(data.experiment.id);
+      setNotice("تم إنشاء المحاكاة وحفظها في حسابك.");
     } catch (error) {
-      setNotice(error.message || "حدث خطأ أثناء إنشاء البحث.");
+      setNotice(error.message || "حدث خطأ أثناء إنشاء المحاكاة.");
     } finally {
       setGenerating(false);
     }
   }
-
-  const researchUrl = subjectSlug ? "/research/" + subjectSlug : "/research";
-  const inlineSimulator = getInlineSimulator(selectedSubject, topic, includePractical);
 
   return (
     <div className="research-page-shell">
       <Header/>
       <main className="research-page-main">
         <Link to="/experiments" className="research-back-link"><ArrowRight size={15}/> العودة إلى المواد والتجارب</Link>
-        <section className="research-hero">
-          <span className="research-kicker"><Sparkles size={15}/> مساعد البحث بالذكاء الاصطناعي</span>
-          <h1>{selectedSubject ? "مشاريع " + selectedSubject.name + " البحثية" : "مركز المشاريع البحثية"}</h1>
-          <p>{selectedSubject ? "حوّل فكرتك إلى بحث أكاديمي متكامل من 10 صفحات تقريبًا، يناسب المادة والصف والمسار، واحفظه في حسابك." : "اختر مادة دراسية واكتب موضوعًا لتحصل على بحث أكاديمي مطول من 10 صفحات تقريبًا، مع إمكانية إرفاق تجربة عملية ومحاكاة مناسبة."}</p>
-          <div className="research-hero-points"><span><BookOpen size={15}/> لكل المواد والمسارات</span><span><ClipboardList size={15}/> بحث كامل من 10 صفحات</span><span><FlaskConical size={15}/> تجربة اختيارية عند ملاءمتها</span></div>
+        <section className="research-hero experiment-hero">
+          <span className="research-kicker"><Sparkles size={15}/> مختبر التجارب بالذكاء الاصطناعي</span>
+          <h1>{selectedSubject ? "مختبر " + selectedSubject.name : "مختبر التجارب التفاعلي"}</h1>
+          <p>اكتب فكرة أي تجربة علمية آمنة، حتى لو كانت خارج المنهج. سيختار الذكاء الاصطناعي نموذجًا مناسبًا ويحوّلها إلى محاكاة تفاعلية تستكشفها بنفسك، بدل إنشاء بحث طويل.</p>
+          <div className="research-hero-points">
+            <span><FlaskConical size={15}/> تجارب من داخل المنهج وخارجه</span>
+            <span><Microscope size={15}/> محاكاة تفاعلية قابلة للتغيير</span>
+            <span><BookOpen size={15}/> خطوات وملاحظات محفوظة بحسابك</span>
+          </div>
         </section>
 
         {notice && <div className="research-notice" role="status">{notice}</div>}
-        {loading ? <div className="research-empty">جارٍ تحميل المواد...</div> : !subjectSlug ? (
+        {loading ? <div className="research-empty">جارٍ تحميل المجالات...</div> : !subjectSlug ? (
           <section className="research-subject-picker">
-            <div className="research-section-head"><div><span>ابدأ من المادة</span><h2>اختر المادة التي تريد البحث فيها</h2></div><b>{visibleSubjects.length} مادة</b></div>
-            <div className="research-filter-row">
-              <label>المسار<select value={selectedTrack} onChange={event=>setSelectedTrack(event.target.value)}><option value="all">كل المسارات</option>{tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label>
-              <label>الصف<select value={selectedGrade} onChange={event=>setSelectedGrade(event.target.value)}><option value="all">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select></label>
-            </div>
+            <div className="research-section-head"><div><span>اختر تصنيفًا فقط</span><h2>في أي مجال تريد إجراء التجربة؟</h2></div><b>{subjects.length} مجالًا</b></div>
+            <p className="experiment-scope-note">اختيار المجال لتنظيم تجاربك المحفوظة فقط، ولا يلزم أن تكون التجربة من المنهج الدراسي لهذا المجال.</p>
             <div className="research-subject-grid">
-              {visibleSubjects.map(subject=><Link to={"/research/" + subject.slug} className="research-subject-card" key={subject.id}>
-                <span className="research-subject-icon"><BookOpen size={20}/></span>
-                <small>{subject.grade_level} · {subject.track || "مشتركة بين المسارات"}</small>
+              {subjects.map(subject=><Link to={"/research/"+subject.slug} className="research-subject-card" key={subject.id}>
+                <span className="research-subject-icon"><FlaskConical size={20}/></span>
+                <small>{subject.grade_level} · {subject.track || "مجال عام"}</small>
                 <strong>{subject.name}</strong>
-                <p>{subject.description || "أنشئ بحثًا أكاديميًا مناسبًا لهذه المادة."}</p>
-                <span className="research-subject-action">ابدأ مشروعًا بحثيًا <ChevronLeft size={15}/></span>
+                <p>{subject.description || "استخدم هذا المجال لتنظيم تجاربك التفاعلية."}</p>
+                <span className="research-subject-action">ابدأ تجربة <ChevronLeft size={15}/></span>
               </Link>)}
-              {visibleSubjects.length === 0 && <div className="research-empty">لا توجد مواد مطابقة لهذا الاختيار.</div>}
             </div>
           </section>
         ) : !selectedSubject ? (
-          <div className="research-empty"><h2>المادة غير موجودة أو غير منشورة</h2><Link to="/research">اختر مادة أخرى</Link></div>
+          <div className="research-empty"><h2>المجال غير موجود أو غير منشور</h2><Link to="/research">اختر مجالًا آخر</Link></div>
         ) : (
           <>
             <section className="research-workspace">
               <div className="research-workspace-intro">
                 <div><span>{selectedSubject.grade_level} · {selectedSubject.track || "جميع المسارات"}</span><h2>{selectedSubject.name}</h2></div>
-                <Link to={researchUrl} className="research-change-subject">تغيير المادة</Link>
+                <Link to="/research" className="research-change-subject">تغيير المجال</Link>
               </div>
-              <form className="research-form" onSubmit={generateProject}>
-                <label className="research-topic-label">ما موضوع البحث الذي تريد إعداده؟
-                  <textarea required minLength={3} maxLength={240} rows={3} value={topic} onChange={event=>setTopic(event.target.value)} placeholder="مثال: أثر التغيرات المناخية على التنوع الحيوي في مصر..."/>
+              <form className="research-form" onSubmit={generateExperiment}>
+                <label className="research-topic-label">ما التجربة التي تريد محاكاتها؟
+                  <textarea required minLength={3} maxLength={240} rows={3} value={topic} onChange={event=>setTopic(event.target.value)} placeholder="مثال: كيف تنتشر الحرارة في جسم معدني؟ أو كيف تنمو جماعة من الكائنات في بيئة محدودة؟"/>
                 </label>
-                <div className="research-options">
-                  <div className="research-length-choice"><b>حجم البحث المطلوب</b><span>بحث أكاديمي متكامل من 10 صفحات تقريبًا</span><small>من 3500 إلى 4200 كلمة، مع مقدمة ومحاور مفصلة ومنهجية ومناقشة وخاتمة ومراجع.</small></div>
-                  <label className="research-checkbox"><input type="checkbox" checked={includePractical} onChange={event=>setIncludePractical(event.target.checked)}/><span><b>أرفق تجربة أو نشاطًا عمليًا</b><small>يظهر داخل البحث عند فتحه، والمحاكي متاح عندما يتوافق الموضوع مع النماذج الموجودة.</small></span></label>
+                <div className="experiment-builder-note">
+                  <b>اكتب أي فكرة آمنة تريد استكشافها</b>
+                  <span>ليس مطلوبًا أن تكون في المنهج أو حتى مرتبطة بالمادة المختارة. سيختار النظام محاكيًا متخصصًا أو نموذجًا رياضيًا تفاعليًا عامًا، ويوضح حدود النموذج.</span>
                 </div>
-                {!session && <div className="research-login-reminder">لإنشاء البحث وحفظه، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
+                {!session && <div className="research-login-reminder">لإنشاء التجربة وحفظها، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
                 <button className="research-generate-button" type="submit" disabled={generating || !topic.trim()}>
-                  <Sparkles size={17}/>{generating ? "جارٍ إعداد البحث وحفظه..." : "أنشئ البحث بالذكاء الاصطناعي"}
+                  <Sparkles size={17}/>{generating ? "جارٍ بناء المحاكاة..." : "أنشئ المحاكاة التفاعلية"}
                 </button>
-                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء بحث خلال 24 ساعة. المحاولة الفاشلة لا تُخصم، والأبحاث الناجحة تظل محفوظة في حسابك.</p>
+                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء محاكاة خلال 24 ساعة. المحاولة الفاشلة لا تُخصم، والتجارب الناجحة تظل محفوظة في حسابك.</p>
               </form>
-              {inlineSimulator && <details className="research-inline-simulator" open>
-                <summary><FlaskConical size={17}/> ابدأ التجربة الآن: {inlineSimulator.title} <span>محاكاة تفاعلية</span></summary>
-                <p>{inlineSimulator.description}</p>
-                <ExperimentSimulator simulatorType={inlineSimulator.type} config={inlineSimulator.config}/>
-              </details>}
             </section>
 
-            {subjectProjects.length > 0 && <section className="research-saved-section">
-              <div className="research-section-head"><div><span>مكتبتك الخاصة</span><h2>أبحاثك السابقة في {selectedSubject.name}</h2></div><b>{subjectProjects.length} بحث</b></div>
-              <div className="research-saved-list">{subjectProjects.map(project=><button type="button" key={project.id} className={selectedProject?.id===project.id?"active":""} onClick={()=>setSelectedProjectId(project.id)}><span>{project.title}</span><small>{new Date(project.created_at).toLocaleDateString("ar-EG")}</small></button>)}</div>
+            {subjectExperiments.length > 0 && <section className="research-saved-section">
+              <div className="research-section-head"><div><span>مكتبتك الخاصة</span><h2>تجاربك المحفوظة في {selectedSubject.name}</h2></div><b>{subjectExperiments.length} تجربة</b></div>
+              <div className="research-saved-list">{subjectExperiments.map(item=><button type="button" key={item.id} className={selectedExperiment?.id===item.id?"active":""} onClick={()=>setSelectedExperimentId(item.id)}><span>{item.title}</span><small>{new Date(item.created_at).toLocaleDateString("ar-EG")}</small></button>)}</div>
             </section>}
-            {loadingProjects && session && <div className="research-empty">جارٍ تحميل أبحاثك المحفوظة...</div>}
-            {selectedProject && <ResearchDocument project={selectedProject} subject={selectedSubject}/>}
-            {!loadingProjects && session && subjectProjects.length===0 && <div className="research-empty"><BookOpen size={22}/><span>لم تنشئ بحثًا لهذه المادة بعد. اكتب موضوعك بالأعلى للبدء.</span></div>}
+            {loadingExperiments && session && <div className="research-empty">جارٍ تحميل تجاربك المحفوظة...</div>}
+            {selectedExperiment && <ExperimentResult experiment={selectedExperiment} subjectName={subjectMap.get(selectedExperiment.subject_id)?.name}/>}
+            {!loadingExperiments && session && subjectExperiments.length===0 && <div className="research-empty"><FlaskConical size={22}/><span>لم تحفظ تجربة في هذا المجال بعد. اكتب فكرتك بالأعلى وابدأ الاستكشاف.</span></div>}
           </>
         )}
 
-        <div className="research-academic-note"><b>تنبيه أكاديمي:</b> الذكاء الاصطناعي يجهّز مسودة تعليمية. راجع الحقائق بنفسك، وتحقق من المراجع، وأضف نتائجك وملاحظاتك الأصلية قبل تسليم أي بحث.</div>
+        <div className="research-academic-note"><b>مهم:</b> هذه نماذج ومحاكاة تعليمية مبسطة، وليست بديلًا عن تجربة واقعية أو قياس معملي. قد تختلف النتائج عن الواقع إذا كانت افتراضات النموذج محدودة. التجارب الخطرة لا تُنفذ خارج الشاشة.</div>
       </main>
     </div>
   );
