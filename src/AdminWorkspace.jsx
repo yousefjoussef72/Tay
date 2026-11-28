@@ -49,6 +49,14 @@ function humanSize(size) {
   return size < 1024 * 1024 ? Math.round(size / 1024) + " KB" : (size / (1024 * 1024)).toFixed(1) + " MB";
 }
 
+function isSafeContactAttachmentPath(value) {
+  const parts = String(value || "").split("/");
+  return parts.length === 3
+    && parts[0] === "incoming"
+    && /^[A-Za-z0-9-]{8,80}$/.test(parts[1])
+    && /^[A-Za-z0-9-]{8,80}-[A-Za-z0-9._-]{1,100}$/.test(parts[2]);
+}
+
 function Alert({ value }) {
   if (!value) return null;
   return <div className={"hub-alert " + (value.kind || "error")}><AlertCircle size={16} />{value.text}</div>;
@@ -625,10 +633,29 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   }
 
   async function removeMessage(message) {
-    if (!window.confirm("حذف الرسالة؟")) return;
+    if (!window.confirm("حذف الرسالة ومرفقاتها؟")) return;
+    const paths = [...new Set(
+      (Array.isArray(message.attachments) ? message.attachments : [])
+        .map(attachment => attachment?.path)
+        .filter(isSafeContactAttachmentPath)
+    )];
+
+    // Remove private files first so deleting the inbox row cannot orphan its attachments.
+    if (paths.length) {
+      const { error: storageError } = await supabase.storage.from(CONTACT_BUCKET).remove(paths);
+      if (storageError) {
+        setAlert({ kind: "error", text: "تعذر حذف مرفقات الرسالة، لذلك لم تُحذف الرسالة. حاول مرة أخرى." });
+        return;
+      }
+    }
+
     const { error } = await supabase.from("messages").delete().eq("id", message.id);
-    if (error) setAlert({ kind: "error", text: "تعذر حذف الرسالة." });
-    else await loadAll();
+    if (error) {
+      setAlert({ kind: "error", text: "تم حذف المرفقات لكن تعذر حذف سجل الرسالة. حدّث الصفحة وحاول مرة أخرى." });
+    } else {
+      await loadAll();
+      setAlert({ kind: "success", text: "تم حذف الرسالة ومرفقاتها." });
+    }
   }
 
   const selectedAttempts = selectedExam ? attempts.filter(a => a.exam_id === selectedExam.id) : [];
