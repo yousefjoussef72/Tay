@@ -309,3 +309,5 @@ button { cursor: pointer; }
   .custom-site-image { max-height:230px; }
   .contact-image { max-height:175px; }
 }
+
+.account-telegram-note { margin: -3px 0 4px; line-height: 1.8; }
