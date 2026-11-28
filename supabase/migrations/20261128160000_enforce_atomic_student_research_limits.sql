@@ -67,5 +67,5 @@ $$;
 
 revoke all on function public.save_learning_research_project(uuid, text, text, jsonb, text, jsonb)
   from public, anon, authenticated;
-grant execute on function public.save_learning_research_project(uuid, text, text, text, text, jsonb)
+grant execute on function public.save_learning_research_project(uuid, text, text, jsonb, text, jsonb)
   to authenticated;
