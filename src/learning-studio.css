@@ -151,3 +151,13 @@
 .learning-related-resource img,.learning-related-resource video { width:100%; max-height:230px; object-fit:contain; border-radius:9px; background:#10232b; }
 .learning-related-resource a { align-self:flex-start; color:#087f72; font-size:10px; font-weight:700; text-decoration:none; }
 @media(max-width:650px) { .learning-related-resource-grid { grid-template-columns:1fr; } }
+
+
+.learning-research-cta { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:18px 0 4px; padding:18px 20px; border:1px solid #d4e9df; border-radius:15px; background:linear-gradient(110deg,#eef8f1,#f8fcf9); }
+.learning-research-cta > div { display:grid; gap:6px; }
+.learning-research-cta > div > span { display:flex; align-items:center; gap:6px; color:#0b8878; font-size:9px; font-weight:700; }
+.learning-research-cta strong { color:#24484b; font-size:14px; }
+.learning-research-cta p { margin:0; color:#728783; font-size:10px; line-height:1.9; }
+.learning-research-cta > a { display:inline-flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; padding:10px 14px; border-radius:9px; background:#087d70; color:#fff; text-decoration:none; font-size:10px; font-weight:700; }
+.learning-research-cta > a:hover { background:#06665d; }
+@media(max-width:650px) { .learning-research-cta { align-items:stretch; flex-direction:column; padding:16px; } .learning-research-cta > a { align-self:flex-start; } }
