@@ -75,8 +75,8 @@ function normalizeConfig(value, simulatorType) {
   }
 
   const model = GENERIC_MODELS.has(input.model) ? input.model : "linear";
-  let xMin = bounded(input.x_min, -100, 0, 0);
-  let xMax = bounded(input.x_max, 0.01, 1000, 10);
+  let xMin = bounded(input.x_min, -1000, 1000, 0);
+  let xMax = bounded(input.x_max, -999.99, 10000, 10);
   if (xMax <= xMin) {
     xMin = 0;
     xMax = 10;
@@ -166,6 +166,14 @@ export default async function handler(req, res) {
 
   const subjectId = cleanText(req.body?.subject_id, 80);
   const topic = cleanText(req.body?.topic, 240);
+  const unsafeTopicPattern = /(?:سلاح|اسلحه|قنبله|متفجر|سموم|سم قاتل|تسميم|إيذاء|ايذاء|انتحار|إيذاء النفس|weapon|firearm|bomb|explosive|poison|toxin|self.?harm)/i;
+  if (unsafeTopicPattern.test(topic)) {
+    return res.status(400).json({
+      ok: false,
+      error: "unsafe_experiment_topic",
+      message: "هذا الموضوع لا يمكن تحويله إلى تجربة. اختر ظاهرة علمية آمنة للمحاكاة الرقمية.",
+    });
+  }
   if (!subjectId || topic.length < 3) {
     return res.status(400).json({
       ok: false,
