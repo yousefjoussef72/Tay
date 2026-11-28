@@ -152,6 +152,71 @@ export const SITE_COPY_GROUPS = [
   },
 ];
 
+SITE_COPY_GROUPS.push(
+  {
+    title: "صفحة قراءة المقال",
+    fields: [
+      { key: "articlePageBack", label: "العودة إلى الرئيسية", value: "العودة إلى الرئيسية" },
+      { key: "articlePageBrand", label: "اسم الموقع أعلى المقال", value: "مساحة" },
+      { key: "articlePageLabel", label: "نوع المحتوى", value: "مقال من داخل المساحة" },
+      { key: "articlePageNotFound", label: "رسالة المقال غير المتاح", value: "المقال غير متاح" },
+      { key: "articlePageNotFoundBody", label: "توضيح عدم توفر المقال", value: "قد يكون المقال حُذف أو لم يعد منشورًا." },
+      { key: "articlePageMissingContent", label: "النص عند عدم وجود محتوى", value: "لم تتم إضافة محتوى لهذا المقال بعد." },
+      { key: "articlePageBrowseMore", label: "رابط تصفح بقية الموقع", value: "تصفح بقية المساحة" },
+    ],
+  },
+  {
+    title: "تفاصيل المكتبة",
+    fields: [
+      { key: "libraryNavHome", label: "رابط الرئيسية", value: "الرئيسية" },
+      { key: "libraryNavAccount", label: "رابط حسابي", value: "حسابي" },
+      { key: "libraryAllCategories", label: "كل الأقسام", value: "الكل" },
+      { key: "libraryFileFallback", label: "الوصف الافتراضي للملف", value: "ملف تعليمي مضاف إلى المكتبة." },
+      { key: "libraryImageOpen", label: "عرض الصورة", value: "عرض الصورة" },
+      { key: "libraryLinkOpen", label: "فتح الرابط الخارجي", value: "فتح الرابط" },
+      { key: "libraryLoadError", label: "رسالة فشل المكتبة", value: "تعذر تحميل المكتبة الآن." },
+      { key: "libraryLoading", label: "حالة تحميل المكتبة", value: "جارٍ تحميل الملفات..." },
+    ],
+  },
+  {
+    title: "تفاصيل الامتحانات",
+    fields: [
+      { key: "examsNavHome", label: "رابط الرئيسية", value: "الرئيسية" },
+      { key: "examsNavAccount", label: "رابط حسابي", value: "حسابي" },
+      { key: "examBackLabel", label: "العودة إلى الامتحانات", value: "العودة إلى الامتحانات" },
+      { key: "examTrainingLabel", label: "عنوان نوع الامتحان", value: "امتحان تدريبي" },
+      { key: "examDescriptionFallback", label: "وصف الامتحان الافتراضي", value: "اختبار تدريبي لقياس مدى استيعابك." },
+      { key: "examDurationLabel", label: "مدة الامتحان", value: "مدة الامتحان" },
+      { key: "examQuestionsCountLabel", label: "عدد الأسئلة", value: "عدد الأسئلة" },
+      { key: "examLoginNotice", label: "تنبيه تسجيل الدخول", value: "تحتاج إلى تسجيل الدخول بحساب الطالب قبل بدء الامتحان." },
+      { key: "examNoAnswersNotice", label: "تعليمات بدء الامتحان", value: "لن تظهر لك الإجابات الصحيحة أثناء الحل. سيحسب النظام درجتك بعد الإرسال." },
+      { key: "examQuestionPoint", label: "وحدة الدرجة", value: "درجة" },
+      { key: "examTimerLabel", label: "الوقت المتبقي", value: "الوقت المتبقي" },
+      { key: "examShortAnswerPlaceholder", label: "حقل الإجابة القصيرة", value: "اكتب إجابتك هنا..." },
+      { key: "examSubmitConfirm", label: "رسالة تأكيد الإرسال", value: "إرسال الإجابات وإنهاء الامتحان؟" },
+      { key: "examSubmitting", label: "حالة إرسال الامتحان", value: "جارٍ التصحيح..." },
+      { key: "examResultSaved", label: "رسالة حفظ النتيجة", value: "تم حفظ محاولتك في سجل الامتحان." },
+      { key: "examQuestionsLoadError", label: "رسالة تعذر تحميل الأسئلة", value: "تعذر تحميل أسئلة الامتحان." },
+      { key: "examUnavailable", label: "رسالة عدم توفر الامتحان", value: "الامتحان غير موجود أو لم يعد منشورًا." },
+      { key: "examSubmitError", label: "رسالة فشل التصحيح", value: "تعذر تصحيح الامتحان. تأكد من اتصالك ثم حاول مرة أخرى." },
+    ],
+  },
+  {
+    title: "حالات ورسائل عامة",
+    fields: [
+      { key: "notFoundTitle", label: "عنوان صفحة 404", value: "هذه الصفحة غير موجودة." },
+      { key: "notFoundBack", label: "العودة من صفحة 404", value: "العودة للرئيسية" },
+      { key: "accountLoggedInLabel", label: "حالة تسجيل الدخول", value: "تم تسجيل الدخول" },
+      { key: "accountWelcomeBack", label: "الترحيب بعد الدخول", value: "أهلًا بعودتك." },
+      { key: "accountProfileDescription", label: "وصف الحساب بعد الدخول", value: "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." },
+      { key: "accountChecking", label: "حالة التحقق من الحساب", value: "جارٍ التحقق من حسابك..." },
+      { key: "accountSignupSuccess", label: "رسالة نجاح إنشاء الحساب", value: "تم إنشاء حسابك وتسجيل دخولك بنجاح." },
+      { key: "accountLoginSuccess", label: "رسالة نجاح تسجيل الدخول", value: "تم تسجيل الدخول بنجاح." },
+      { key: "accountConnectionError", label: "رسالة خطأ الاتصال", value: "حدثت مشكلة اتصال. تحقق من الإنترنت وحاول مرة أخرى." },
+    ],
+  }
+);
+
 export const SITE_MEDIA_FIELDS = [
   { key: "brandLogoUrl", label: "شعار الموقع", description: "صورة الشعار التي تظهر بجوار اسم الموقع." },
   { key: "heroImageUrl", label: "صورة الواجهة الرئيسية", description: "صورة بديلة/إضافية لواجهة البداية." },
