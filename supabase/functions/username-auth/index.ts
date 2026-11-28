@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
   const originAllowed = !origin
     || origin === "https://tay-space.vercel.app"
     || /^https:\/\/tay-space-[a-z0-9-]+-yousefjoussef72\.vercel\.app$/.test(origin)
-    || /^https:\/\/deploy-preview-\\d+--comfy-malabi-25d1dc\\.netlify\\.app$/.test(origin)
+    || /^https:\/\/deploy-preview-\d+--comfy-malabi-25d1dc\.netlify\.app$/.test(origin)
     || /^http:\/\/localhost(:\d+)?$/.test(origin);
   const corsHeaders = corsHeadersFor(originAllowed ? origin : null);
   const send = (body: Record<string, unknown>, status = 200) => reply(body, status, corsHeaders);
