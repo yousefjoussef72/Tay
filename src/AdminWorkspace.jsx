@@ -25,7 +25,7 @@ const TABS = [
 ];
 
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", track_id: "", subject_id: "", grade_level: "", curriculum_year: "", is_published: false };
-const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", subject_id: "", unit_id: "", lesson_id: "", external_url: "", file_path: "", file_name: "", is_published: false };
+const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", track_id: "", grade_level: "", curriculum_year: "", subject_id: "", unit_id: "", lesson_id: "", external_url: "", file_path: "", file_name: "", is_published: false };
 const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "", track_id: "", subject_id: "", grade_level: "", curriculum_year: "" };
 const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", grading_mode: "ai", grading_rubric: "", points: 1, image_url: "" };
 
@@ -125,7 +125,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
     setLoading(true);
     const [articleResult, resourceResult, subjectResult, trackResult, unitResult, lessonResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,track_id,subject_id,grade_level,curriculum_year,is_published,published_at,created_at").order("created_at", { ascending: false }),
-      supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,subject_id,unit_id,lesson_id,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,track_id,grade_level,curriculum_year,subject_id,unit_id,lesson_id,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_subjects").select("id,name,sort_order,track_id,curriculum_year,grade_level,subject_kind").order("curriculum_year").order("sort_order").order("name"),
       supabase.from("learning_tracks").select("id,name,slug,sort_order").order("sort_order"),
       supabase.from("learning_units").select("id,subject_id,title,sort_order").order("sort_order").order("title"),
@@ -389,6 +389,15 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
         mime_type: resourceDraft.resource_type === "link" ? null : (resourceFile?.type || resourceDraft.mime_type),
         file_size: resourceDraft.resource_type === "link" ? null : (resourceFile?.size || resourceDraft.file_size),
         is_published: resourceDraft.is_published,
+        track_id: resourceDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === resourceDraft.subject_id)?.track_id || null)
+          : (resourceDraft.track_id || null),
+        grade_level: resourceDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === resourceDraft.subject_id)?.grade_level || "")
+          : (resourceDraft.grade_level || ""),
+        curriculum_year: resourceDraft.subject_id
+          ? (curriculumSubjects.find(item => item.id === resourceDraft.subject_id)?.curriculum_year || null)
+          : (resourceDraft.curriculum_year ? Number(resourceDraft.curriculum_year) : null),
         subject_id: resourceDraft.subject_id || null,
         unit_id: resourceDraft.unit_id || null,
         lesson_id: resourceDraft.lesson_id || null,
@@ -902,10 +911,24 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
             <div className="hub-form-grid">
+              <label>المسار
+                <select value={resourceDraft.track_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, track_id: e.target.value, subject_id: "", unit_id: "", lesson_id: "" })}>
+                  <option value="">كل المسارات / محتوى مشترك</option>
+                  {curriculumTracks.map(track => <option key={track.id} value={track.id}>{track.name}</option>)}
+                </select>
+              </label>
+              <label>الصف الدراسي
+                <select value={resourceDraft.curriculum_year || ""} onChange={e => setResourceDraft({ ...resourceDraft, curriculum_year: e.target.value, grade_level: e.target.value === "2" ? "الصف الثاني" : e.target.value === "3" ? "الصف الثالث" : e.target.value === "1" ? "الصف الأول" : "" })}>
+                  <option value="">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+                </select>
+              </label>
               <label>ربط بالمادة
-                <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
-                  <option value="">مورد عام في المكتبة</option>
-                  {curriculumSubjects.map(subject => {
+                <select value={resourceDraft.subject_id || ""} onChange={e => {
+                  const subject=curriculumSubjects.find(item=>item.id===e.target.value);
+                  setResourceDraft({ ...resourceDraft, subject_id: e.target.value, track_id: subject?.track_id || "", curriculum_year: subject?.curriculum_year || "", grade_level: subject?.grade_level || "", unit_id: "", lesson_id: "" });
+                }}>
+                  <option value="">بدون ربط بمادة محددة</option>
+                  {curriculumSubjects.filter(subject => !resourceDraft.track_id || !subject.track_id || subject.track_id === resourceDraft.track_id).map(subject => {
                     const trackName=curriculumTracks.find(track=>track.id===subject.track_id)?.name || "مشتركة";
                     return <option key={subject.id} value={subject.id}>{subject.name} · {trackName} · {subject.grade_level}</option>;
                   })}
@@ -924,7 +947,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
                 </select>
               </label>
             </div>
-            <small className="hub-form-hint">اربط الملف بالمادة أو الوحدة أو الدرس ليظهر بجوار المحتوى المرتبط به. اترك الاختيارات فارغة لإبقائه في المكتبة العامة.</small>
+            <small className="hub-form-hint">يمكنك ربط الملف بمسار وصف فقط، أو بمادة ووحدة ودرس محدد. اترك كل التصنيفات فارغة ليظهر كمورد عام مشترك.</small>
             {resourceDraft.resource_type === "link" ? <label>الرابط الخارجي<input type="url" required value={resourceDraft.external_url} onChange={e => setResourceDraft({ ...resourceDraft, external_url: e.target.value })} placeholder="https://..." dir="ltr" /></label> : <>
               {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}{resourcePreviewUrl && (resourceDraft.resource_type === "video" ? <video className="hub-library-video-preview" controls preload="metadata" src={resourcePreviewUrl} /> : <a href={resourcePreviewUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>)}</div>}
               <FilePicker file={resourceFile} onChange={setResourceFile} accept={resourceDraft.resource_type === "image" ? "image/*" : resourceDraft.resource_type === "pdf" ? ".pdf,application/pdf" : resourceDraft.resource_type === "video" ? ".mp4,.webm,.mov,.ogg,video/mp4,video/webm,video/quicktime,video/ogg" : ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"} label={resourceDraft.resource_type === "video" ? "اختر فيديو من هاتفك أو الكمبيوتر" : "اختر ملفًا من هاتفك أو الكمبيوتر"} />
