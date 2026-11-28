@@ -118,6 +118,8 @@ export default async function handler(req, res) {
   }
 
   const contentOnly = requestedSimulator === "none";
+  const isEnglishSubject = /اللغة الإنجليزية|english/i.test(subject);
+  const isLanguageSubject = /لغة|english|language/i.test(subject);
   const simulator = SIMULATORS[requestedSimulator] || null;
   const simulatorList = Object.entries(SIMULATORS).map(([key, value]) => ({ type: key, label: value.label, config: value.config }));
   const system = contentOnly ? [
@@ -128,6 +130,11 @@ export default async function handler(req, res) {
     "لا تنشئ أي JavaScript أو HTML أو CSS أو كود قابل للتنفيذ مطلقًا.",
     "لا تخترع حقائق أو مواد من المنهج الرسمي أو أرقام صفحات أو نتائج تعلم غير مؤكدة. إذا كان هناك تفصيل غير متحقق، صغه كنشاط عام ولا تنسبه إلى كتاب رسمي.",
     "اجعل النشاط مناسبًا لطبيعة المادة: قراءة وتحليل واستماع ومحادثة ومفردات للغات، مصادر وتسلسل زمني وتحليل أدلة للتاريخ، مفاهيم ومسائل للمواد العلمية، وتطبيقات وحالات عملية للأعمال.",
+    isEnglishSubject
+      ? "بما أن المادة هي اللغة الإنجليزية، اجعل نصوص القراءة والمفردات والجمل وأسئلة التدريب باللغة الإنجليزية، واجعل تعليمات المعلم وإرشادات الطالب بالعربية عند الحاجة."
+      : isLanguageSubject
+        ? "بما أن المادة لغة أجنبية، استخدم اللغة المستهدفة في نصوص القراءة والمفردات والتدريبات، واجعل تعليمات المعلم بالعربية عند الحاجة."
+        : "استخدم لغة المادة ومصطلحاتها الصحيحة، ولا تفرض مفردات أو تدريبات لغة أجنبية على المواد غير اللغوية.",
     "أعد أهدافًا وخطوات تنفيذ وملاحظات وأسئلة تفكير، واستخدم القوانين فقط إذا كانت المادة تستلزم ذلك.",
     "أعد كائنًا بالبنية: {title, description, experience_type:'guided_activity', simulator_type:null, simulation_config:{}, content:{intro,objectives:[],steps:[],observations:[],formulas:[],reflection_questions:[]}}.",
     "أضف من 3 إلى 5 أسئلة تفكير مرتبطة بالنشاط، ولا تضع الإجابات داخل الأسئلة."
