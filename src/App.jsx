@@ -472,6 +472,27 @@ function AccountPage() {
       }
       setSession(sessionData.session);
       if (sessionData.user) await loadProfile(sessionData.user);
+
+      // Notify the site administrator only after an actual successful signup, never on login.
+      if (action === "signup" && sessionData.session?.access_token) {
+        try {
+          const notifyResponse = await fetch("/api/telegram-signup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + sessionData.session.access_token,
+            },
+            body: "{}",
+          });
+          const notifyResult = await notifyResponse.json().catch(() => ({}));
+          if (!notifyResponse.ok || notifyResult.ok !== true) {
+            console.warn("[telegram-signup] notification was not delivered", notifyResult.error || notifyResponse.status);
+          }
+        } catch (notifyError) {
+          console.warn("[telegram-signup] notification request failed", notifyError?.name || "Error");
+        }
+      }
+
       setPassword("");
       setNotice({
         kind: "success",
@@ -559,6 +580,7 @@ function AccountPage() {
                     <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
                   </span>
                 </label>
+                {mode === "signup" && <p className="form-hint account-telegram-note">عند إنشاء الحساب، يصل إلى إدارة Tay Space إشعار باسم المستخدم والاسم ونوع الجهاز ونظام التشغيل والمتصفح. لا يتضمن إشعار تيليجرام عنوان IP.</p>}
                 {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
                 <button className="button button-primary account-submit" type="submit" disabled={busy}>
                   {busy ? copy.accountBusy : mode === "signup" ? copy.accountCreateButton : copy.accountLoginButton}
