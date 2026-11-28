@@ -13,6 +13,9 @@ create table if not exists public.exam_sessions (
 create index if not exists exam_sessions_exam_user_started_idx
   on public.exam_sessions (exam_id, user_id, started_at desc);
 
+create index if not exists exam_sessions_user_id_idx
+  on public.exam_sessions (user_id);
+
 alter table public.exam_sessions enable row level security;
 revoke all on table public.exam_sessions from public, anon, authenticated;
 grant all on table public.exam_sessions to service_role;
