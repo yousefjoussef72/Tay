@@ -12,6 +12,58 @@ function list(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
+function getInlineSimulator(subject, topic, includePractical) {
+  if (!includePractical || !subject) return null;
+  const isPhysics = subject.slug?.includes("physics") || /فيزياء|physics/i.test(subject.name || "");
+  if (!isPhysics) return null;
+
+  const normalized = String(topic || "").toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[ًٌٍَُِّْـ]/g, "");
+
+  if (/بندول|pendulum/.test(normalized)) {
+    return {
+      type: "simple_pendulum",
+      title: "محاكي البندول البسيط",
+      description: "غيّر طول البندول ولاحظ أثره في الزمن الدوري، مع تثبيت الكتلة وزاوية الإزاحة.",
+      config: { length: 0.8, mass: 0.3, max_angle_deg: 12 },
+    };
+  }
+  if (/زنبرك|نابض|حركة توافقية بسيطة|spring/.test(normalized)) {
+    return {
+      type: "harmonic_spring",
+      title: "محاكي الكتلة والنابض",
+      description: "غيّر الكتلة أو ثابت النابض، متغيرًا واحدًا كل مرة، ولاحظ أثر ذلك في الاهتزاز.",
+      config: { mass: 0.3, stiffness: 80, amplitude_cm: 6 },
+    };
+  }
+  if (/موجة|الموجات|انتشار الموج|wave/.test(normalized)) {
+    return {
+      type: "wave_motion",
+      title: "محاكي الموجات",
+      description: "غيّر السعة أو التردد ولاحظ كيف يتغير شكل الموجة.",
+      config: { amplitude: 2, frequency: 1.5 },
+    };
+  }
+  if (/مقذوف|المقذوفات|القذف|قذيفة|projectile/.test(normalized)) {
+    return {
+      type: "projectile_motion",
+      title: "محاكي حركة المقذوفات",
+      description: "جرّب زوايا وسرعات مختلفة ولاحظ أثرها في المدى والارتفاع.",
+      config: { speed: 12, angle_deg: 45, height: 0 },
+    };
+  }
+  if (/السقوط الحر|سقوط حر|free.?fall|تسارع الجاذبية/.test(normalized)) {
+    return {
+      type: "free_fall",
+      title: "محاكي السقوط الحر",
+      description: "غيّر ارتفاع السقوط ولاحظ أثره في زمن السقوط والسرعة.",
+      config: { height: 20 },
+    };
+  }
+  return null;
+}
+
 function Header() {
   return (
     <header className="research-header">
@@ -269,6 +321,7 @@ export default function ResearchProjectsPage() {
   }
 
   const researchUrl = subjectSlug ? "/research/" + subjectSlug : "/research";
+  const inlineSimulator = getInlineSimulator(selectedSubject, topic, includePractical);
 
   return (
     <div className="research-page-shell">
@@ -322,8 +375,13 @@ export default function ResearchProjectsPage() {
                 <button className="research-generate-button" type="submit" disabled={generating || !topic.trim()}>
                   <Sparkles size={17}/>{generating ? "جارٍ إعداد البحث وحفظه..." : "أنشئ البحث بالذكاء الاصطناعي"}
                 </button>
-                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء بحث خلال 24 ساعة. الأبحاث التي تنشئها تظل محفوظة في حسابك.</p>
+                <p className="research-form-hint">لديك حتى 5 محاولات لإنشاء بحث خلال 24 ساعة. المحاولة الفاشلة لا تُخصم، والأبحاث الناجحة تظل محفوظة في حسابك.</p>
               </form>
+              {inlineSimulator && <details className="research-inline-simulator" open>
+                <summary><FlaskConical size={17}/> ابدأ التجربة الآن: {inlineSimulator.title} <span>محاكاة تفاعلية</span></summary>
+                <p>{inlineSimulator.description}</p>
+                <ExperimentSimulator simulatorType={inlineSimulator.type} config={inlineSimulator.config}/>
+              </details>}
             </section>
 
             {subjectProjects.length > 0 && <section className="research-saved-section">
