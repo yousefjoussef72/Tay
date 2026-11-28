@@ -33,13 +33,20 @@ declare
   v_max_score integer := 0;
   v_score integer := 0;
   v_attempt_id uuid;
+  v_answer_count integer := 0;
 begin
   if p_user_id is null or p_session_id is null then
     return jsonb_build_object('ok', false, 'error', 'invalid_session');
   end if;
 
-  if coalesce(jsonb_typeof(p_answers), '') <> 'object'
-    or jsonb_object_length(p_answers) > 1000 then
+  if coalesce(jsonb_typeof(p_answers), '') <> 'object' then
+    return jsonb_build_object('ok', false, 'error', 'invalid_answers');
+  end if;
+
+  select count(*)::integer into v_answer_count
+  from jsonb_each(p_answers);
+
+  if v_answer_count > 1000 then
     return jsonb_build_object('ok', false, 'error', 'invalid_answers');
   end if;
 
