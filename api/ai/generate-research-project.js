@@ -22,7 +22,7 @@ function cleanSections(value) {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 8).map(section => ({
     heading: cleanText(section?.heading, 160),
-    body: cleanText(section?.body, 2600),
+    body: cleanText(section?.body, 4200),
   })).filter(section => section.heading && section.body);
 }
 
@@ -224,6 +224,20 @@ async function refundReservation(client, reservation) {
   }
 }
 
+function countResearchWords(research) {
+  const parts = [
+    research?.title, research?.abstract, research?.research_problem,
+    ...(research?.research_questions || []), ...(research?.objectives || []),
+    research?.importance, research?.introduction, research?.methodology?.approach,
+    ...(research?.methodology?.steps || []),
+    ...(research?.sections || []).flatMap(section => [section.heading, section.body]),
+    research?.expected_results, research?.discussion, research?.conclusion,
+    ...(research?.recommendations || []), ...(research?.limitations || []),
+    ...(research?.references || []),
+  ];
+  return parts.filter(Boolean).join(" ").trim().split(/\s+/).filter(Boolean).length;
+}
+
 function normalizeResearch(value, subject, includePractical) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -235,24 +249,24 @@ function normalizeResearch(value, subject, includePractical) {
 
   return {
     title: cleanText(value.title, 180),
-    abstract: cleanText(value.abstract, 2200),
+    abstract: cleanText(value.abstract, 3000),
     keywords: cleanArray(value.keywords, 8, 80),
-    research_problem: cleanText(value.research_problem, 1600),
+    research_problem: cleanText(value.research_problem, 2200),
     research_questions: cleanArray(value.research_questions, 6, 500),
     objectives: cleanArray(value.objectives, 8, 400),
-    importance: cleanText(value.importance, 1400),
-    introduction: cleanText(value.introduction, 2200),
+    importance: cleanText(value.importance, 2200),
+    introduction: cleanText(value.introduction, 3200),
     methodology: {
-      approach: cleanText(value.methodology?.approach, 700),
+      approach: cleanText(value.methodology?.approach, 1200),
       steps: cleanArray(value.methodology?.steps, 8, 600),
     },
     sections: cleanSections(value.sections),
-    expected_results: cleanText(value.expected_results, 1800),
-    discussion: cleanText(value.discussion, 1800),
-    conclusion: cleanText(value.conclusion, 1600),
+    expected_results: cleanText(value.expected_results, 2200),
+    discussion: cleanText(value.discussion, 2600),
+    conclusion: cleanText(value.conclusion, 2200),
     recommendations: cleanArray(value.recommendations, 8, 500),
     limitations: cleanArray(value.limitations, 6, 400),
-    references: cleanArray(value.references, 8, 500),
+    references: cleanArray(value.references, 12, 700),
     practical_experiment: practical,
     simulator_type: simulatorType,
     simulation_config: simulatorType ? normalizeSimulationConfig(value.simulation_config, simulatorType) : {},
@@ -339,16 +353,20 @@ export default async function handler(req, res) {
     "لا تقترح أنشطة خطرة أو مواد كيميائية أو أدوات مؤذية. اجعل أي نشاط عملي آمنًا وبسيطًا ومناسبًا لبيئة تعليمية وتحت إشراف معلم عند الحاجة.",
     "أخرج JSON صالحًا فقط دون Markdown أو نص خارج JSON.",
     "البنية المطلوبة: {title,abstract,keywords:[],research_problem,research_questions:[],objectives:[],importance,introduction,methodology:{approach,steps:[]},sections:[{heading,body}],expected_results,discussion,conclusion,recommendations:[],limitations:[],references:[],practical_experiment:{title,purpose,hypothesis,materials:[],steps:[],variables:{independent,dependent,controlled:[]},expected_observations:[],analysis_questions:[],safety_notes:[]}|null,simulator_type,simulation_config}.",
-    "أنشئ من 5 إلى 7 محاور بحثية مفيدة، ولا تضع إجابات أسئلة البحث داخل قائمة الأسئلة.",
+    "أنشئ بحثًا أكاديميًا طويلًا يعادل 10 صفحات A4 تقريبًا عند طباعته بتنسيق مدرسي معتاد، وليس مجرد خطة بحث أو ملخص.",
+    "الطول إلزامي: من 3500 إلى 4200 كلمة عربية فعلية، موزعة على كل الأقسام. لا تختصر ولا تكرر الكلام لزيادة الحجم.",
+    "اكتب مقدمة موسعة من 300 إلى 400 كلمة، ومن 8 محاور رئيسية على الأقل، كل محور من 350 إلى 450 كلمة، ثم منهجية وتحليل ومناقشة وخاتمة وتوصيات ومراجع مقترحة.",
+    "اجعل كل محور يحتوي شرحًا وتعريفات وأمثلة وتحليلًا وعلاقة واضحة بسؤال البحث، مع انتقال منطقي بين المحاور.",
+    "لا تعتبر عدد العناوين صفحات؛ يجب أن يكون متن كل محور مطولًا ومفيدًا. لا تتوقف بعد تقديم الهيكل.",
+    "أضف فهرس محاور مختصرًا ضمن المحتوى.",
+    "أنشئ 8 إلى 10 محاور بحثية مفيدة، ولا تضع إجابات أسئلة البحث داخل قائمة الأسئلة.",
     (subject.slug === "physics" || /فيزياء|physics/i.test(subject.name || ""))
       ? "يمكن اختيار محاكي فيزياء فقط إذا كان ملائمًا علميًا للموضوع: harmonic_spring أو simple_pendulum أو wave_motion أو projectile_motion أو free_fall. لا تختَر محاكيًا لمجرد ملء الحقل."
       : "هذه المادة لا تملك محاكيًا تفاعليًا معتمدًا في النظام حاليًا؛ اجعل simulator_type مساويًا null واكتب نشاطًا عمليًا أو تحليليًا آمنًا عند طلبه.",
     includePractical
       ? "أرفق تجربة أو نشاطًا تطبيقيًا مرتبطًا بسؤال البحث. إذا كان الموضوع فيزيائيًا ويناسب نموذجًا موجودًا، اربط التجربة بنوع المحاكي وإعداداته. وإلا قدم تجربة موجهة بلا محاكاة."
       : "اجعل practical_experiment مساويًا null وsimulator_type مساويًا null.",
-    detailLevel === "deep"
-      ? "اكتب بحثًا موسعًا، مع شرح عميق وتحليل مترابط، بما يقارب 1200 إلى 1600 كلمة عربية."
-      : "اكتب بحثًا متوسط التفصيل ومتكامل العناصر، بما يقارب 800 إلى 1100 كلمة عربية.",
+    "المطلوب في كل الحالات بحث من 10 صفحات تقريبًا (3500 إلى 4200 كلمة عربية)، ولا تخفض الطول بسبب مستوى التفصيل.",
   ].join("\n");
 
   const user = [
@@ -365,7 +383,7 @@ export default async function handler(req, res) {
   ].filter(Boolean).join("\n");
 
   try {
-    const result = await generateJson(req, { system, user, maxTokens: 8500 });
+    const result = await generateJson(req, { system, user, maxTokens: 12000 });
     const research = normalizeResearch(result.data?.research || result.data, subject, includePractical);
 
     if (
@@ -374,15 +392,16 @@ export default async function handler(req, res) {
       !research.abstract ||
       !research.research_problem ||
       research.objectives.length < 2 ||
-      research.sections.length < 4 ||
-      research.conclusion.length < 20
+      research.sections.length < 8 ||
+      research.conclusion.length < 20 ||
+      countResearchWords(research) < 3000
     ) {
       await releaseReservation();
       console.error("research_generation_quality_check_failed");
       return res.status(502).json({
         ok: false,
         error: "incomplete_research_project",
-        message: "لم تكتمل عناصر البحث بشكل كافٍ. لم تُخصم المحاولة، ويمكنك إعادة المحاولة أو جعل الموضوع أكثر تحديدًا.",
+        message: "لم يُنشئ الذكاء الاصطناعي بحثًا بطول 10 صفحات مكتملًا. لم تُخصم المحاولة. أعد المحاولة أو حدّد الموضوع أكثر.",
       });
     }
 

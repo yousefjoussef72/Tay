@@ -195,7 +195,7 @@ export default function ResearchProjectsPage() {
   const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState("");
   const [topic, setTopic] = useState("");
-  const [detailLevel, setDetailLevel] = useState("standard");
+  const [detailLevel, setDetailLevel] = useState("deep");
   const [includePractical, setIncludePractical] = useState(true);
   const [selectedTrack, setSelectedTrack] = useState("all");
   const [selectedGrade, setSelectedGrade] = useState("all");
@@ -331,8 +331,8 @@ export default function ResearchProjectsPage() {
         <section className="research-hero">
           <span className="research-kicker"><Sparkles size={15}/> مساعد البحث بالذكاء الاصطناعي</span>
           <h1>{selectedSubject ? "مشاريع " + selectedSubject.name + " البحثية" : "مركز المشاريع البحثية"}</h1>
-          <p>{selectedSubject ? "حوّل فكرتك إلى بحث منظم يناسب المادة والصف والمسار، واحتفظ بنسخ أبحاثك في حسابك." : "اختر مادة دراسية، ثم اكتب موضوعًا لتحصل على مسودة بحث متكاملة قابلة للمراجعة والتطوير."}</p>
-          <div className="research-hero-points"><span><BookOpen size={15}/> لكل المواد والمسارات</span><span><ClipboardList size={15}/> بحث منظم بعناصره</span><span><FlaskConical size={15}/> تجربة اختيارية عند ملاءمتها</span></div>
+          <p>{selectedSubject ? "حوّل فكرتك إلى بحث أكاديمي متكامل من 10 صفحات تقريبًا، يناسب المادة والصف والمسار، واحفظه في حسابك." : "اختر مادة دراسية واكتب موضوعًا لتحصل على بحث أكاديمي مطول من 10 صفحات تقريبًا، مع إمكانية إرفاق تجربة عملية ومحاكاة مناسبة."}</p>
+          <div className="research-hero-points"><span><BookOpen size={15}/> لكل المواد والمسارات</span><span><ClipboardList size={15}/> بحث كامل من 10 صفحات</span><span><FlaskConical size={15}/> تجربة اختيارية عند ملاءمتها</span></div>
         </section>
 
         {notice && <div className="research-notice" role="status">{notice}</div>}
@@ -368,7 +368,7 @@ export default function ResearchProjectsPage() {
                   <textarea required minLength={3} maxLength={240} rows={3} value={topic} onChange={event=>setTopic(event.target.value)} placeholder="مثال: أثر التغيرات المناخية على التنوع الحيوي في مصر..."/>
                 </label>
                 <div className="research-options">
-                  <label>مستوى التفصيل<select value={detailLevel} onChange={event=>setDetailLevel(event.target.value)}><option value="standard">بحث متوسط التفصيل</option><option value="deep">بحث موسع ومتعمق</option></select></label>
+                  <div className="research-length-choice"><b>حجم البحث المطلوب</b><span>بحث أكاديمي متكامل من 10 صفحات تقريبًا</span><small>من 3500 إلى 4200 كلمة، مع مقدمة ومحاور مفصلة ومنهجية ومناقشة وخاتمة ومراجع.</small></div>
                   <label className="research-checkbox"><input type="checkbox" checked={includePractical} onChange={event=>setIncludePractical(event.target.checked)}/><span><b>أرفق تجربة أو نشاطًا عمليًا</b><small>يظهر داخل البحث عند فتحه، والمحاكي متاح عندما يتوافق الموضوع مع النماذج الموجودة.</small></span></label>
                 </div>
                 {!session && <div className="research-login-reminder">لإنشاء البحث وحفظه، <Link to="/account">سجّل الدخول إلى حساب الطالب</Link>.</div>}
