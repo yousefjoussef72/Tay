@@ -17,8 +17,6 @@ alter table public.exam_sessions enable row level security;
 revoke all on table public.exam_sessions from public, anon, authenticated;
 grant all on table public.exam_sessions to service_role;
 
-drop function if exists public.submit_exam(uuid, jsonb);
-
 create or replace function public.grade_exam_session_internal(
   p_session_id uuid,
   p_user_id uuid,
