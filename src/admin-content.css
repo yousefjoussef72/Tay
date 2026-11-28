@@ -254,3 +254,34 @@
   .hub-ai-generator { padding:14px; }
   .hub-attempt-row { flex-wrap:wrap; }
 }
+
+
+/* Master-only moderator management */
+.hub-moderator-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; align-items:start; }
+.hub-moderator-create,.hub-moderator-list { min-width:0; }
+.hub-moderator-create .hub-panel-heading { align-items:center; }
+.hub-moderator-create .hub-panel-heading h2 { display:flex; align-items:center; gap:8px; }
+.hub-moderator-create .hub-muted { margin:0 0 18px; font-size:10px; line-height:2; }
+.hub-moderator-create .hub-editor { gap:14px; }
+.hub-moderator-create .hub-editor > label { display:flex; flex-direction:column; gap:7px; color:#586a70; font-size:10px; }
+.hub-moderator-create .hub-editor input { width:100%; min-height:42px; padding:10px 12px; border:1px solid #e1e5dc; border-radius:3px; color:#243948; background:#fff; font:11px "Alexandria",sans-serif; }
+.hub-moderator-create .hub-editor input:focus { outline:none; border-color:#a4b76b; }
+.hub-moderator-list .hub-panel-heading { align-items:center; }
+.hub-moderator-list .hub-panel-heading > div { display:flex; flex-direction:column; gap:4px; }
+.hub-moderator-list .hub-panel-heading small { color:#8a9799; font-size:9px; }
+.hub-moderator-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid #eceee8; }
+.hub-moderator-row > div { display:flex; min-width:0; flex-direction:column; gap:4px; }
+.hub-moderator-row strong { color:#263949; font-size:11px; }
+.hub-moderator-row span { color:#6c8291; font:10px "DM Sans",sans-serif; }
+.hub-moderator-row small { color:#909b9b; font-size:9px; }
+.hub-moderator-row button { flex:0 0 auto; }
+.hub-moderator-note { grid-column:1/-1; display:flex; align-items:flex-start; gap:10px; padding:15px; background:#f7f8f2; border:1px solid #e6e9df; color:#748b55; }
+.hub-moderator-note svg { flex:0 0 auto; margin-top:2px; }
+.hub-moderator-note strong { display:block; margin-bottom:4px; color:#4e6640; font-size:10px; }
+.hub-moderator-note p { margin:0; color:#7d8b88; font-size:9px; line-height:2; }
+@media (max-width:850px) {
+  .hub-moderator-layout { grid-template-columns:1fr; }
+}
+@media (max-width:620px) {
+  .hub-moderator-row { align-items:flex-start; flex-direction:column; }
+}
