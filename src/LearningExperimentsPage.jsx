@@ -29,6 +29,21 @@ function PageHeader() {
   );
 }
 
+
+function LessonQuiz({ items }) {
+  const [answers, setAnswers] = useState({});
+  const score = items.reduce((total,item,index)=>total+(answers[index]===item.answer?1:0),0);
+  return <section className="learning-content-section learning-lesson-quiz">
+    <h2>اختبر فهمك</h2>
+    <div className="learning-quiz-score">{score} / {items.length}</div>
+    {items.map((item,index)=><article key={index}>
+      <h3>{index+1}. {item.question}</h3>
+      <div className="learning-quiz-options">{(item.options||[]).map((option,optionIndex)=><button type="button" key={optionIndex} className={answers[index]===optionIndex?(optionIndex===item.answer?"correct":"incorrect"):""} onClick={()=>setAnswers(current=>({...current,[index]:optionIndex}))}>{option}</button>)}</div>
+      {answers[index]!==undefined&&<p>{item.why}</p>}
+    </article>)}
+  </section>;
+}
+
 function ExperimentCard({ experiment, subject, unit }) {
   const icon = experiment.experience_type === "virtual_lab" ? <FlaskConical size={20}/> : <Atom size={20}/>;
   return (
@@ -43,7 +58,7 @@ function ExperimentCard({ experiment, subject, unit }) {
 }
 
 export default function LearningExperimentsPage() {
-  const { slug } = useParams();
+  const { slug, lessonSlug } = useParams();
   const [data, setData] = useState(EMPTY);
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedUnit, setSelectedUnit] = useState("all");
@@ -89,10 +104,18 @@ export default function LearningExperimentsPage() {
   const unitMap = useMemo(() => new Map(data.units.map(item => [item.id, item])), [data.units]);
   const lessonMap = useMemo(() => new Map(data.lessons.map(item => [item.id, item])), [data.lessons]);
   const selected = slug ? data.experiments.find(item => item.slug === slug) : null;
+  const selectedLesson = lessonSlug ? data.lessons.find(item => item.slug === lessonSlug) : null;
   const visibleUnits = useMemo(
     () => data.units.filter(unit => selectedSubject === "all" || unit.subject_id === selectedSubject),
     [data.units, selectedSubject]
   );
+  const visibleLessons = useMemo(() => data.lessons.filter(item => {
+    const unit = unitMap.get(item.unit_id);
+    const matchesSubject = selectedSubject === "all" || unit?.subject_id === selectedSubject;
+    const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit;
+    const text = (item.title + " " + item.summary).toLowerCase();
+    return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
+  }), [data.lessons, unitMap, selectedSubject, selectedUnit, search]);
   const visibleExperiments = useMemo(() => data.experiments.filter(item => {
     const matchesSubject = selectedSubject === "all" || item.subject_id === selectedSubject;
     const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit;
@@ -109,7 +132,7 @@ export default function LearningExperimentsPage() {
     setObservations("");
     setReflectionAnswers({});
     startedAt.current = Date.now();
-  }, [slug]);
+  }, [slug, lessonSlug]);
 
   async function completeExperiment() {
     if (!selected) return;
@@ -134,6 +157,42 @@ export default function LearningExperimentsPage() {
       setNotice("تم تسجيل إنجاز التجربة في حسابك بنجاح.");
     }
     setSaving(false);
+  }
+
+  if (lessonSlug && !loading && !selectedLesson) {
+    return <div className="learning-public-shell"><PageHeader/><main className="learning-public-main"><div className="learning-empty"><BookOpen size={28}/><h1>الدرس غير موجود أو لم يعد منشورًا</h1><Link to="/experiments" className="learning-back-link"><ArrowRight size={15}/> العودة إلى المواد والتجارب</Link></div></main></div>;
+  }
+
+  if (lessonSlug && selectedLesson) {
+    const unit = unitMap.get(selectedLesson.unit_id);
+    const subject = unit ? subjectMap.get(unit.subject_id) : null;
+    const content = selectedLesson.content_json || {};
+    const relatedExperiments = data.experiments.filter(item => item.lesson_id === selectedLesson.id);
+    const sections = lines(content.sections);
+    const laws = lines(content.laws);
+    const roadmap = lines(content.exam_roadmap);
+    const quiz = lines(content.quiz);
+    return (
+      <div className="learning-public-shell">
+        <PageHeader/>
+        <main className="learning-public-main learning-experiment-detail">
+          <Link to="/experiments" className="learning-back-link"><ArrowRight size={15}/> العودة إلى المواد والتجارب</Link>
+          <div className="learning-detail-title">
+            <div className="learning-breadcrumb">{subject?.name || "المادة"}{unit?.title ? " / " + unit.title : ""}</div>
+            <span className="learning-public-kicker"><BookOpen size={15}/> درس تعليمي</span>
+            <h1>{selectedLesson.title}</h1>
+            <p>{selectedLesson.summary}</p>
+          </div>
+          {content.intro && <section className="learning-content-section"><h2>مقدمة الدرس</h2><p>{content.intro}</p></section>}
+          {selectedLesson.learning_objectives?.length > 0 && <section className="learning-content-section"><h2><CheckCircle2 size={18}/> أهداف التعلم</h2><ul>{selectedLesson.learning_objectives.map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
+          {sections.length > 0 && <section className="learning-content-section"><h2>شرح الدرس</h2><div className="learning-lesson-grid">{sections.map((section,index)=><article key={section.id || index}><span>{section.subtitle || "شرح"}</span><h3>{section.title}</h3><p>{section.body}</p>{section.example && <p className="learning-example">{section.example}</p>}{section.formula && <strong dir="ltr">{section.formula}</strong>}<details className="learning-explain-details"><summary>افهمها ببساطة / للامتحان / بعمق</summary><p>{section.simple}</p><p>{section.exam}</p><p>{section.deep}</p></details></article>)}</div></section>}
+          {laws.length > 0 && <section className="learning-content-section"><h2>القوانين والملخص</h2><div className="learning-formula-grid">{laws.map((item,index)=><div key={index}><b>{item.title}</b><strong dir="ltr">{item.formula}</strong><small>{item.note}</small></div>)}</div></section>}
+          {roadmap.length > 0 && <section className="learning-content-section"><h2>خريطة الحل في الامتحان</h2><ol>{roadmap.map((item,index)=><li key={index}>{item}</li>)}</ol></section>}
+          {quiz.length > 0 && <LessonQuiz items={quiz}/>}
+          {relatedExperiments.length > 0 && <section className="learning-content-section"><h2><FlaskConical size={18}/> جرّب ما تعلمته</h2><div className="learning-experiment-grid">{relatedExperiments.map(experiment=><ExperimentCard key={experiment.id} experiment={experiment} subject={subject} unit={unit}/>)}</div></section>}
+        </main>
+      </div>
+    );
   }
 
   if (slug && !loading && !selected) {
@@ -189,17 +248,22 @@ export default function LearningExperimentsPage() {
           <span className="learning-public-kicker"><GraduationCap size={15}/> الصف الثاني من البكالوريا المصرية</span>
           <h1>المواد والتجارب التفاعلية</h1>
           <p>اختر المادة والوحدة، افتح التجربة، غيّر القيم، واكتشف بنفسك كيف تعمل القوانين.</p>
-          <div className="learning-list-stats"><span><BookOpen size={16}/>{data.subjects.length} مادة</span><span><Layers3 size={16}/>{data.units.length} وحدة</span><span><FlaskConical size={16}/>{data.experiments.length} تجربة</span></div>
+          <div className="learning-list-stats"><span><BookOpen size={16}/>{data.subjects.length} مادة</span><span><Layers3 size={16}/>{data.units.length} وحدة</span><span><BookOpen size={16}/>{data.lessons.length} درس</span><span><FlaskConical size={16}/>{data.experiments.length} تجربة</span></div>
         </div>
         <div className="learning-list-tools">
-          <label><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="ابحث عن تجربة أو موضوع..."/></label>
+          <label><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="ابحث عن مادة أو درس أو تجربة..."/></label>
           <select value={selectedSubject} onChange={event=>setSelectedSubject(event.target.value)}><option value="all">كل المواد</option>{data.subjects.map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
           <select value={selectedUnit} onChange={event=>setSelectedUnit(event.target.value)}><option value="all">كل الوحدات</option>{visibleUnits.map(unit=><option key={unit.id} value={unit.id}>{unit.title}</option>)}</select>
         </div>
         {error && <div className="learning-error">{error}</div>}
-        {loading ? <div className="learning-empty">جارٍ تحميل المواد والتجارب...</div> : visibleExperiments.length === 0 ? <div className="learning-empty"><FlaskConical size={27}/><h2>لا توجد تجارب منشورة لهذا الاختيار</h2><p>ستظهر هنا التجارب التي ينشئها فريق المنصة وينشرها من لوحة الإدارة.</p></div> : (
-          <div className="learning-experiment-grid">{visibleExperiments.map(item=><ExperimentCard key={item.id} experiment={item} subject={subjectMap.get(item.subject_id)} unit={unitMap.get(item.unit_id)}/>)}</div>
-        )}
+        {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>
+          <section className="learning-list-section"><div className="learning-list-section-head"><h2><BookOpen size={18}/> الدروس</h2><span>{visibleLessons.length} درس</span></div>
+            {visibleLessons.length === 0 ? <div className="learning-inline-empty">لا توجد دروس منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleLessons.map(lesson=>{const unit=unitMap.get(lesson.unit_id);const subject=unit?subjectMap.get(unit.subject_id):null;return <Link className="learning-experiment-card learning-lesson-card" key={lesson.id} to={"/lessons/"+lesson.slug}><div className="learning-experiment-card-icon"><BookOpen size={20}/></div><div className="learning-experiment-meta"><span>{subject?.name||"مادة تعليمية"}</span>{unit?.title&&<span>{unit.title}</span>}</div><h3>{lesson.title}</h3><p>{lesson.summary}</p><div className="learning-experiment-card-foot"><span>شرح وقوانين</span><span>افتح الدرس <ChevronLeft size={15}/></span></div></Link>})}</div>}
+          </section>
+          <section className="learning-list-section"><div className="learning-list-section-head"><h2><FlaskConical size={18}/> التجارب والمحاكاة</h2><span>{visibleExperiments.length} تجربة</span></div>
+            {visibleExperiments.length === 0 ? <div className="learning-inline-empty">لا توجد تجارب منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleExperiments.map(item=><ExperimentCard key={item.id} experiment={item} subject={subjectMap.get(item.subject_id)} unit={unitMap.get(item.unit_id)}/>)}</div>}
+          </section>
+        </> }
       </main>
     </div>
   );
