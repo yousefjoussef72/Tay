@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowRight, Atom, BookOpen, CheckCircle2, ChevronLeft, Clock3,
-  FlaskConical, GraduationCap, Layers3, Library, ListChecks, Search, Sparkles
+  FlaskConical, GraduationCap, Layers3, Library, ListChecks, Search, Sparkles,
+  Landmark, Languages
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import ExperimentSimulator from "./ExperimentSimulator.jsx";
@@ -12,6 +13,13 @@ const EMPTY = { subjects: [], units: [], lessons: [], experiments: [], resources
 
 function lines(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+function SubjectIcon({ slug }) {
+  if (slug === "physics") return <Atom size={22}/>;
+  if (slug === "english") return <Languages size={22}/>;
+  if (slug === "history") return <Landmark size={22}/>;
+  return <BookOpen size={22}/>;
 }
 
 function PageHeader() {
@@ -134,6 +142,15 @@ export default function LearningExperimentsPage() {
     const text = (item.title + " " + item.description).toLowerCase();
     return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
   }), [data.experiments, selectedSubject, selectedUnit, search]);
+  const visibleResources = useMemo(() => data.resources.filter(item => {
+    const resourceUnit = unitMap.get(item.unit_id);
+    const resourceLesson = lessonMap.get(item.lesson_id);
+    const resourceSubjectId = item.subject_id || resourceUnit?.subject_id || unitMap.get(resourceLesson?.unit_id)?.subject_id;
+    const matchesSubject = selectedSubject === "all" || resourceSubjectId === selectedSubject;
+    const matchesUnit = selectedUnit === "all" || item.unit_id === selectedUnit || resourceLesson?.unit_id === selectedUnit;
+    const text = (item.title + " " + (item.description || "") + " " + (item.category || "")).toLowerCase();
+    return matchesSubject && matchesUnit && text.includes(search.trim().toLowerCase());
+  }), [data.resources, unitMap, lessonMap, selectedSubject, selectedUnit, search]);
 
   useEffect(() => {
     setSelectedUnit("all");
@@ -274,10 +291,60 @@ export default function LearningExperimentsPage() {
           <select value={selectedSubject} onChange={event=>setSelectedSubject(event.target.value)}><option value="all">كل المواد</option>{data.subjects.map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
           <select value={selectedUnit} onChange={event=>setSelectedUnit(event.target.value)}><option value="all">كل الوحدات</option>{visibleUnits.map(unit=><option key={unit.id} value={unit.id}>{unit.title}</option>)}</select>
         </div>
+        {!loading && <section className="learning-subjects-section">
+          <div className="learning-list-section-head">
+            <h2><Layers3 size={18}/> المواد الدراسية</h2>
+            <span>{data.subjects.length} مواد متاحة</span>
+          </div>
+          <div className="learning-subject-grid">
+            {data.subjects.map(subject => {
+              const subjectUnits = data.units.filter(item => item.subject_id === subject.id);
+              const subjectLessons = data.lessons.filter(item => subjectUnits.some(unit => unit.id === item.unit_id));
+              const subjectExperiments = data.experiments.filter(item => item.subject_id === subject.id);
+              const subjectResources = data.resources.filter(item => item.subject_id === subject.id);
+              const active = selectedSubject === subject.id;
+              return (
+                <button
+                  type="button"
+                  key={subject.id}
+                  className={"learning-subject-card" + (active ? " active" : "")}
+                  aria-pressed={active}
+                  onClick={() => {
+                    setSelectedSubject(current => current === subject.id ? "all" : subject.id);
+                    setSearch("");
+                  }}
+                >
+                  <span className={"learning-subject-icon subject-" + subject.slug}><SubjectIcon slug={subject.slug}/></span>
+                  <span className="learning-subject-status">{active ? "المادة المحددة" : (subjectUnits.length || subjectLessons.length || subjectExperiments.length || subjectResources.length) ? "المحتوى متاح" : "جاهزة لإضافة المحتوى"}</span>
+                  <strong>{subject.name}</strong>
+                  <small>{subject.description || "مساحة مستقلة لإضافة محتوى هذه المادة."}</small>
+                  <span className="learning-subject-counts">
+                    <span>{subjectUnits.length} وحدة</span>
+                    <span>{subjectLessons.length} درس</span>
+                    <span>{subjectResources.length} ملف</span>
+                  </span>
+                  <span className="learning-subject-action">{active ? "إلغاء التحديد" : "افتح مساحة المادة"} <ChevronLeft size={15}/></span>
+                </button>
+              );
+            })}
+          </div>
+          {selectedSubject !== "all" && <button type="button" className="learning-all-subjects" onClick={() => setSelectedSubject("all")}>عرض كل المواد</button>}
+        </section>}
         {error && <div className="learning-error">{error}</div>}
         {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>
           <section className="learning-list-section"><div className="learning-list-section-head"><h2><BookOpen size={18}/> الدروس</h2><span>{visibleLessons.length} درس</span></div>
             {visibleLessons.length === 0 ? <div className="learning-inline-empty">لا توجد دروس منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleLessons.map(lesson=>{const unit=unitMap.get(lesson.unit_id);const subject=unit?subjectMap.get(unit.subject_id):null;return <Link className="learning-experiment-card learning-lesson-card" key={lesson.id} to={"/lessons/"+lesson.slug}><div className="learning-experiment-card-icon"><BookOpen size={20}/></div><div className="learning-experiment-meta"><span>{subject?.name||"مادة تعليمية"}</span>{unit?.title&&<span>{unit.title}</span>}</div><h3>{lesson.title}</h3><p>{lesson.summary}</p><div className="learning-experiment-card-foot"><span>شرح وقوانين</span><span>افتح الدرس <ChevronLeft size={15}/></span></div></Link>})}</div>}
+          </section>
+          <section className="learning-list-section"><div className="learning-list-section-head"><h2><Library size={18}/> الملفات والمصادر</h2><span>{visibleResources.length} ملف أو مصدر</span></div>
+            {visibleResources.length === 0 ? <div className="learning-inline-empty">لا توجد ملفات مضافة لهذه المادة بعد. يمكنك ربط ملفاتها من تبويب المكتبة والملفات في لوحة الإدارة.</div> : <div className="learning-resource-grid">{visibleResources.map(item => (
+              <article className="learning-resource-card" key={item.id}>
+                <div className="learning-resource-icon">{item.resource_type === "video" ? <FlaskConical size={19}/> : item.resource_type === "image" ? <BookOpen size={19}/> : <Library size={19}/>}</div>
+                <div className="learning-resource-copy"><span>{item.category || "مصدر تعليمي"}</span><h3>{item.title}</h3><p>{item.description || "ملف تعليمي مرتبط بالمادة."}</p></div>
+                {item.resource_type === "video" && item.resolved_url && <video controls playsInline preload="metadata" src={item.resolved_url}>متصفحك لا يدعم تشغيل الفيديو.</video>}
+                {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/>}
+                {item.resolved_url ? <a href={item.resolved_url} target="_blank" rel="noreferrer">{item.resource_type === "video" ? "مشاهدة الفيديو" : item.resource_type === "link" ? "فتح المصدر" : "فتح أو تنزيل الملف"} <ArrowRight size={14}/></a> : <small>المصدر غير متاح مؤقتًا.</small>}
+              </article>
+            ))}</div>}
           </section>
           <section className="learning-list-section"><div className="learning-list-section-head"><h2><FlaskConical size={18}/> التجارب والمحاكاة</h2><span>{visibleExperiments.length} تجربة</span></div>
             {visibleExperiments.length === 0 ? <div className="learning-inline-empty">لا توجد تجارب منشورة لهذا الاختيار بعد.</div> : <div className="learning-experiment-grid">{visibleExperiments.map(item=><ExperimentCard key={item.id} experiment={item} subject={subjectMap.get(item.subject_id)} unit={unitMap.get(item.unit_id)}/>)}</div>}
