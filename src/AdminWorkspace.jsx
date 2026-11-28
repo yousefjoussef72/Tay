@@ -502,7 +502,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
 
   function editExamDetails() {
     if (!selectedExam) return;
-    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "" });
+    setExamDraft({ ...EMPTY_EXAM, id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "", track_id: selectedExam.track_id || "", subject_id: selectedExam.subject_id || "", grade_level: selectedExam.grade_level || "", curriculum_year: selectedExam.curriculum_year || "" });
     setExamCoverFile(null);
     setEditingExam(true);
   }
