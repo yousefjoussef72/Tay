@@ -22,7 +22,7 @@
 .studio-panel-head > span { color:#8b9b9b; font-size:9px; }
 .studio-editor { display:flex; flex-direction:column; gap:12px; }
 .studio-field { min-width:0; display:flex; flex-direction:column; gap:7px; color:#536970; font-size:9px; }
-.studio-field input,.studio-field textarea,.studio-field select { width:100%; min-height:39px; padding:9px 11px; border:1px solid #dfe8e4; border-radius:8px; outline:none; background:#fbfdfc; color:#1e3540; font:10px inherit; }
+.studio-field input,.studio-field textarea,.studio-field select { width:100%; min-height:39px; padding:9px 11px; border:1px solid #dfe8e4; border-radius:8px; outline:none; background:#fbfdfc; color:#1e3540; font:inherit; font-size:10px; }
 .studio-field textarea { resize:vertical; line-height:1.9; }
 .studio-field input:focus,.studio-field textarea:focus,.studio-field select:focus { border-color:#5db8a7; }
 .studio-field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
