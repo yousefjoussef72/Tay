@@ -1,6 +1,4 @@
-import { generateJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
-
-const MODEL = "openai/gpt-4.1-mini";
+import { generateGroqJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
 
 function safeString(value, max = 6000) {
   return String(value ?? "").trim().slice(0, max);
@@ -98,7 +96,7 @@ export default async function handler(req, res) {
     + JSON.stringify(essayItems);
 
   try {
-    const result = await generateJson(req, { system, user: prompt, maxTokens: 5000 });
+    const result = await generateGroqJson({ system, user: prompt, maxTokens: 5000 });
     const rawGrades = Array.isArray(result.data?.grades) ? result.data.grades : [];
     const gradeMap = new Map();
     for (const grade of rawGrades) {
@@ -142,7 +140,7 @@ export default async function handler(req, res) {
         ai_feedback: Object.fromEntries(gradeMap),
         grading_status: gradingStatus,
         ai_graded_at: new Date().toISOString(),
-        ai_model: MODEL,
+        ai_model: result.model,
       })
       .eq("id", attemptId)
       .select("id,score,max_score,objective_score,ai_essay_score,ai_feedback,grading_status,ai_graded_at")

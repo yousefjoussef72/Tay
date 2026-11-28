@@ -1,4 +1,4 @@
-import { generateJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
+import { generateGroqJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
 
 const SIMULATORS = {
   harmonic_spring: {
@@ -174,7 +174,7 @@ export default async function handler(req, res) {
   ].filter(Boolean).join("\n");
 
   try {
-    const result = await generateJson(req, { system, user, maxTokens: 5000 });
+    const result = await generateGroqJson({ system, user, maxTokens: 5000 });
     const experiment = normalizeExperiment(result.data?.experiment || result.data, requestedSimulator);
     if (!experiment || !experiment.title || !experiment.content.intro || experiment.content.steps.length < 2) {
       return res.status(502).json({
