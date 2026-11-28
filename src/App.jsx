@@ -51,7 +51,7 @@ function Header() {
 function safeSiteHref(value, fallback = "#") {
   const href = String(value || "").trim();
   if (!href || href.startsWith("//")) return fallback;
-  return /^(https?:\\/\\/|mailto:|tel:|\\/|#)/i.test(href) ? href : fallback;
+  return /^(https?:\/\/|mailto:|tel:|\/|#)/i.test(href) ? href : fallback;
 }
 
 function Home() {
