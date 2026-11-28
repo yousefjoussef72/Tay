@@ -22,6 +22,13 @@ export const SITE_COPY_GROUPS = [
       { key: "navExams", label: "الامتحانات", value: "الامتحانات" },
       { key: "navAccount", label: "حساب الطالب", value: "حساب الطالب" },
       { key: "navAdmin", label: "لوحة الإدارة", value: "لوحة الإدارة" },
+      { key: "navHomeUrl", label: "رابط الرئيسية", value: "/#home" },
+      { key: "navAboutUrl", label: "رابط عن الموقع", value: "/#about" },
+      { key: "navFeaturesUrl", label: "رابط المميزات", value: "/#features" },
+      { key: "navContactUrl", label: "رابط التواصل", value: "/#contact" },
+      { key: "navLibraryUrl", label: "رابط المكتبة", value: "/library" },
+      { key: "navExamsUrl", label: "رابط الامتحانات", value: "/exams" },
+      { key: "navAccountUrl", label: "رابط الحساب", value: "/account" },
     ],
   },
   {
@@ -33,6 +40,8 @@ export const SITE_COPY_GROUPS = [
       { key: "heroDescription", label: "الوصف أسفل العنوان", value: "نضع الآن الأساس لموقعك. الفكرة والاسم والمحتوى سنحددها معًا، أما البنية التقنية فقد بدأت بالفعل.", multiline: true },
       { key: "heroPrimaryButton", label: "الزر الرئيسي", value: "اكتشف الموقع" },
       { key: "heroSecondaryButton", label: "الزر الثانوي", value: "ابدأ الحديث" },
+      { key: "heroPrimaryUrl", label: "رابط الزر الرئيسي", value: "#about" },
+      { key: "heroSecondaryUrl", label: "رابط الزر الثانوي", value: "#contact" },
       { key: "heroNote", label: "العبارة أسفل الأزرار", value: "تصميم مرن · عربي بالكامل · قابل للتطوير" },
       { key: "heroCardCaption", label: "النص على البطاقة الفنية", value: "مساحة جديدة" },
       { key: "heroBottomLeft", label: "النص أسفل اليسار", value: "01 — البداية" },
@@ -47,6 +56,7 @@ export const SITE_COPY_GROUPS = [
       { key: "aboutTitleLine2", label: "العنوان، السطر الثاني", value: "بل لنصنع شيئًا له معنى." },
       { key: "aboutDescription", label: "النص التعريفي", value: "هذه نسخة أولية أنشأناها لتكون نقطة انطلاق. لا يوجد مجال أو محتوى مفروض مسبقًا؛ سنرسم تجربة الموقع معًا بعد تثبيت الأساس.", multiline: true },
       { key: "aboutLink", label: "رابط الانتقال للمميزات", value: "تعرف على ما تم تجهيزه" },
+      { key: "aboutLinkUrl", label: "وجهة رابط قسم التعريف", value: "#features" },
     ],
   },
   {
@@ -86,6 +96,7 @@ export const SITE_COPY_GROUPS = [
       { key: "contactNameLabel", label: "حقل الاسم", value: "الاسم" },
       { key: "contactNamePlaceholder", label: "مثال الاسم", value: "اسمك" },
       { key: "contactEmailLabel", label: "حقل البريد الإلكتروني", value: "البريد الإلكتروني" },
+      { key: "contactEmailPlaceholder", label: "مثال البريد الإلكتروني", value: "name@example.com" },
       { key: "contactSubjectLabel", label: "حقل الموضوع", value: "موضوع الرسالة" },
       { key: "contactSubjectPlaceholder", label: "مثال الموضوع", value: "كيف يمكننا مساعدتك؟" },
       { key: "contactMessageLabel", label: "حقل الرسالة", value: "رسالتك" },
@@ -134,6 +145,7 @@ export const SITE_COPY_GROUPS = [
       { key: "librarySearchPlaceholder", label: "مربع البحث", value: "ابحث عن كتاب أو ملخص..." },
       { key: "libraryEmpty", label: "حالة المكتبة الفارغة", value: "لا توجد ملفات منشورة تطابق بحثك حاليًا." },
       { key: "libraryOpenFile", label: "فتح/تحميل الملف", value: "فتح أو تحميل الملف" },
+      { key: "libraryNavLibrary", label: "رابط المكتبة", value: "المكتبة" },
     ],
   },
   {
@@ -143,11 +155,13 @@ export const SITE_COPY_GROUPS = [
       { key: "examsTitle", label: "عنوان الصفحة", value: "الامتحانات" },
       { key: "examsDescription", label: "وصف الصفحة", value: "اختبارات منشورة من فريق Tay Space، مع تصحيح تلقائي للأسئلة الموضوعية.", multiline: true },
       { key: "examsEmpty", label: "حالة عدم وجود امتحانات", value: "لا توجد امتحانات منشورة حتى الآن." },
+      { key: "examViewButton", label: "زر عرض الامتحان", value: "عرض الامتحان" },
       { key: "examStartButton", label: "زر بدء الامتحان", value: "ابدأ الامتحان" },
       { key: "examLoginButton", label: "زر الدخول قبل الامتحان", value: "تسجيل الدخول لبدء الامتحان" },
       { key: "examSubmitButton", label: "زر إرسال الإجابات", value: "إرسال الإجابات والتصحيح" },
       { key: "examResultLabel", label: "عنوان النتيجة", value: "تم تصحيح إجاباتك" },
       { key: "examBackToList", label: "العودة لقائمة الامتحانات", value: "العودة إلى قائمة الامتحانات" },
+      { key: "examsNavExams", label: "رابط الامتحانات", value: "الامتحانات" },
     ],
   },
 ];
@@ -206,6 +220,7 @@ SITE_COPY_GROUPS.push(
     fields: [
       { key: "notFoundTitle", label: "عنوان صفحة 404", value: "هذه الصفحة غير موجودة." },
       { key: "notFoundBack", label: "العودة من صفحة 404", value: "العودة للرئيسية" },
+      { key: "articlesEmpty", label: "حالة عدم وجود مقالات", value: "لا توجد مقالات منشورة بعد." },
       { key: "accountLoggedInLabel", label: "حالة تسجيل الدخول", value: "تم تسجيل الدخول" },
       { key: "accountWelcomeBack", label: "الترحيب بعد الدخول", value: "أهلًا بعودتك." },
       { key: "accountProfileDescription", label: "وصف الحساب بعد الدخول", value: "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." },
@@ -224,15 +239,20 @@ export const SITE_MEDIA_FIELDS = [
   { key: "featuresImageUrl", label: "صورة قسم المميزات", description: "صورة أو بانر لقسم المميزات." },
   { key: "contactImageUrl", label: "صورة قسم التواصل", description: "صورة خلفية أو صورة جانبية لقسم التواصل." },
   { key: "footerLogoUrl", label: "شعار التذييل", description: "صورة الشعار في أسفل الموقع." },
+  { key: "feature1ImageUrl", label: "صورة بطاقة الميزة الأولى", description: "صورة اختيارية داخل البطاقة الأولى." },
+  { key: "feature2ImageUrl", label: "صورة بطاقة الميزة الثانية", description: "صورة اختيارية داخل البطاقة الثانية." },
+  { key: "feature3ImageUrl", label: "صورة بطاقة الميزة الثالثة", description: "صورة اختيارية داخل البطاقة الثالثة." },
 ];
 
 export const SITE_SECTION_FIELDS = [
+  { key: "showHeader", label: "القائمة العلوية", description: "إظهار أو إخفاء شريط التنقل." },
   { key: "showHero", label: "واجهة البداية", description: "إظهار أو إخفاء الواجهة الرئيسية." },
   { key: "showAbout", label: "قسم التعريف", description: "إظهار أو إخفاء قسم التعريف بالموقع." },
   { key: "showFeatures", label: "قسم المميزات", description: "إظهار أو إخفاء بطاقات المميزات." },
   { key: "showArticles", label: "آخر المقالات", description: "إظهار أو إخفاء أحدث المقالات المنشورة." },
   { key: "showContact", label: "قسم التواصل", description: "إظهار أو إخفاء نموذج التواصل." },
   { key: "showCustomBlocks", label: "الأقسام الإضافية", description: "إظهار أو إخفاء الأقسام التي تنشئها بنفسك." },
+  { key: "showFooter", label: "تذييل الموقع", description: "إظهار أو إخفاء الجزء السفلي من الصفحة." },
 ];
 
 export const DEFAULT_SITE_BLOCKS = [];
