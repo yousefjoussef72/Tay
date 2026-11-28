@@ -23,18 +23,18 @@ function describeDevice(userAgent) {
   else if (/Mac OS X|Macintosh/i.test(ua)) { device = "كمبيوتر"; os = "macOS"; }
   else if (/Linux/i.test(ua)) { device = "كمبيوتر"; os = "Linux"; }
 
-  if (/Edg\\//i.test(ua)) browser = "Microsoft Edge";
-  else if (/Firefox\\//i.test(ua)) browser = "Firefox";
-  else if (/OPR\\//i.test(ua)) browser = "Opera";
-  else if (/Chrome\\//i.test(ua)) browser = "Google Chrome";
-  else if (/Safari\\//i.test(ua)) browser = "Safari";
+  if (/Edg\//i.test(ua)) browser = "Microsoft Edge";
+  else if (/Firefox\//i.test(ua)) browser = "Firefox";
+  else if (/OPR\//i.test(ua)) browser = "Opera";
+  else if (/Chrome\//i.test(ua)) browser = "Google Chrome";
+  else if (/Safari\//i.test(ua)) browser = "Safari";
 
   return { device, os, browser };
 }
 
 async function completeNotification(supabaseUrl, publishableKey, authorization, sent) {
   try {
-    await fetch(supabaseUrl.replace(/\\/$/, "") + "/rest/v1/rpc/complete_telegram_signup_notification", {
+    await fetch(supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/complete_telegram_signup_notification", {
       method: "POST",
       headers: {
         apikey: publishableKey,
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
 
   let claimed = false;
   try {
-    const baseUrl = supabaseUrl.replace(/\\/$/, "");
+    const baseUrl = supabaseUrl.replace(/\/$/, "");
     const verifyResponse = await fetch(baseUrl + "/auth/v1/user", {
       headers: { apikey: publishableKey, Authorization: authorization },
       signal: AbortSignal.timeout(5000),
