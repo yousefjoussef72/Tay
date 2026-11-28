@@ -329,43 +329,57 @@ export default function AdminWorkspace({ session }) {
     } else if (questionDraft.question_type === "true_false") {
       options = ["صحيح", "خطأ"];
     }
-    setBusy(true); setAlert(null);
-    const values = {
-      exam_id: selectedExam.id,
-      prompt: questionDraft.prompt.trim(),
-      question_type: questionDraft.question_type,
-      options,
-      points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
-      sort_order: editingQuestionId ? (questions.find(q => q.id === editingQuestionId)?.sort_order ?? questions.length) : questions.length,
-    };
-    let questionId = editingQuestionId;
-    let questionError = null;
-    if (editingQuestionId) {
-      const result = await supabase.from("exam_questions").update(values).eq("id", editingQuestionId);
-      questionError = result.error;
-    } else {
-      const result = await supabase.from("exam_questions").insert(values).select("id").single();
-      questionError = result.error;
-      questionId = result.data?.id;
+
+    setBusy(true);
+    setAlert(null);
+    let uploadedPath = null;
+    try {
+      let imageUrl = questionDraft.image_url || null;
+      if (questionImageFile) {
+        uploadedPath = await uploadAsset(questionImageFile, "exam-questions");
+        imageUrl = publicFileUrl(uploadedPath);
+      }
+      const values = {
+        exam_id: selectedExam.id,
+        prompt: questionDraft.prompt.trim(),
+        question_type: questionDraft.question_type,
+        options,
+        points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
+        image_url: imageUrl,
+        sort_order: editingQuestionId ? (questions.find(q => q.id === editingQuestionId)?.sort_order ?? questions.length) : questions.length,
+      };
+      let questionId = editingQuestionId;
+      let questionError = null;
+      if (editingQuestionId) {
+        const result = await supabase.from("exam_questions").update(values).eq("id", editingQuestionId);
+        questionError = result.error;
+      } else {
+        const result = await supabase.from("exam_questions").insert(values).select("id").single();
+        questionError = result.error;
+        questionId = result.data?.id;
+      }
+      if (!questionError && questionId) {
+        const keyResult = await supabase.from("exam_answer_keys").upsert({
+          question_id: questionId,
+          correct_answer: questionDraft.correct_answer.trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "question_id" });
+        questionError = keyResult.error;
+      }
+      if (questionError) throw questionError;
+
+      setQuestionDraft(EMPTY_QUESTION);
+      setQuestionImageFile(null);
+      setEditingQuestionId(null);
+      await loadQuestions(selectedExam.id);
+      await loadAll();
+      setAlert({ kind: "success", text: editingQuestionId ? "تم تعديل السؤال." : "تمت إضافة السؤال." });
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ السؤال." });
+    } finally {
+      setBusy(false);
     }
-    if (!questionError && questionId) {
-      const keyResult = await supabase.from("exam_answer_keys").upsert({
-        question_id: questionId,
-        correct_answer: questionDraft.correct_answer.trim(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "question_id" });
-      questionError = keyResult.error;
-    }
-    setBusy(false);
-    if (questionError) {
-      setAlert({ kind: "error", text: questionError.message || "تعذر حفظ السؤال." });
-      return;
-    }
-    setQuestionDraft(EMPTY_QUESTION);
-    setEditingQuestionId(null);
-    await loadQuestions(selectedExam.id);
-    await loadAll();
-    setAlert({ kind: "success", text: editingQuestionId ? "تم تعديل السؤال." : "تمت إضافة السؤال." });
   }
 
   function editQuestion(question) {
