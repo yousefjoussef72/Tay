@@ -292,7 +292,7 @@ export default function LearningStudioAdmin({ session }) {
           <section className="studio-panel">
             <div className="studio-panel-head"><h3>المواد الحالية</h3><span>{subjects.length} مادة</span></div>
             {subjects.length===0?<div className="studio-empty">لم تتم إضافة مواد بعد.</div>:subjects.map(item=><article className={"studio-list-row "+(subjectDraft.id===item.id?"selected":"")} key={item.id}>
-              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{item.grade_level} · {item.track} · {item.is_published?"منشورة":"مسودة"}</small></div>
+              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{units.filter(unit=>unit.subject_id===item.id).length} وحدة · {lessons.filter(lesson=>units.some(unit=>unit.id===lesson.unit_id && unit.subject_id===item.id)).length} درس · {experiments.filter(experiment=>experiment.subject_id===item.id).length} نشاط · {item.is_published?"ظاهرة للطلاب":"مخفية"}</small></div>
               <div className="studio-row-actions"><button type="button" onClick={()=>setSubjectDraft(subjectForm(item))} title="تعديل"><Pencil size={15}/></button><button type="button" onClick={()=>deleteSubject(item)} title="حذف"><Trash2 size={15}/></button></div>
             </article>)}
           </section>
