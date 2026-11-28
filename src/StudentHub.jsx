@@ -8,10 +8,16 @@ import { useSiteCopy } from "./siteCopy.js";
 const BUCKET = "tay-assets";
 const fileUrl = path => path ? supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : "";
 
+function safeHubHref(value, fallback = "/") {
+  const href = String(value || "").trim();
+  if (!href || href.startsWith("//")) return fallback;
+  return /^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(href) ? href : fallback;
+}
+
 function PublicHubHeader() {
   const { copy } = useSiteCopy();
   if (copy.showHeader === false) return null;
-  return <header className="public-hub-header"><Link to="/" className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></Link><nav><Link to={copy.navLibraryUrl || "/library"}>{copy.navLibrary}</Link><Link to={copy.navExamsUrl || "/exams"}>{copy.navExams}</Link><Link to={copy.navAccountUrl || "/account"}>{copy.navAccount}</Link><Link to={copy.navHomeUrl || "/"}>{copy.navHome}</Link></nav></header>;
+  return <header className="public-hub-header"><a href={safeHubHref(copy.navHomeUrl, "/")} className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></a><nav><a href={safeHubHref(copy.navLibraryUrl, "/library")}>{copy.navLibrary}</a><a href={safeHubHref(copy.navExamsUrl, "/exams")}>{copy.navExams}</a><a href={safeHubHref(copy.navAccountUrl, "/account")}>{copy.navAccount}</a><a href={safeHubHref(copy.navHomeUrl, "/")}>{copy.navHome}</a></nav></header>;
 }
 
 export function LibraryPage() {
