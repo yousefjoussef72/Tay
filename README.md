@@ -25,7 +25,7 @@
 
 ## قاعدة البيانات
 
-مشروع Supabase الحالي اسمه `tay-space` والمنطقة هي Frankfurt (EU Central). تم تطبيق المخطط بالفعل؛ الملف `supabase/migrations/202611240001_initial_schema.sql` يوثق الجداول والسياسات المطبقة.
+مشروع Supabase الحالي اسمه `tay-space` والمنطقة هي Frankfurt (EU Central). تم تطبيق المخطط بالفعل؛ الملف `supabase/migrations/20261124055933_initial_schema.sql` يوثق الجداول والسياسات المطبقة.
 
 الجداول:
 - `profiles`: بيانات الحسابات وأدوارها.
