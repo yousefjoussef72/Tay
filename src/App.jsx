@@ -3,7 +3,8 @@ import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpLeft, ArrowUpRight, Check, Clock3, FileText,
   Layers3, LayoutDashboard, LockKeyhole, Mail, Menu, MessageSquare,
-  Plus, Send, Paperclip, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
+  Plus, Send, Paperclip, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn,
+  BookOpen, FlaskConical, Library, ClipboardList
 } from "lucide-react";
 import { supabase, supabaseReady } from "./lib/supabase.js";
 const AdminWorkspace = lazy(() => import("./AdminWorkspace.jsx"));
@@ -280,6 +281,48 @@ function Home() {
           </div>
         </section>}
         {renderCustomBlocks("afterAbout")}
+
+        <section className="quick-access-section section-pad" id="learning">
+          <div className="container">
+            <div className="quick-access-heading">
+              <div>
+                <div className="section-kicker"><span>ابدأ من هنا</span> مساحة التعلم</div>
+                <h2>كل أدوات رحلتك التعليمية <span>في مكان واحد</span></h2>
+              </div>
+              <p>اختار القسم اللي محتاجه، وهتوصل للمحتوى مباشرة من غير ما تدور بين صفحات الموقع.</p>
+            </div>
+            <div className="quick-access-grid">
+              <Link to="/experiments" className="quick-access-card">
+                <span className="quick-access-icon"><FlaskConical size={23}/></span>
+                <span className="quick-access-number">01</span>
+                <h3>المواد والتجارب</h3>
+                <p>افتح الدروس، راجع القوانين، وجرّب المحاكاة التفاعلية بنفسك.</p>
+                <span className="quick-access-link">استكشف المواد <ArrowUpLeft size={16}/></span>
+              </Link>
+              <Link to="/library" className="quick-access-card">
+                <span className="quick-access-icon"><Library size={23}/></span>
+                <span className="quick-access-number">02</span>
+                <h3>المكتبة التعليمية</h3>
+                <p>كل الملفات والمراجع والصور والفيديوهات في مساحة واحدة مرتبة.</p>
+                <span className="quick-access-link">افتح المكتبة <ArrowUpLeft size={16}/></span>
+              </Link>
+              <Link to="/exams" className="quick-access-card">
+                <span className="quick-access-icon"><ClipboardList size={23}/></span>
+                <span className="quick-access-number">03</span>
+                <h3>الامتحانات</h3>
+                <p>اختبر فهمك، حل الأسئلة، وتابع نتيجتك بعد انتهاء المحاولة.</p>
+                <span className="quick-access-link">ابدأ التدريب <ArrowUpLeft size={16}/></span>
+              </Link>
+              <Link to="/account" className="quick-access-card">
+                <span className="quick-access-icon"><BookOpen size={23}/></span>
+                <span className="quick-access-number">04</span>
+                <h3>حساب الطالب</h3>
+                <p>احتفظ بسجل إنجازاتك وتابع تقدمك في رحلتك التعليمية.</p>
+                <span className="quick-access-link">افتح حسابك <ArrowUpLeft size={16}/></span>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {copy.showFeatures !== false && <section className="features-section section-pad" id="features">
           <div className="container">

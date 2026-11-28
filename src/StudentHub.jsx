@@ -22,7 +22,26 @@ function safeHubHref(value, fallback = "/") {
 function PublicHubHeader() {
   const { copy } = useSiteCopy();
   if (copy.showHeader === false) return null;
-  return <header className="public-hub-header"><a href={safeHubHref(copy.navHomeUrl, "/")} className="public-hub-brand">{copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : null}{copy.brandName} <span>{copy.publicHubTagline}</span></a><nav><a href="/experiments">المواد والتجارب</a><a href={safeHubHref(copy.navLibraryUrl, "/library")}>{copy.navLibrary}</a><a href={safeHubHref(copy.navExamsUrl, "/exams")}>{copy.navExams}</a><a href={safeHubHref(copy.navAccountUrl, "/account")}>{copy.navAccount}</a><a href={safeHubHref(copy.navHomeUrl, "/")}>{copy.navHome}</a></nav></header>;
+  return (
+    <header className="public-hub-header">
+      <a href={safeHubHref(copy.navHomeUrl, "/")} className="public-hub-brand">
+        <span className="public-hub-brand-mark">
+          {copy.brandLogoUrl ? <img src={copy.brandLogoUrl} alt="" /> : <BookOpen size={19}/>}
+        </span>
+        <span className="public-hub-brand-copy">
+          <strong>{copy.brandName}</strong>
+          <small>{copy.publicHubTagline}</small>
+        </span>
+      </a>
+      <nav aria-label="التنقل الرئيسي">
+        <a href={safeHubHref(copy.navHomeUrl, "/")}>{copy.navHome}</a>
+        <a href="/experiments">المواد والتجارب</a>
+        <a href={safeHubHref(copy.navLibraryUrl, "/library")}>{copy.navLibrary}</a>
+        <a href={safeHubHref(copy.navExamsUrl, "/exams")}>{copy.navExams}</a>
+        <a href={safeHubHref(copy.navAccountUrl, "/account")} className="public-hub-account-link">{copy.navAccount}</a>
+      </nav>
+    </header>
+  );
 }
 
 export function LibraryPage() {

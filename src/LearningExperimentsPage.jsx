@@ -17,13 +17,16 @@ function lines(value) {
 function PageHeader() {
   return (
     <header className="learning-public-header">
-      <Link to="/" className="learning-brand"><span className="learning-brand-mark"><GraduationCap size={20}/></span><span><b>Tay Space</b><small>منصة التعلم بالتجربة والتطبيق</small></span></Link>
-      <nav>
+      <Link to="/" className="learning-brand">
+        <span className="learning-brand-mark"><GraduationCap size={20}/></span>
+        <span className="learning-brand-copy"><b>Tay Space</b><small>منصة التعلم بالتجربة والتطبيق</small></span>
+      </Link>
+      <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
-        <Link to="/account">حساب الطالب</Link>
+        <Link to="/account" className="learning-account-link">حساب الطالب</Link>
       </nav>
     </header>
   );
