@@ -152,8 +152,28 @@ export const SITE_COPY_GROUPS = [
   },
 ];
 
+export const SITE_MEDIA_FIELDS = [
+  { key: "brandLogoUrl", label: "شعار الموقع", description: "صورة الشعار التي تظهر بجوار اسم الموقع." },
+  { key: "heroImageUrl", label: "صورة الواجهة الرئيسية", description: "صورة بديلة/إضافية لواجهة البداية." },
+  { key: "aboutImageUrl", label: "صورة قسم التعريف", description: "صورة توضيحية لقسم عن الموقع." },
+  { key: "featuresImageUrl", label: "صورة قسم المميزات", description: "صورة أو بانر لقسم المميزات." },
+  { key: "contactImageUrl", label: "صورة قسم التواصل", description: "صورة خلفية أو صورة جانبية لقسم التواصل." },
+  { key: "footerLogoUrl", label: "شعار التذييل", description: "صورة الشعار في أسفل الموقع." },
+];
+
+export const SITE_SECTION_FIELDS = [
+  { key: "showHero", label: "واجهة البداية", description: "إظهار أو إخفاء الواجهة الرئيسية." },
+  { key: "showAbout", label: "قسم التعريف", description: "إظهار أو إخفاء قسم التعريف بالموقع." },
+  { key: "showFeatures", label: "قسم المميزات", description: "إظهار أو إخفاء بطاقات المميزات." },
+  { key: "showArticles", label: "آخر المقالات", description: "إظهار أو إخفاء أحدث المقالات المنشورة." },
+  { key: "showContact", label: "قسم التواصل", description: "إظهار أو إخفاء نموذج التواصل." },
+  { key: "showCustomBlocks", label: "الأقسام الإضافية", description: "إظهار أو إخفاء الأقسام التي تنشئها بنفسك." },
+];
+
+export const DEFAULT_SITE_BLOCKS = [];
+
 export const DEFAULT_SITE_COPY = Object.fromEntries(
-  SITE_COPY_GROUPS.flatMap(group => group.fields.map(field => [field.key, field.value]))
+  [...SITE_COPY_GROUPS.flatMap(group => group.fields.map(field => [field.key, field.value])), ...SITE_MEDIA_FIELDS.map(field => [field.key, ""]), ...SITE_SECTION_FIELDS.map(field => [field.key, true]), ["customBlocks", DEFAULT_SITE_BLOCKS]]
 );
 
 const SiteCopyContext = createContext(null);
