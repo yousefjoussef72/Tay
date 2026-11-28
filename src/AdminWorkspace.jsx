@@ -235,7 +235,7 @@ export default function AdminWorkspace({ session }) {
       resetResource(); await loadAll();
       setAlert({ kind: "success", text: "تم حفظ المورد في المكتبة." });
     } catch (error) {
-      if (newPath) await supabase.storage.from(BUCKET).remove([newPath]);
+      if (newPath) await supabase.storage.from(LIBRARY_BUCKET).remove([newPath]);
       setAlert({ kind: "error", text: error.message || "تعذر حفظ المورد." });
     } finally { setBusy(false); }
   }
