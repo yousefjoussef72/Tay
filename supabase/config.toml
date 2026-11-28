@@ -2,3 +2,9 @@ project_id = "uvkgtbzhkprngvdrbasy"
 
 [functions.username-auth]
 verify_jwt = false
+
+[functions.start-exam]
+verify_jwt = true
+
+[functions.submit-exam]
+verify_jwt = true
