@@ -102,7 +102,7 @@ function newBlock() {
 }
 
 export default function SiteContentEditor() {
-  const { copy, saveCopy, loaded } = useSiteCopy();
+  const { copy, saveCopy, loaded, loadError, reloadCopy } = useSiteCopy();
   const [draft, setDraft] = useState(copy);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -121,7 +121,29 @@ export default function SiteContentEditor() {
     setStatus(null);
   }
 
+  function validateDraft() {
+    const badImage = SITE_MEDIA_FIELDS.find(field => draft[field.key] && !safeImageUrl(draft[field.key]));
+    if (badImage) return "رابط الصورة في خانة «" + badImage.label + "» يجب أن يبدأ بـ https://.";
+    for (const key of ["heroPrimaryUrl", "heroSecondaryUrl", "aboutLinkUrl", "navHomeUrl", "navAboutUrl", "navFeaturesUrl", "navContactUrl", "navLibraryUrl", "navExamsUrl", "navAccountUrl"]) {
+      const value = String(draft[key] || "").trim();
+      if (value && !/^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(value)) {
+        return "أحد روابط الموقع غير صالح. استخدم رابط https أو مسارًا داخليًا يبدأ بـ / أو #.";
+      }
+    }
+    const badBlock = (draft.customBlocks || []).find(block =>
+      (block.imageUrl && !safeImageUrl(block.imageUrl)) ||
+      (block.buttonUrl && !/^(https?:\/\/|mailto:|tel:|\/(?!\/)|#)/i.test(String(block.buttonUrl).trim()))
+    );
+    if (badBlock) return "راجع رابط الصورة أو الزر في القسم «" + (badBlock.title || "قسم جديد") + "».";
+    return "";
+  }
+
   async function save() {
+    const validationError = validateDraft();
+    if (validationError) {
+      setStatus({ kind: "error", text: validationError });
+      return;
+    }
     setBusy(true);
     setStatus(null);
     const { error } = await saveCopy(draft);
@@ -178,6 +200,12 @@ export default function SiteContentEditor() {
   const blocks = draft.customBlocks || [];
 
   if (!loaded) return <div className="site-editor-loading">جارٍ تحميل إعدادات الموقع...</div>;
+  if (loadError) return <div className="site-editor-load-error">
+    <AlertCircle size={22} />
+    <strong>تعذر تحميل إعدادات الموقع</strong>
+    <p>لم نسمح بالحفظ حتى لا تُستبدل إعدادات موجودة بقيم افتراضية.</p>
+    <button type="button" className="hub-secondary" onClick={reloadCopy}><RotateCcw size={15} /> إعادة المحاولة</button>
+  </div>;
 
   return (
     <div className="site-content-editor">
