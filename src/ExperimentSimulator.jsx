@@ -289,6 +289,7 @@ export default function ExperimentSimulator({ simulatorType, config = {} }) {
 }
 
 export const SIMULATOR_OPTIONS = [
+  { value:"auto", label:"دع الذكاء الاصطناعي يختار النموذج" },
   { value:"", label:"نشاط بدون محاكاة" },
   { value:"harmonic_spring", label:"النابض والكتلة" },
   { value:"simple_pendulum", label:"البندول البسيط" },
