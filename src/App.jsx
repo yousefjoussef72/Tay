@@ -228,6 +228,7 @@ function AdminPage() {
   const [session, setSession] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -268,19 +269,27 @@ function AdminPage() {
   async function signIn(event) {
     event.preventDefault();
     setError("");
-    if (!supabase) return;
-    const { data, error: signInError } = await supabase.functions.invoke("username-auth", {
-      body: { action: "login", username, password },
-    });
-    if (signInError || !data?.access_token || !data?.refresh_token) {
-      setError(data?.message || "اسم المستخدم أو كلمة المرور غير صحيحة.");
-      return;
+    if (!supabase || authBusy) return;
+    setAuthBusy(true);
+    try {
+      const { data, error: signInError } = await supabase.functions.invoke("username-auth", {
+        body: { action: "login", username: username.trim().toLowerCase(), password },
+      });
+      if (signInError || !data?.access_token || !data?.refresh_token) {
+        setError(data?.message || "اسم المستخدم أو كلمة المرور غير صحيحة.");
+        return;
+      }
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) setError("تعذر بدء الجلسة. حاول مرة أخرى.");
+    } catch (error) {
+      console.error("Admin sign-in failed:", error);
+      setError("حدث خطأ أثناء تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.");
+    } finally {
+      setAuthBusy(false);
     }
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-    });
-    if (sessionError) setError("تعذر بدء الجلسة. حاول مرة أخرى.");
   }
 
   async function createArticle(event) {
@@ -330,10 +339,10 @@ function AdminPage() {
         <div className="login-card">
           <div className="admin-icon"><LockKeyhole size={25} /></div><span className="admin-label">منطقة محمية</span><h1>مرحبًا بعودتك.</h1><p>سجّل الدخول بحساب الإدارة للمتابعة.</p>
           <form onSubmit={signIn} className="login-form">
-            <label>اسم المستخدم<input type="text" required autoComplete="username" value={username} onChange={e => setUsername(e.target.value.toLowerCase())} dir="ltr" /></label>
-            <label>كلمة المرور<input type="password" required value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
+            <label>اسم المستخدم<input type="text" required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" value={username} onChange={e => setUsername(e.target.value.toLowerCase())} dir="ltr" /></label>
+            <label>كلمة المرور<input type="password" required minLength={8} maxLength={72} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
             {error && <div className="notice error">{error}</div>}
-            <button className="button button-primary" type="submit">تسجيل الدخول <ArrowLeft size={17} /></button>
+            <button className="button button-primary" type="submit" disabled={authBusy}>{authBusy ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"} <ArrowLeft size={17} /></button>
           </form>
         </div>
       ) : role !== "admin" ? (
@@ -513,7 +522,7 @@ function AccountPage() {
                     <input
                       type={showPassword ? "text" : "password"}
                       required
-                      minLength={mode === "signup" ? 8 : 6}
+                      minLength={8}
                       maxLength={72}
                       autoComplete={mode === "signup" ? "new-password" : "current-password"}
                       value={password}
@@ -530,7 +539,7 @@ function AccountPage() {
                   {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
                 </button>
               </form>
-              <p className="account-footnote">اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. احتفظ بكلمة المرور، فلا يوجد استرداد عبر البريد حاليًا.</p>
+              <p className="account-footnote">اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. في الحسابات السابقة، استُخدم الجزء السابق لعلامة @ من بريد التسجيل كاسم مستخدم بعد تحويله إلى أحرف صغيرة واستبدال الرموز غير المدعومة بـ _. احتفظ بكلمة المرور؛ لا يتوفر استرداد آلي لها في هذه النسخة.</p>
             </section>
           )}
           <Link to="/" className="account-home-link"><ArrowLeft size={15} /> العودة إلى الصفحة الرئيسية</Link>
