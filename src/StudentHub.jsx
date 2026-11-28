@@ -14,6 +14,7 @@ function PublicHubHeader() {
 }
 
 export function LibraryPage() {
+  const { copy } = useSiteCopy();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -29,7 +30,7 @@ export function LibraryPage() {
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (!active) return;
-      if (loadError) setError(copy.libraryLoadError);
+      if (loadError) setError("load");
       setItems(data || []);
       setLoading(false);
     }
@@ -53,7 +54,7 @@ export function LibraryPage() {
         <label><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={copy.librarySearchPlaceholder} /></label>
         <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c} value={c}>{c === "ALL" ? copy.libraryAllCategories : c}</option>)}</select>
       </div>
-      {error && <p className="hub-alert error">{error}</p>}
+      {error && <p className="hub-alert error">{error === "load" ? copy.libraryLoadError : error}</p>}
       {loading ? <div className="public-hub-empty">{copy.libraryLoading}</div> : filtered.length === 0 ? <div className="public-hub-empty">{copy.libraryEmpty}</div> : <div className="public-resource-grid">
         {filtered.map(item => {
           const url = item.resource_type === "link" ? item.external_url : fileUrl(item.file_path);
@@ -123,7 +124,7 @@ export function ExamsPage() {
     }
     load();
     return () => { alive = false; };
-  }, [examId]);
+  }, [examId, copy.examUnavailable, copy.examQuestionsLoadError, copy.examListLoadError]);
 
   async function submitExam() {
     if (!exam || submitting || result) return;
@@ -177,7 +178,7 @@ export function ExamsPage() {
         {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
           {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} دقيقة</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
         </div>}
-      </> : loading ? <div className="public-hub-empty">جارٍ تحميل الامتحان...</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
+      </> : loading ? <div className="public-hub-empty">{copy.examLoading}</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
         <div className="public-hub-kicker">{copy.examTrainingLabel}</div>
         <h1>{exam.title}</h1>
