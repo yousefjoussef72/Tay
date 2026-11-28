@@ -61,7 +61,8 @@ function normalizePractical(value) {
 function normalizeResearch(value, subject, includePractical) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
-  const simulatorType = includePractical && subject.slug === "physics" && SIMULATORS[value.simulator_type]
+  const isPhysicsSubject = subject.slug === "physics" || /فيزياء|physics/i.test(subject.name || "");
+  const simulatorType = includePractical && isPhysicsSubject && SIMULATORS[value.simulator_type]
     ? value.simulator_type
     : null;
   const practical = includePractical ? normalizePractical(value.practical_experiment) : null;
@@ -167,7 +168,7 @@ export default async function handler(req, res) {
     "أخرج JSON صالحًا فقط دون Markdown أو نص خارج JSON.",
     "البنية المطلوبة: {title,abstract,keywords:[],research_problem,research_questions:[],objectives:[],importance,introduction,methodology:{approach,steps:[]},sections:[{heading,body}],expected_results,discussion,conclusion,recommendations:[],limitations:[],references:[],practical_experiment:{title,purpose,hypothesis,materials:[],steps:[],variables:{independent,dependent,controlled:[]},expected_observations:[],analysis_questions:[],safety_notes:[]}|null,simulator_type,simulation_config}.",
     "أنشئ من 5 إلى 7 محاور بحثية مفيدة، ولا تضع إجابات أسئلة البحث داخل قائمة الأسئلة.",
-    subject.slug === "physics"
+    (subject.slug === "physics" || /فيزياء|physics/i.test(subject.name || ""))
       ? "يمكن اختيار محاكي فيزياء فقط إذا كان ملائمًا علميًا للموضوع: harmonic_spring أو simple_pendulum أو wave_motion أو projectile_motion أو free_fall. لا تختَر محاكيًا لمجرد ملء الحقل."
       : "هذه المادة لا تملك محاكيًا تفاعليًا معتمدًا في النظام حاليًا؛ اجعل simulator_type مساويًا null واكتب نشاطًا عمليًا أو تحليليًا آمنًا عند طلبه.",
     includePractical
