@@ -50,6 +50,7 @@ function PageHeader() {
       <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
+        <Link to="/research">المشاريع البحثية</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
         <Link to="/account" className="learning-account-link">حساب الطالب</Link>
@@ -195,6 +196,7 @@ export default function LearningExperimentsPage() {
   const sharedSubjects = visibleSubjects.filter(subject => !subject.track_id);
   const specialistSubjects = selectedTrack === "all" ? [] : visibleSubjects.filter(subject => subject.track_id === selectedTrack);
   const selectedTrackInfo = data.tracks.find(track => track.id === selectedTrack);
+  const selectedSubjectInfo = subjectMap.get(selectedSubject);
 
   useEffect(() => {
     setNotice("");
@@ -334,7 +336,7 @@ export default function LearningExperimentsPage() {
         <div className="learning-list-tools learning-track-filters">
           <label><Search size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="ابحث عن مادة أو درس أو موضوع..."/></label>
           <select value={selectedTrack} onChange={event=>setSelectedTrack(event.target.value)}><option value="all">كل المسارات</option>{data.tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select>
-          <select value={selectedGrade} onChange={event=>setSelectedGrade(event.target.value)}><option value="all">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
+          <select value={selectedGrade} onChange={event=>setSelectedGrade(event.target.value)}><option value="all">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
           <select value={selectedSubject} onChange={event=>setSelectedSubject(event.target.value)}><option value="all">كل المواد</option>{visibleSubjects.map(subject=><option key={subject.id} value={subject.id}>{subject.name} · {subject.grade_level}</option>)}</select>
           <select value={selectedUnit} onChange={event=>setSelectedUnit(event.target.value)}><option value="all">كل الوحدات</option>{visibleUnits.map(unit=><option value={unit.id} key={unit.id}>{unit.title}</option>)}</select>
         </div>
@@ -428,6 +430,7 @@ export default function LearningExperimentsPage() {
             </div>}
           </section>
           {selectedSubject !== "all" && <button type="button" className="learning-all-subjects" onClick={() => {setSelectedSubject("all");setSelectedUnit("all")}}>عرض جميع المواد المحددة</button>}
+          {selectedSubjectInfo && <section className="learning-research-cta"><div><span><Sparkles size={15}/> مساحة المشاريع البحثية</span><strong>هل لديك فكرة بحث في {selectedSubjectInfo.name}؟</strong><p>أنشئ بحثًا منظمًا بالذكاء الاصطناعي، واحتفظ به في حسابك، مع تجربة عملية اختيارية عندما تكون مناسبة للموضوع.</p></div><Link to={"/research/" + selectedSubjectInfo.slug}>ابدأ مشروعًا بحثيًا <ChevronLeft size={16}/></Link></section>}
         </>}
         {error && <div className="learning-error">{error}</div>}
         {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>
