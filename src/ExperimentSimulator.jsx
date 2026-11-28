@@ -278,6 +278,114 @@ function FreeFallSimulation({ config }) {
   );
 }
 
+const GENERIC_MODEL_LABELS = {
+  linear: "علاقة خطية",
+  quadratic: "علاقة تربيعية",
+  inverse: "علاقة عكسية",
+  inverse_square: "علاقة عكسية تربيعية",
+  exponential_growth: "نمو أسي",
+  exponential_decay: "تناقص أسي",
+  sinusoidal: "علاقة دورية",
+  logistic_growth: "نمو محدود",
+};
+
+function genericModelValue(config, rawX) {
+  const x = Number(rawX) || 0;
+  const initial = clamp(config.initial_value ?? 1, 0.001, 10000);
+  const rate = clamp(config.rate ?? 0.5, -5, 5);
+  const amplitude = clamp(config.amplitude ?? 1, 0, 10000);
+  const offset = clamp(config.offset ?? 0, -10000, 10000);
+  const frequency = clamp(config.frequency ?? 1, 0.01, 10);
+  const capacity = clamp(config.carrying_capacity ?? 100, 0.01, 10000);
+  let value;
+  switch (config.model) {
+    case "quadratic": value = offset + rate * x * x; break;
+    case "inverse": value = offset + rate / Math.max(Math.abs(x), 0.15); break;
+    case "inverse_square": value = offset + rate / (Math.max(Math.abs(x), 0.15) ** 2); break;
+    case "exponential_growth": value = initial * Math.exp(clamp(rate * x, -20, 20)); break;
+    case "exponential_decay": value = initial * Math.exp(-Math.abs(rate) * Math.max(0, x)); break;
+    case "sinusoidal": value = offset + amplitude * Math.sin(2 * Math.PI * frequency * x); break;
+    case "logistic_growth": {
+      const safeInitial = Math.min(initial, capacity * 0.95);
+      value = capacity / (1 + ((capacity - safeInitial) / safeInitial) * Math.exp(-Math.abs(rate) * x));
+      break;
+    }
+    case "linear":
+    default: value = offset + rate * x; break;
+  }
+  return Number.isFinite(value) ? clamp(value, -100000, 100000) : 0;
+}
+
+function GenericModelSimulation({ config }) {
+  const xMin = Number.isFinite(Number(config.x_min)) ? Number(config.x_min) : 0;
+  const xMax = Number.isFinite(Number(config.x_max)) && Number(config.x_max) > xMin ? Number(config.x_max) : 10;
+  const initialX = clamp(config.x_value ?? (xMin + xMax) / 2, xMin, xMax);
+  const [xValue, setXValue] = useState(initialX);
+  const points = useMemo(() => {
+    const values = Array.from({ length: 61 }, (_, index) => {
+      const x = xMin + (xMax - xMin) * index / 60;
+      return { x, y: genericModelValue(config, x) };
+    });
+    const yMin = Math.min(0, ...values.map(point => point.y));
+    const yMax = Math.max(0, ...values.map(point => point.y));
+    const span = Math.max(yMax - yMin, Math.abs(yMax) * 0.05, 1);
+    const low = yMin - span * 0.08;
+    const high = yMax + span * 0.08;
+    const xToSvg = x => 42 + ((x - xMin) / (xMax - xMin)) * 636;
+    const yToSvg = y => 214 - ((y - low) / (high - low)) * 172;
+    const path = values.map((point, index) => `${index ? "L" : "M"} ${xToSvg(point.x).toFixed(1)} ${yToSvg(point.y).toFixed(1)}`).join(" ");
+    const currentY = genericModelValue(config, xValue);
+    return { path, x: xToSvg(xValue), y: yToSvg(currentY), yMin: low, yMax: high, currentY };
+  }, [config, xMin, xMax, xValue]);
+
+  return (
+    <section className="simulator-card generic-simulator-card">
+      <div className="simulator-card-head">
+        <div>
+          <span className="simulator-kicker"><Activity size={14}/> نموذج رياضي تفاعلي</span>
+          <h3>محاكاة: {config.y_label || "المتغير الناتج"} مقابل {config.x_label || "المتغير المستقل"}</h3>
+          <p>{GENERIC_MODEL_LABELS[config.model] || GENERIC_MODEL_LABELS.linear} · غيّر قيمة المتغير وشاهد أثرها في المنحنى</p>
+        </div>
+        <button type="button" className="sim-secondary" onClick={() => setXValue(initialX)}><RotateCcw size={15}/> إعادة</button>
+      </div>
+      <div className="sim-stage">
+        <svg viewBox="0 0 720 250" role="img" aria-label="منحنى تفاعلي يوضح العلاقة بين متغيرين">
+          <rect width="720" height="250" rx="17" fill="#0d202b"/>
+          <g stroke="#294956" strokeDasharray="4 7">
+            <line x1="42" y1="42" x2="678" y2="42"/>
+            <line x1="42" y1="128" x2="678" y2="128"/>
+            <line x1="42" y1="214" x2="678" y2="214"/>
+            <line x1="42" y1="28" x2="42" y2="214"/>
+          </g>
+          <path d={points.path} fill="none" stroke="#55cbb6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1={points.x} y1="28" x2={points.x} y2="214" stroke="#e8a56f" strokeDasharray="4 6" strokeWidth="2"/>
+          <circle cx={points.x} cy={points.y} r="7" fill="#e8a56f" stroke="#fff1e6" strokeWidth="2"/>
+          <text x="680" y="239" fill="#8eabb5" fontSize="11" textAnchor="end">{config.x_label || "المتغير المستقل"}</text>
+          <text x="48" y="20" fill="#8eabb5" fontSize="11">{config.y_label || "المتغير الناتج"}</text>
+          <text x="50" y="234" fill="#8eabb5" fontSize="10">{fmt(xMin,2)}</text>
+          <text x="670" y="234" fill="#8eabb5" fontSize="10" textAnchor="end">{fmt(xMax,2)}</text>
+        </svg>
+      </div>
+      <div className="sim-controls generic-sim-controls">
+        <RangeControl
+          label={config.x_label || "المتغير المستقل"}
+          value={xValue}
+          min={xMin}
+          max={xMax}
+          step={(xMax - xMin) / 200}
+          unit={config.x_unit || ""}
+          onChange={setXValue}
+        />
+      </div>
+      <div className="sim-metrics-grid">
+        <Metric label={config.x_label || "المتغير المستقل"} value={fmt(xValue,3)} unit={config.x_unit || ""}/>
+        <Metric label={config.y_label || "المتغير الناتج"} value={fmt(points.currentY,3)} unit={config.y_unit || ""}/>
+        <Metric label="النموذج المستخدم" value={GENERIC_MODEL_LABELS[config.model] || GENERIC_MODEL_LABELS.linear} unit=""/>
+      </div>
+    </section>
+  );
+}
+
 export default function ExperimentSimulator({ simulatorType, config = {} }) {
   const normalized = simulatorType || "harmonic_spring";
   if (normalized === "harmonic_spring") return <SpringSimulation config={config}/>;
@@ -285,6 +393,7 @@ export default function ExperimentSimulator({ simulatorType, config = {} }) {
   if (normalized === "wave_motion") return <WaveSimulation config={config}/>;
   if (normalized === "projectile_motion") return <ProjectileSimulation config={config}/>;
   if (normalized === "free_fall") return <FreeFallSimulation config={config}/>;
+  if (normalized === "generic_model") return <GenericModelSimulation config={config}/>;
   return <div className="sim-unavailable">نوع المحاكاة غير مدعوم في هذا الإصدار.</div>;
 }
 
@@ -295,5 +404,6 @@ export const SIMULATOR_OPTIONS = [
   { value:"simple_pendulum", label:"البندول البسيط" },
   { value:"wave_motion", label:"الموجة الجيبية" },
   { value:"projectile_motion", label:"حركة المقذوفات" },
-  { value:"free_fall", label:"السقوط الحر" }
+  { value:"free_fall", label:"السقوط الحر" },
+  { value:"generic_model", label:"نموذج علمي عام" }
 ];
