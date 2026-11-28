@@ -71,9 +71,6 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [curriculumSubjects, setCurriculumSubjects] = useState([]);
   const [curriculumUnits, setCurriculumUnits] = useState([]);
   const [curriculumLessons, setCurriculumLessons] = useState([]);
-  const [curriculumSubjects, setCurriculumSubjects] = useState([]);
-  const [curriculumUnits, setCurriculumUnits] = useState([]);
-  const [curriculumLessons, setCurriculumLessons] = useState([]);
   const [exams, setExams] = useState([]);
   const [messages, setMessages] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -125,14 +122,11 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
       supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
-      supabase.from("learning_subjects").select("id,name,slug,is_published").order("sort_order"),
-      supabase.from("learning_units").select("id,subject_id,title,slug,is_published").order("sort_order"),
-      supabase.from("learning_lessons").select("id,unit_id,title,slug,is_published").order("sort_order"),
     ]);
     const attemptRows = attemptResult.data || [];
-    setCurriculumSubjects(curriculumSubjectResult.data || []);
-    setCurriculumUnits(curriculumUnitResult.data || []);
-    setCurriculumLessons(curriculumLessonResult.data || []);
+    setCurriculumSubjects(subjectResult.data || []);
+    setCurriculumUnits(unitResult.data || []);
+    setCurriculumLessons(lessonResult.data || []);
     const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
     const profileResult = userIds.length
       ? await supabase.from("profiles").select("id,display_name,username").in("id", userIds)
