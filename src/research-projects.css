@@ -123,3 +123,15 @@
   .research-practical .research-practical-body { display:grid!important; }
   .research-paper-section,.research-paper-chapters article,.research-practical { break-inside:avoid; }
 }
+
+
+.research-inline-simulator { margin-top:17px; padding:16px; border:1px solid #bcded0; border-radius:14px; background:#f4faf6; }
+.research-inline-simulator > summary { display:flex; align-items:center; gap:9px; color:#087c70; font-size:12px; font-weight:800; cursor:pointer; list-style:none; }
+.research-inline-simulator > summary::-webkit-details-marker { display:none; }
+.research-inline-simulator > summary span { margin-right:auto; padding:4px 8px; border-radius:99px; background:#e1f2e8; color:#498875; font-size:9px; white-space:nowrap; }
+.research-inline-simulator > p { margin:10px 0 13px; color:#637d75; font-size:10px; line-height:1.9; }
+.research-inline-simulator[open] { box-shadow:0 5px 18px #0d78640c; }
+@media(max-width:600px) {
+  .research-inline-simulator { padding:13px; }
+  .research-inline-simulator > summary { align-items:flex-start; flex-wrap:wrap; }
+}
