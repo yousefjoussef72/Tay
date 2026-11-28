@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare,
+  FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare, Video,
   Plus, Pencil, Trash2, Eye, EyeOff, Upload, ExternalLink, Save, X,
   Clock3, CheckCircle2, AlertCircle, File, Link as LinkIcon, ArrowRight,
   RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award
@@ -56,7 +56,7 @@ function FilePicker({ file, onChange, accept = ".pdf,.doc,.docx,image/*", label 
     <label className="hub-file-picker">
       <Upload size={18} />
       <span>{file ? file.name : label}</span>
-      <small>{file ? humanSize(file.size) : "PDF أو صور أو مستندات، حتى 50 ميجابايت"}</small>
+      <small>{file ? humanSize(file.size) : "PDF أو صور أو Word أو فيديو، حتى 50 ميجابايت"}</small>
       <input type="file" accept={accept} onChange={e => onChange(e.target.files?.[0] || null)} />
     </label>
   );
@@ -225,11 +225,15 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+      "video/ogg",
     ];
     const allowed = targetBucket === LIBRARY_BUCKET ? libraryTypes : imageTypes;
     if (!allowed.includes(file.type)) {
       throw new Error(targetBucket === LIBRARY_BUCKET
-        ? "نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word."
+        ? "نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word أو فيديو MP4 أو WebM أو MOV."
         : "صور الموقع تقبل JPEG أو PNG أو WebP أو GIF فقط.");
     }
     const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(-100) || "file";
@@ -773,12 +777,12 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             <label>اسم الملف أو المورد<input required value={resourceDraft.title} onChange={e => setResourceDraft({ ...resourceDraft, title: e.target.value })} placeholder="مثال: ملخص الوحدة الأولى" /></label>
             <label>وصف مختصر<textarea rows="2" value={resourceDraft.description} onChange={e => setResourceDraft({ ...resourceDraft, description: e.target.value })} placeholder="ماذا سيجد الطالب داخل الملف؟" /></label>
             <div className="hub-form-grid">
-              <label>نوع المورد<select value={resourceDraft.resource_type} onChange={e => setResourceDraft({ ...resourceDraft, resource_type: e.target.value })}><option value="pdf">كتاب أو ملف PDF</option><option value="image">صورة</option><option value="document">مستند Word</option><option value="link">رابط خارجي</option></select></label>
+              <label>نوع المورد<select value={resourceDraft.resource_type} onChange={e => setResourceDraft({ ...resourceDraft, resource_type: e.target.value })}><option value="pdf">كتاب أو ملف PDF</option><option value="image">صورة</option><option value="document">مستند Word</option><option value="video">فيديو</option><option value="link">رابط خارجي</option></select></label>
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
             {resourceDraft.resource_type === "link" ? <label>الرابط الخارجي<input type="url" required value={resourceDraft.external_url} onChange={e => setResourceDraft({ ...resourceDraft, external_url: e.target.value })} placeholder="https://..." dir="ltr" /></label> : <>
-              {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}{resourcePreviewUrl && <a href={resourcePreviewUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>}</div>}
-              <FilePicker file={resourceFile} onChange={setResourceFile} accept={resourceDraft.resource_type === "image" ? "image/*" : resourceDraft.resource_type === "pdf" ? ".pdf,application/pdf" : ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"} label="اختر ملفًا من هاتفك أو الكمبيوتر" />
+              {resourceDraft.file_path && !resourceFile && <div className="hub-current-file"><File size={16} />{resourceDraft.file_name || "الملف الحالي"}{resourcePreviewUrl && (resourceDraft.resource_type === "video" ? <video className="hub-library-video-preview" controls preload="metadata" src={resourcePreviewUrl} /> : <a href={resourcePreviewUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /></a>)}</div>}
+              <FilePicker file={resourceFile} onChange={setResourceFile} accept={resourceDraft.resource_type === "image" ? "image/*" : resourceDraft.resource_type === "pdf" ? ".pdf,application/pdf" : resourceDraft.resource_type === "video" ? ".mp4,.webm,.mov,.ogg,video/mp4,video/webm,video/quicktime,video/ogg" : ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"} label={resourceDraft.resource_type === "video" ? "اختر فيديو من هاتفك أو الكمبيوتر" : "اختر ملفًا من هاتفك أو الكمبيوتر"} />
             </>}
             <label className="hub-check"><input type="checkbox" checked={resourceDraft.is_published} onChange={e => setResourceDraft({ ...resourceDraft, is_published: e.target.checked })} />نشر المورد للطلاب فور الحفظ</label>
             <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Upload size={16} />{busy ? "جارٍ الرفع والحفظ..." : "حفظ في المكتبة"}</button><button type="button" className="hub-secondary" onClick={resetResource}>تفريغ</button></div>
@@ -787,7 +791,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             <div className="hub-panel-heading"><h2>مكتبة الملفات ({resources.length})</h2></div>
             {resources.length === 0 ? <div className="hub-empty">المكتبة فارغة. أضف أول كتاب أو صورة.</div> : resources.map(resource => (
               <div className="hub-row" key={resource.id}>
-                <div className="hub-row-icon">{resource.resource_type === "image" ? <ImageIcon size={19} /> : resource.resource_type === "link" ? <LinkIcon size={19} /> : <FileText size={19} />}</div>
+                <div className="hub-row-icon">{resource.resource_type === "image" ? <ImageIcon size={19} /> : resource.resource_type === "video" ? <Video size={19} /> : resource.resource_type === "link" ? <LinkIcon size={19} /> : <FileText size={19} />}</div>
                 <div className="hub-row-main"><strong>{resource.title}</strong><small>{resource.category} · {resource.is_published ? "منشور" : "مخفي"}{resource.file_size ? " · " + humanSize(resource.file_size) : ""}</small></div>
                 <div className="hub-row-actions"><button onClick={() => editResource(resource)} title="تعديل وفتح الملف"><Pencil size={16} /></button><button onClick={() => toggleResource(resource)} title="تغيير النشر">{resource.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeResource(resource)} title="حذف"><Trash2 size={16} /></button></div>
               </div>
