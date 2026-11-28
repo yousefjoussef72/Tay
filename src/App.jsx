@@ -10,6 +10,7 @@ const AdminWorkspace = lazy(() => import("./AdminWorkspace.jsx"));
 const LibraryPage = lazy(() => import("./StudentHub.jsx").then(module => ({ default: module.LibraryPage })));
 const ExamsPage = lazy(() => import("./StudentHub.jsx").then(module => ({ default: module.ExamsPage })));
 const ArticlePage = lazy(() => import("./ArticlePage.jsx"));
+const PhysicsLabPage = lazy(() => import("./PhysicsLabPage.jsx"));
 import { SiteCopyProvider, useSiteCopy } from "./siteCopy.js";
 
 const features = [
@@ -38,6 +39,7 @@ function Header() {
           <a href={safeSiteHref(copy.navAboutUrl, "/#about")} onClick={close}>{copy.navAbout}</a>
           <a href={safeSiteHref(copy.navFeaturesUrl, "/#features")} onClick={close}>{copy.navFeatures}</a>
           <a href={safeSiteHref(copy.navContactUrl, "/#contact")} onClick={close}>{copy.navContact}</a>
+          <Link to="/interactive-physics" onClick={close}>معمل الفيزياء</Link>
           <a href={safeSiteHref(copy.navLibraryUrl, "/library")} onClick={close}>{copy.navLibrary}</a>
           <a href={safeSiteHref(copy.navExamsUrl, "/exams")} onClick={close}>{copy.navExams}</a>
           <a href={safeSiteHref(copy.navAccountUrl, "/account")} onClick={close}>{copy.navAccount}</a>
@@ -627,6 +629,7 @@ export default function App() {
     <Route path="/library" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل المكتبة...</div>}><LibraryPage /></Suspense>} />
     <Route path="/exams" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل الامتحانات...</div>}><ExamsPage /></Suspense>} />
     <Route path="/exams/:examId" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل الامتحان...</div>}><ExamsPage /></Suspense>} />
+    <Route path="/interactive-physics" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل معمل الفيزياء...</div>}><PhysicsLabPage /></Suspense>} />
     <Route path="/articles/:slug" element={<Suspense fallback={<div className="admin-message" role="status">جارٍ تحميل المقال...</div>}><ArticlePage /></Suspense>} />
     <Route path="*" element={<NotFound />} />
   </Routes></SiteCopyProvider>;
