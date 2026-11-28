@@ -110,7 +110,7 @@ function ResearchDocument({ project, subject }) {
       {list(content.limitations).length > 0 && <section className="research-paper-section"><h3>حدود البحث</h3><ul>{list(content.limitations).map((item,index)=><li key={index}>{item}</li>)}</ul></section>}
       {list(content.references).length > 0 && <section className="research-paper-section"><h3>مصادر ومراجع مقترحة للتحقق</h3><ul>{list(content.references).map((item,index)=><li key={index}>{item}</li>)}</ul><small>راجع المصدر بنفسك قبل إدراجه في النسخة النهائية. لا تعتبر هذه القائمة توثيقًا لمعلومات لم تتحقق منها.</small></section>}
 
-      {practical && <details className="research-practical">
+      {practical && <details className="research-practical" open={Boolean(simulatorType)}>
         <summary><FlaskConical size={17}/> اعرض التجربة العملية المرتبطة بالبحث <span>اختياري</span></summary>
         <div className="research-practical-body">
           <h3>{practical.title}</h3>
