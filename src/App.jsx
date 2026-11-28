@@ -8,6 +8,7 @@ import {
 import { supabase, supabaseReady } from "./lib/supabase.js";
 import AdminWorkspace from "./AdminWorkspace.jsx";
 import { LibraryPage, ExamsPage } from "./StudentHub.jsx";
+import ArticlePage from "./ArticlePage.jsx";
 
 const features = [
   {
@@ -184,10 +185,11 @@ function Home() {
               <div className="articles-heading"><h2>من داخل المساحة</h2><span>المحتوى المنشور</span></div>
               <div className="article-grid">
                 {loadingArticles ? <p className="muted">جارٍ تحميل المحتوى...</p> : articles.map(article => (
-                  <article className="article-card" key={article.id}>
-                    <span className="article-tag">مقال</span><h3>{article.title}</h3>
+                  <Link to={"/articles/" + article.slug} className="article-card article-card-link" key={article.id} aria-label={"قراءة المقال: " + article.title}>
+                    <span className="article-tag">مقال · اضغط للقراءة</span><h3>{article.title}</h3>
                     <p>{article.excerpt || "اكتشف هذا الموضوع من داخل المساحة."}</p>
-                  </article>
+                    <span className="article-read-more">قراءة المقال <ArrowUpLeft size={15} /></span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -567,5 +569,5 @@ function NotFound() {
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="*" element={<NotFound />} /></Routes>;
+  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="/articles/:slug" element={<ArticlePage />} /><Route path="*" element={<NotFound />} /></Routes>;
 }
