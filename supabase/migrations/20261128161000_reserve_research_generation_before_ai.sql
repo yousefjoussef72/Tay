@@ -51,6 +51,8 @@ revoke all on function public.reserve_learning_research_generation()
 grant execute on function public.reserve_learning_research_generation()
   to authenticated;
 
+drop function if exists public.save_learning_research_project(uuid, text, text, jsonb, text, jsonb);
+
 create or replace function public.save_learning_research_project(
   p_reservation_id uuid,
   p_subject_id uuid,
