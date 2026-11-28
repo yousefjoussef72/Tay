@@ -36,6 +36,7 @@ function Header() {
   const { copy } = useSiteCopy();
   const [menuOpen, setMenuOpen] = useState(false);
   const close = () => setMenuOpen(false);
+  if (copy.showHeader === false) return null;
   return (
     <header className="site-header">
       <div className="container nav-wrap">
@@ -47,13 +48,13 @@ function Header() {
           {menuOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
         <nav className={menuOpen ? "nav-links open" : "nav-links"}>
-          <a href="/#home" onClick={close}>{copy.navHome}</a>
-          <a href="/#about" onClick={close}>{copy.navAbout}</a>
-          <a href="/#features" onClick={close}>{copy.navFeatures}</a>
-          <a href="/#contact" onClick={close}>{copy.navContact}</a>
-          <Link to="/library" onClick={close}>{copy.navLibrary}</Link>
-          <Link to="/exams" onClick={close}>{copy.navExams}</Link>
-          <Link to="/account" onClick={close}>{copy.navAccount}</Link>
+          <a href={copy.navHomeUrl || "/#home"} onClick={close}>{copy.navHome}</a>
+          <a href={copy.navAboutUrl || "/#about"} onClick={close}>{copy.navAbout}</a>
+          <a href={copy.navFeaturesUrl || "/#features"} onClick={close}>{copy.navFeatures}</a>
+          <a href={copy.navContactUrl || "/#contact"} onClick={close}>{copy.navContact}</a>
+          <Link to={copy.navLibraryUrl || "/library"} onClick={close}>{copy.navLibrary}</Link>
+          <Link to={copy.navExamsUrl || "/exams"} onClick={close}>{copy.navExams}</Link>
+          <Link to={copy.navAccountUrl || "/account"} onClick={close}>{copy.navAccount}</Link>
         </nav>
         <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> {copy.navAdmin}</Link>
       </div>
@@ -194,9 +195,9 @@ function Home() {
             </div>
             {copy.featuresImageUrl && <img className="site-section-image features-image" src={copy.featuresImageUrl} alt="" />}
             <div className="feature-grid">
-              {features.map(({ icon: Icon, number, titleKey, bodyKey }) => (
+              {features.map(({ icon: Icon, number, titleKey, bodyKey, imageKey }) => (
                 <article className="feature-card" key={number}>
-                  <div className="feature-top"><span>{number}</span><Icon size={22} strokeWidth={1.6} /></div>
+                  <div className="feature-top"><span>{number}</span>{copy[imageKey] ? <img className="feature-custom-image" src={copy[imageKey]} alt="" /> : <Icon size={22} strokeWidth={1.6} />}</div>
                   <h3>{copy[titleKey]}</h3><p>{copy[bodyKey]}</p><div className="feature-rule" />
                 </article>
               ))}
@@ -248,13 +249,13 @@ function Home() {
           </div>
         </section>}
       </main>
-      <footer className="site-footer">
+      {copy.showFooter !== false && <footer className="site-footer">
         <div className="container footer-inner">
           <Link to="/" className="brand footer-brand">{copy.footerLogoUrl ? <img className="site-brand-image" src={copy.footerLogoUrl} alt={copy.brandName} /> : <span className="brand-mark"><span /></span>}<span className="brand-name">{copy.brandName}<small>{copy.brandTagline}</small></span></Link>
           <span>{copy.footerText}</span>
           <a href="#home" className="back-top">{copy.footerBackTop} <ArrowUpRight size={16} /></a>
         </div>
-      </footer>
+      </footer>}
     </>
   );
 }
@@ -453,13 +454,13 @@ function AccountPage() {
         setNotice({
           kind: "error",
           text: data?.message || (data?.error === "username_taken"
-            ? "اسم المستخدم مستخدم بالفعل."
-            : "اسم المستخدم أو كلمة المرور غير صحيحة. راجع البيانات وحاول مرة أخرى."),
+            ? copy.accountUsernameTaken
+            : copy.accountAuthError),
         });
         return;
       }
       if (!data?.access_token || !data?.refresh_token) {
-        setNotice({ kind: "success", text: "تم إنشاء الحساب. سجّل الدخول الآن باسم المستخدم وكلمة المرور." });
+        setNotice({ kind: "success", text: copy.accountSignupCreated });
         setMode("login");
         setPassword("");
         return;
@@ -469,7 +470,7 @@ function AccountPage() {
         refresh_token: data.refresh_token,
       });
       if (sessionError) {
-        setNotice({ kind: "error", text: "تم تنفيذ الطلب لكن تعذر بدء الجلسة. حاول تسجيل الدخول." });
+        setNotice({ kind: "error", text: copy.accountSessionStartError });
         return;
       }
       setSession(sessionData.session);
@@ -477,11 +478,11 @@ function AccountPage() {
       setPassword("");
       setNotice({
         kind: "success",
-        text: action === "signup" ? "تم إنشاء حسابك وتسجيل دخولك بنجاح." : "تم تسجيل الدخول بنجاح.",
+        text: action === "signup" ? copy.accountSignupSuccess : copy.accountLoginSuccess,
       });
     } catch (error) {
       console.error("Username authentication failed:", error);
-      setNotice({ kind: "error", text: "حدثت مشكلة اتصال. تحقق من الإنترنت وحاول مرة أخرى." });
+      setNotice({ kind: "error", text: copy.accountConnectionError });
     } finally {
       setBusy(false);
     }
@@ -512,10 +513,10 @@ function AccountPage() {
               <span className="admin-label">{copy.accountLoggedInLabel}</span>
               <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
               <p className="account-email" dir="ltr">@{profile?.username || session.user.user_metadata?.username || "user"}</p>
-              <div className="account-role">{profile?.role === "admin" ? "مدير الموقع" : "حساب طالب"}</div>
+              <div className="account-role">{profile?.role === "admin" ? copy.accountAdminRole : copy.accountStudentRole}</div>
               <div className="account-actions">
-                <Link to="/" className="button button-primary">العودة إلى الموقع <ArrowLeft size={17} /></Link>
-                <button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> تسجيل الخروج</button>
+                <Link to="/" className="button button-primary">{copy.accountReturnToSite} <ArrowLeft size={17} /></Link>
+                <button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> {copy.accountSignOut}</button>
               </div>
               {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
             </section>
@@ -531,8 +532,8 @@ function AccountPage() {
                     <input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder={copy.accountFullNamePlaceholder} />
                   </label>
                 )}
-                <label>اسم المستخدم
-                  <input
+                <label>{copy.accountUsernameLabel}
+                  <input>
                     type="text"
                     required
                     minLength={3}
@@ -545,7 +546,7 @@ function AccountPage() {
                     dir="ltr"
                   />
                 </label>
-                <label>كلمة المرور
+                <label>{copy.accountPasswordLabel}
                   <span className="password-field">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -563,11 +564,10 @@ function AccountPage() {
                 </label>
                 {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
                 <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? copy.accountCreateButton : copy.accountLoginButton}
+                  {busy ? copy.accountBusy : mode === "signup" ? copy.accountCreateButton : copy.accountLoginButton}
                   {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
                 </button>
               </form>
-              <p className="account-footnote">اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. في الحسابات السابقة، استُخدم الجزء السابق لعلامة @ من بريد التسجيل كاسم مستخدم بعد تحويله إلى أحرف صغيرة واستبدال الرموز غير المدعومة بـ _. احتفظ بكلمة المرور؛ لا يتوفر استرداد آلي لها في هذه النسخة.</p>
             </section>
           )}
           <Link to="/" className="account-home-link"><ArrowLeft size={15} /> {copy.accountBackHome}</Link>
