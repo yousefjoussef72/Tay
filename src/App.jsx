@@ -510,7 +510,7 @@ function AccountPage() {
               <span className="admin-label">{copy.accountLoggedInLabel}</span>
               <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
               <p className="account-email" dir="ltr">@{profile?.username || session.user.user_metadata?.username || "user"}</p>
-              <div className="account-role">{profile?.role === "admin" ? copy.accountAdminRole : copy.accountStudentRole}</div>
+              <div className="account-role">{profile?.role === "admin" ? "المدير الرئيسي" : profile?.role === "moderator" ? "مشرف Tay Space" : copy.accountStudentRole}</div>
               <div className="account-actions">
                 <Link to="/" className="button button-primary">{copy.accountReturnToSite} <ArrowLeft size={17} /></Link>
                 <button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> {copy.accountSignOut}</button>
