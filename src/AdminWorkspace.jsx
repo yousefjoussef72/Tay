@@ -124,9 +124,10 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     const [articleResult, resourceResult, subjectResult, trackResult, unitResult, lessonResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
-      supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
+      supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,track_id,subject_id,grade_level,curriculum_year,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,subject_id,unit_id,lesson_id,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("learning_subjects").select("id,name,sort_order").order("sort_order").order("name"),
+      supabase.from("learning_subjects").select("id,name,sort_order,track_id,curriculum_year,grade_level,subject_kind").order("curriculum_year").order("sort_order").order("name"),
+      supabase.from("learning_tracks").select("id,name,slug,sort_order").order("sort_order"),
       supabase.from("learning_units").select("id,subject_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("learning_lessons").select("id,unit_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,track_id,subject_id,grade_level,curriculum_year,is_published,created_at").order("created_at", { ascending: false }),
