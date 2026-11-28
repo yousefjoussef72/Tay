@@ -50,7 +50,7 @@ function PageHeader() {
       <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
-        <Link to="/research">المشاريع البحثية</Link>
+        <Link to="/research">مختبر التجارب</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
         <Link to="/account" className="learning-account-link">حساب الطالب</Link>
@@ -430,7 +430,7 @@ export default function LearningExperimentsPage() {
             </div>}
           </section>
           {selectedSubject !== "all" && <button type="button" className="learning-all-subjects" onClick={() => {setSelectedSubject("all");setSelectedUnit("all")}}>عرض جميع المواد المحددة</button>}
-          {selectedSubjectInfo && <section className="learning-research-cta"><div><span><Sparkles size={15}/> مساحة المشاريع البحثية</span><strong>هل لديك فكرة بحث في {selectedSubjectInfo.name}؟</strong><p>أنشئ بحثًا منظمًا بالذكاء الاصطناعي، واحتفظ به في حسابك، مع تجربة عملية اختيارية عندما تكون مناسبة للموضوع.</p></div><Link to={"/research/" + selectedSubjectInfo.slug}>ابدأ مشروعًا بحثيًا <ChevronLeft size={16}/></Link></section>}
+          {selectedSubjectInfo && <section className="learning-research-cta"><div><span><Sparkles size={15}/> مساحة مختبر التجارب</span><strong>هل لديك فكرة تجربة في {selectedSubjectInfo.name}؟</strong><p>حوّل فكرتك إلى محاكاة تفاعلية، حتى لو كانت خارج المنهج، واحفظ تجربتك في حسابك.</p></div><Link to={"/research/" + selectedSubjectInfo.slug}>ابدأ تجربة تفاعلية <ChevronLeft size={16}/></Link></section>}
         </>}
         {error && <div className="learning-error">{error}</div>}
         {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>
