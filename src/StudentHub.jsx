@@ -90,7 +90,12 @@ export function ExamsPage() {
   const [active, setActive] = useState(false);
   const [answers, setAnswers] = useState({});
   const [remaining, setRemaining] = useState(0);
+  const [expiresAt, setExpiresAt] = useState("");
+  const [serverClockOffset, setServerClockOffset] = useState(0);
+  const [attemptSessionId, setAttemptSessionId] = useState(null);
+  const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
@@ -134,42 +139,80 @@ export function ExamsPage() {
   }, [examId, copy.examUnavailable, copy.examQuestionsLoadError, copy.examListLoadError]);
 
   async function submitExam() {
-    if (!exam || submitting || result) return;
+    if (!exam || !attemptSessionId || submitting || result) return;
     setSubmitting(true);
-    const { data, error: submitError } = await supabase.rpc("submit_exam", {
-      p_exam_id: exam.id,
-      p_answers: answers,
-    });
-    setSubmitting(false);
-    if (submitError) {
-      setError(submitError.message === "authentication_required" ? copy.examAuthRequired : copy.examSubmitError);
+    setSubmissionError("");
+    try {
+      const { data, error: submitError } = await supabase.functions.invoke("submit-exam", {
+        body: { session_id: attemptSessionId, answers },
+      });
+      if (submitError || !data?.ok) {
+        const code = data?.error || "";
+        setSubmissionError(code === "exam_time_expired" ? copy.examTimeExpired : (data?.message || copy.examSubmitError));
+        setActive(false);
+        if (code === "exam_time_expired" || code === "exam_session_not_found" || code === "exam_session_already_submitted") {
+          setAttemptSessionId(null);
+          setExpiresAt("");
+        }
+        return;
+      }
+      setResult(data.result);
       setActive(false);
-      return;
+    } catch {
+      setSubmissionError(copy.examSubmitError);
+      setActive(false);
+    } finally {
+      setSubmitting(false);
     }
-    setResult(data);
-    setActive(false);
   }
 
   useEffect(() => {
-    if (!active || result || submitting) return;
-    const timer = window.setInterval(() => setRemaining(value => Math.max(0, value - 1)), 1000);
+    if (!active || !expiresAt || result || submitting) return;
+    const updateRemaining = () => {
+      const serverNow = Date.now() + serverClockOffset;
+      const next = Math.max(0, Math.ceil((Date.parse(expiresAt) - serverNow) / 1000));
+      setRemaining(next);
+    };
+    updateRemaining();
+    const timer = window.setInterval(updateRemaining, 1000);
     return () => window.clearInterval(timer);
-  }, [active, result, submitting]);
+  }, [active, expiresAt, serverClockOffset, result, submitting]);
 
   useEffect(() => {
-    if (active && remaining === 0 && !result && !submitting) submitExam();
-  }, [active, remaining, result, submitting]);
+    if (active && remaining === 0 && !result && !submitting && attemptSessionId) submitExam();
+  }, [active, remaining, result, submitting, attemptSessionId]);
 
   async function beginExam() {
     if (!user) {
       navigate("/account");
       return;
     }
-    setAnswers({});
-    setResult(null);
+    setStarting(true);
+    setSubmissionError("");
     setError("");
-    setRemaining((exam.duration_minutes || 30) * 60);
-    setActive(true);
+    setAttemptSessionId(null);
+    setExpiresAt("");
+    try {
+      const { data, error: startError } = await supabase.functions.invoke("start-exam", {
+        body: { exam_id: exam.id },
+      });
+      if (startError || !data?.ok || !data?.session_id || !data?.expires_at) {
+        setSubmissionError(data?.message || copy.examStartError);
+        return;
+      }
+      const offset = Date.parse(data.server_now || new Date().toISOString()) - Date.now();
+      setServerClockOffset(offset);
+      setAttemptSessionId(data.session_id);
+      setExpiresAt(data.expires_at);
+      setAnswers({});
+      setResult(null);
+      setRemaining(Math.max(0, Math.ceil((Date.parse(data.expires_at) - Date.parse(data.server_now || new Date().toISOString())) / 1000)));
+      setActive(true);
+    } catch {
+      setSubmissionError(copy.examStartError);
+    } finally {
+      setStarting(false);
+    }
   }
 
   const formatTime = seconds => String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
@@ -191,8 +234,8 @@ export function ExamsPage() {
         <h1>{exam.title}</h1>
         {exam.cover_image_url && <img className="public-exam-detail-cover" src={exam.cover_image_url} alt={exam.title} />}
         <p className="public-hub-lead">{exam.description || copy.examDetailFallback}</p>
-        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} {copy.examMinuteUnit}</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
-        {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
+        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} {copy.examMinuteUnit}</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p>{submissionError && <p className="hub-alert error">{submissionError}</p>}<button className="hub-primary" disabled={starting || submitting} onClick={attemptSessionId && submissionError ? submitExam : beginExam}>{starting ? copy.examStarting : submitting ? copy.examSubmitting : user ? (attemptSessionId && submissionError ? copy.examRetrySubmitButton : copy.examStartButton) : copy.examLoginButton}</button></section>}
+        {active && <section className="public-exam-paper">{submissionError && <p className="hub-alert error">{submissionError}</p>}<div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
             {q.image_url && <img className="public-question-image" src={q.image_url} alt={"صورة السؤال " + (index + 1)} />}
             {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
