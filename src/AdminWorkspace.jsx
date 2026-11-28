@@ -905,7 +905,10 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
               <label>ربط بالمادة
                 <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
                   <option value="">مورد عام في المكتبة</option>
-                  {curriculumSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                  {curriculumSubjects.map(subject => {
+                    const trackName=curriculumTracks.find(track=>track.id===subject.track_id)?.name || "مشتركة";
+                    return <option key={subject.id} value={subject.id}>{subject.name} · {trackName} · {subject.grade_level}</option>;
+                  })}
                 </select>
               </label>
               <label>ربط بالوحدة
