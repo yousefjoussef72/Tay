@@ -134,27 +134,6 @@ export default async function handler(req, res) {
     });
   }
 
-  const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await auth.client
-    .from("learning_research_projects")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", windowStart);
-
-  if (countError) {
-    return res.status(500).json({
-      ok: false,
-      error: "research_quota_check_failed",
-      message: "تعذر التحقق من عدد الأبحاث المحفوظة. حاول مرة أخرى.",
-    });
-  }
-  if ((count || 0) >= 5) {
-    return res.status(429).json({
-      ok: false,
-      error: "research_daily_limit",
-      message: "وصلت إلى الحد اليومي، وهو 5 أبحاث خلال 24 ساعة. يمكنك الرجوع إلى أبحاثك المحفوظة أو المحاولة لاحقًا.",
-    });
-  }
-
   const system = [
     "أنت باحث أكاديمي ومشرف مشاريع للمرحلة الثانوية في البكالوريا المصرية.",
     "أنشئ مسودة بحث تعليمية متكاملة، واضحة ومترابطة، تساعد الطالب على التعلم والتوثيق، وليست بديلًا عن مراجعة الطالب أو مصادره الأصلية.",
@@ -213,21 +192,26 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: savedProject, error: saveError } = await auth.client
-      .from("learning_research_projects")
-      .insert({
-        user_id: auth.user.id,
-        subject_id: subject.id,
-        topic,
-        title: research.title,
-        content_json: research,
-        simulator_type: research.simulator_type,
-        simulation_config: research.simulation_config,
-      })
-      .select("id,subject_id,topic,title,content_json,simulator_type,simulation_config,created_at")
-      .single();
+    const { data: savedProject, error: saveError } = await auth.client.rpc(
+      "save_learning_research_project",
+      {
+        p_subject_id: subject.id,
+        p_topic: topic,
+        p_title: research.title,
+        p_content_json: research,
+        p_simulator_type: research.simulator_type,
+        p_simulation_config: research.simulation_config,
+      }
+    );
 
     if (saveError || !savedProject) {
+      if (saveError?.message?.includes("research_daily_limit")) {
+        return res.status(429).json({
+          ok: false,
+          error: "research_daily_limit",
+          message: "وصلت إلى الحد اليومي، وهو 5 أبحاث خلال 24 ساعة. يمكنك الرجوع إلى أبحاثك المحفوظة أو المحاولة لاحقًا.",
+        });
+      }
       return res.status(500).json({
         ok: false,
         error: "research_save_failed",
