@@ -804,27 +804,6 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
             <div className="hub-form-grid">
-              <label>اربط المورد بمادة (اختياري)
-                <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value || null, unit_id: null, lesson_id: null })}>
-                  <option value="">مورد عام غير مرتبط بمادة</option>
-                  {curriculumSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
-                </select>
-              </label>
-              <label>الوحدة (اختياري)
-                <select value={resourceDraft.unit_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, unit_id: e.target.value || null, lesson_id: null })} disabled={!resourceDraft.subject_id}>
-                  <option value="">كل وحدات المادة</option>
-                  {curriculumUnits.filter(unit => unit.subject_id === resourceDraft.subject_id).map(unit => <option key={unit.id} value={unit.id}>{unit.title}</option>)}
-                </select>
-              </label>
-              <label>الدرس (اختياري)
-                <select value={resourceDraft.lesson_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, lesson_id: e.target.value || null })} disabled={!resourceDraft.unit_id}>
-                  <option value="">كل دروس الوحدة</option>
-                  {curriculumLessons.filter(lesson => lesson.unit_id === resourceDraft.unit_id).map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
-                </select>
-              </label>
-            </div>
-            <small className="hub-hint">عند ربط الملف بدرس، سيظهر للطلاب داخل صفحة الدرس نفسه، مع بقائه في المكتبة العامة إذا كان منشورًا.</small>
-            <div className="hub-form-grid">
               <label>ربط بالمادة
                 <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
                   <option value="">مورد عام في المكتبة</option>
