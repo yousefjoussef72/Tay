@@ -104,9 +104,9 @@ export default async function handler(req, res) {
   const lesson = cleanText(req.body?.lesson, 180);
   const title = cleanText(req.body?.title, 180);
   const userPrompt = cleanText(req.body?.prompt, 3500);
-  const simulatorType = cleanText(req.body?.simulator_type, 60);
+  const requestedSimulator = cleanText(req.body?.simulator_type, 60);
 
-  if (!subject || !userPrompt || userPrompt.length < 8 || !SIMULATORS[simulatorType]) {
+  if (!subject || !userPrompt || userPrompt.length < 8 || (!SIMULATORS[requestedSimulator] && requestedSimulator !== "auto")) {
     return res.status(400).json({
       ok: false,
       error: "invalid_experiment_request",
@@ -114,20 +114,23 @@ export default async function handler(req, res) {
     });
   }
 
-  const simulator = SIMULATORS[simulatorType];
+  const simulator = SIMULATORS[requestedSimulator] || null;
+  const simulatorList = Object.entries(SIMULATORS).map(([key, value]) => ({ type: key, label: value.label, config: value.config }));
   const system = [
     "أنت مصمم تجارب تعليمية علمية للمرحلة الثانوية.",
     "أنشئ تجربة تفاعلية باللغة العربية الفصحى الواضحة، مناسبة لمستوى الطالب المحدد.",
     "أخرج JSON صالحًا فقط دون Markdown أو أي نص خارجه.",
     "لا تنشئ أي JavaScript أو HTML أو CSS أو كود قابل للتنفيذ مطلقًا.",
     "لا تقترح تشغيل كود أو تحميله. المحاكاة تُنفذ في الموقع بواسطة محرك ثابت وآمن.",
-    "يجب أن تستخدم نموذج المحاكاة المحدد فقط ولا تغيّره.",
+    requestedSimulator === "auto"
+      ? "اختر بنفسك أنسب نموذج محاكاة من القائمة المعتمدة، وأعد قيمته في simulator_type."
+      : "يجب أن تستخدم نموذج المحاكاة المحدد فقط ولا تغيّره.",
     "استخدم حقائق وقوانين علمية دقيقة، ولا تخترع تفاصيل من المنهج الرسمي أو أرقام صفحات أو نواتج تعلم غير مؤكدة.",
     "اجعل الأهداف والخطوات والملاحظات والأسئلة مترابطة مع النموذج العلمي المختار.",
     "أضف 3 إلى 5 أسئلة تفكير تساعد الطالب على تفسير ما يلاحظه، ولا تضع الإجابات ضمن الأسئلة.",
     "أعد كائنًا بالبنية: {title, description, experience_type, simulator_type, simulation_config, content:{intro,objectives:[],steps:[],observations:[],formulas:[],reflection_questions:[]}}.",
-    "مفاتيح إعدادات المحاكاة المسموح بها فقط هي: " + Object.keys(simulator.config).join(", ") + ".",
-    "التزم بحدود القيم التالية حرفيًا: " + JSON.stringify(simulator.config) + ".",
+    "النماذج المعتمدة وإعدادات كل نموذج وحدودها: " + JSON.stringify(simulatorList) + ".",
+    "استخدم مفاتيح النموذج الذي اخترته فقط، والتزم بحدود قيمه حرفيًا.",
     "لا تضع أي مفاتيح إضافية أو إعدادات غير معروفة في simulation_config.",
     "يجب أن يكون experience_type إما simulation أو virtual_lab.",
   ].join("\n");
@@ -140,7 +143,7 @@ export default async function handler(req, res) {
     unit ? "الوحدة: " + unit : "",
     lesson ? "الدرس المرتبط: " + lesson : "",
     title ? "العنوان المقترح: " + title : "",
-    "نموذج المحاكاة الإلزامي: " + simulator.label + " (" + simulatorType + ")",
+    "نموذج المحاكاة المطلوب: " + (simulator?.label ? simulator.label + " (" + requestedSimulator + ")" : "اختَر النموذج الأنسب من قائمة النماذج المعتمدة") ,
     "طلب المعلم: " + userPrompt,
     "اكتب تجربة عملية يمكن للطالب تنفيذها على المحاكاة داخل الصفحة، مع خطوات واضحة وقوانين وملاحظات وأسئلة تفكير.",
     "أعد JSON فقط.",
@@ -148,7 +151,7 @@ export default async function handler(req, res) {
 
   try {
     const result = await generateJson(req, { system, user, maxTokens: 5000 });
-    const experiment = normalizeExperiment(result.data?.experiment || result.data, simulatorType);
+    const experiment = normalizeExperiment(result.data?.experiment || result.data, requestedSimulator);
     if (!experiment || !experiment.title || !experiment.content.intro || experiment.content.steps.length < 2) {
       return res.status(502).json({
         ok: false,
