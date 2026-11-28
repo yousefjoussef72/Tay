@@ -23,13 +23,16 @@ function normalizeQuestion(item, index) {
     if (!options.includes(correctAnswer)) return null;
   }
 
+  const gradingRubric = questionType === "essay" ? text(item.grading_rubric, 4000) : "";
+  if (questionType === "essay" && !gradingRubric) return null;
+
   return {
     prompt,
     question_type: questionType,
     options,
     correct_answer: correctAnswer,
     grading_mode: questionType === "essay" ? "ai" : "auto",
-    grading_rubric: questionType === "essay" ? text(item.grading_rubric, 4000) : "",
+    grading_rubric: gradingRubric,
     points,
     sort_order: index,
   };
