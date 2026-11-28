@@ -522,6 +522,7 @@ export default function AdminWorkspace({ session }) {
             <div className="hub-panel-heading"><h2>إدارة الامتحانات</h2><button className="hub-small-add" onClick={() => { setExamDraft(EMPTY_EXAM); setSelectedExam(null); setQuestions([]); setEditingExam(true); setQuestionDraft(EMPTY_QUESTION); }}><Plus size={15} />امتحان جديد</button></div>
             {exams.length === 0 ? <div className="hub-empty">لم تنشئ امتحانات بعد.</div> : exams.map(exam => (
               <div className={"hub-exam-row " + (selectedExam?.id === exam.id ? "selected" : "")} key={exam.id}>
+                {exam.cover_image_url && <img className="hub-exam-list-cover" src={exam.cover_image_url} alt="" />}
                 <button className="hub-exam-select" onClick={() => openExam(exam)}><strong>{exam.title}</strong><small>{exam.duration_minutes} دقيقة · {attempts.filter(a => a.exam_id === exam.id).length} محاولة · {exam.is_published ? "منشور" : "مسودة"}</small></button>
                 <div className="hub-row-actions"><button onClick={() => toggleExam(exam)} title={exam.is_published ? "إيقاف النشر" : "نشر"}>{exam.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeExam(exam)} title="حذف"><Trash2 size={16} /></button></div>
               </div>
@@ -535,14 +536,19 @@ export default function AdminWorkspace({ session }) {
                 <label>اسم الامتحان<input required value={examDraft.title} onChange={e => setExamDraft({ ...examDraft, title: e.target.value })} placeholder="امتحان الوحدة الأولى" /></label>
                 <label>تعليمات أو وصف<textarea rows="3" value={examDraft.description} onChange={e => setExamDraft({ ...examDraft, description: e.target.value })} placeholder="اكتب تعليمات الامتحان..." /></label>
                 <label>مدة الامتحان بالدقائق<input type="number" min="1" max="300" required value={examDraft.duration_minutes} onChange={e => setExamDraft({ ...examDraft, duration_minutes: e.target.value })} /></label>
+                {examDraft.cover_image_url && !examCoverFile && <div className="hub-image-preview"><img src={examDraft.cover_image_url} alt="غلاف الامتحان" /><button type="button" className="hub-secondary compact" onClick={() => setExamDraft({ ...examDraft, cover_image_url: "" })}>إزالة الغلاف</button></div>}
+                <FilePicker file={examCoverFile} onChange={setExamCoverFile} accept="image/*" label="إضافة صورة غلاف للامتحان" />
                 <button className="hub-primary" disabled={busy}><Save size={16} />حفظ بيانات الامتحان</button>
               </form>
             ) : selectedExam && (
               <>
+                {selectedExam.cover_image_url && <img className="hub-exam-cover-preview" src={selectedExam.cover_image_url} alt={selectedExam.title} />}
                 <div className="hub-panel-heading"><div><h2>{selectedExam.title}</h2><small>{questions.length} سؤال · {selectedExam.duration_minutes} دقيقة</small></div><button className="hub-secondary compact" onClick={editExamDetails}><Pencil size={15} /> تعديل</button></div>
                 <form className="hub-question-form" onSubmit={saveQuestion}>
                   <h3>{editingQuestionId ? "تعديل السؤال" : "إضافة سؤال"}</h3>
                   <label>نص السؤال<textarea rows="3" required value={questionDraft.prompt} onChange={e => setQuestionDraft({ ...questionDraft, prompt: e.target.value })} placeholder="اكتب السؤال بوضوح..." /></label>
+                  {questionDraft.image_url && !questionImageFile && <div className="hub-image-preview"><img src={questionDraft.image_url} alt="صورة السؤال" /><button type="button" className="hub-secondary compact" onClick={() => setQuestionDraft({ ...questionDraft, image_url: "" })}>إزالة الصورة</button></div>}
+                  <FilePicker file={questionImageFile} onChange={setQuestionImageFile} accept="image/*" label="إضافة صورة للسؤال (اختياري)" />
                   <div className="hub-form-grid">
                     <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option></select></label>
                     <label>الدرجة<input type="number" min="1" max="100" value={questionDraft.points} onChange={e => setQuestionDraft({ ...questionDraft, points: e.target.value })} /></label>
@@ -553,7 +559,7 @@ export default function AdminWorkspace({ session }) {
                   <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Plus size={16} />{editingQuestionId ? "حفظ التعديل" : "إضافة السؤال"}</button>{editingQuestionId && <button type="button" className="hub-secondary" onClick={() => { setEditingQuestionId(null); setQuestionDraft(EMPTY_QUESTION); setQuestionImageFile(null); }}>إلغاء</button>}</div>
                 </form>
                 <div className="hub-question-list"><h3><ListChecks size={17} /> أسئلة الامتحان</h3>
-                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}><div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
+                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
                 </div>
                 <div className="hub-attempts"><h3>نتائج الطلاب ({selectedAttempts.length})</h3>{selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div key={attempt.id}><span>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</span><strong>{attempt.score} / {attempt.max_score}</strong></div>)}</div>
                 <div className="hub-publish-note"><CheckCircle2 size={16} /> بعد الانتهاء من الأسئلة، استخدم زر النشر بجوار اسم الامتحان ليظهر للطلاب.</div>
