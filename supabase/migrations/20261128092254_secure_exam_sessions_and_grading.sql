@@ -10,8 +10,8 @@ create table if not exists public.exam_sessions (
   constraint exam_sessions_valid_window check (expires_at > started_at)
 );
 
-create index if not exists exam_sessions_user_exam_started_idx
-  on public.exam_sessions (user_id, exam_id, started_at desc);
+create index if not exists exam_sessions_exam_user_started_idx
+  on public.exam_sessions (exam_id, user_id, started_at desc);
 
 alter table public.exam_sessions enable row level security;
 revoke all on table public.exam_sessions from public, anon, authenticated;
