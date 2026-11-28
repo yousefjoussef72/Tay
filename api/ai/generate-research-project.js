@@ -134,6 +134,25 @@ export default async function handler(req, res) {
     });
   }
 
+  // Reserve the student's rolling 24-hour generation quota before spending AI tokens.
+  const { data: reservation, error: reservationError } = await auth.client.rpc(
+    "reserve_learning_research_generation"
+  );
+  if (reservationError || !reservation?.id) {
+    if (reservationError?.message?.includes("research_daily_limit")) {
+      return res.status(429).json({
+        ok: false,
+        error: "research_daily_limit",
+        message: "وصلت إلى الحد اليومي، وهو 5 محاولات لإنشاء بحث خلال 24 ساعة.",
+      });
+    }
+    return res.status(500).json({
+      ok: false,
+      error: "research_quota_reservation_failed",
+      message: "تعذر حجز محاولة إنشاء البحث. حاول مرة أخرى.",
+    });
+  }
+
   const system = [
     "أنت باحث أكاديمي ومشرف مشاريع للمرحلة الثانوية في البكالوريا المصرية.",
     "أنشئ مسودة بحث تعليمية متكاملة، واضحة ومترابطة، تساعد الطالب على التعلم والتوثيق، وليست بديلًا عن مراجعة الطالب أو مصادره الأصلية.",
@@ -195,6 +214,7 @@ export default async function handler(req, res) {
     const { data: savedProject, error: saveError } = await auth.client.rpc(
       "save_learning_research_project",
       {
+        p_reservation_id: reservation.id,
         p_subject_id: subject.id,
         p_topic: topic,
         p_title: research.title,
@@ -209,7 +229,7 @@ export default async function handler(req, res) {
         return res.status(429).json({
           ok: false,
           error: "research_daily_limit",
-          message: "وصلت إلى الحد اليومي، وهو 5 أبحاث خلال 24 ساعة. يمكنك الرجوع إلى أبحاثك المحفوظة أو المحاولة لاحقًا.",
+          message: "وصلت إلى الحد اليومي، وهو 5 محاولات لإنشاء بحث خلال 24 ساعة.",
         });
       }
       return res.status(500).json({
