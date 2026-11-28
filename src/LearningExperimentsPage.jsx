@@ -334,7 +334,10 @@ export default function LearningExperimentsPage() {
             </div>
             <div className="learning-track-grid">
               {data.tracks.map(track => {
-                const trackSubjects = visibleSubjects.filter(subject => subject.track_id === track.id);
+                const trackSubjects = data.subjects.filter(subject =>
+                  subject.track_id === track.id &&
+                  (selectedGrade === "all" || String(subject.curriculum_year || 2) === selectedGrade)
+                );
                 const active = selectedTrack === track.id;
                 return (
                   <button type="button" key={track.id} className={"learning-track-card" + (active ? " active" : "")}
