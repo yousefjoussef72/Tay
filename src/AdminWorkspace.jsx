@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
+import SiteContentEditor from "./SiteContentEditor.jsx";
 
 const BUCKET = "tay-assets";
 const TABS = [
@@ -14,12 +15,13 @@ const TABS = [
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
   { id: "exams", label: "الامتحانات", icon: ClipboardList },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
+  { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
 
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
 const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", external_url: "", file_path: "", file_name: "", is_published: false };
-const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30 };
-const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1 };
+const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
+const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1, image_url: "" };
 
 function slugFor(title) {
   const normalized = title.toLowerCase().trim()
@@ -73,9 +75,11 @@ export default function AdminWorkspace({ session }) {
   const [resourceDraft, setResourceDraft] = useState(EMPTY_RESOURCE);
   const [resourceFile, setResourceFile] = useState(null);
   const [examDraft, setExamDraft] = useState(EMPTY_EXAM);
+  const [examCoverFile, setExamCoverFile] = useState(null);
   const [selectedExam, setSelectedExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [questionDraft, setQuestionDraft] = useState(EMPTY_QUESTION);
+  const [questionImageFile, setQuestionImageFile] = useState(null);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editingExam, setEditingExam] = useState(false);
 
@@ -84,7 +88,7 @@ export default function AdminWorkspace({ session }) {
     const [articleResult, resourceResult, examResult, messageResult, attemptResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("exams").select("id,title,description,duration_minutes,is_published,created_at").order("created_at", { ascending: false }),
+      supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,score,max_score,submitted_at").order("submitted_at", { ascending: false }).limit(200),
     ]);
@@ -244,7 +248,7 @@ export default function AdminWorkspace({ session }) {
 
   async function loadQuestions(examId) {
     const [questionResult, answerResult] = await Promise.all([
-      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order").eq("exam_id", examId).order("sort_order").order("created_at"),
+      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url").eq("exam_id", examId).order("sort_order").order("created_at"),
       supabase.from("exam_answer_keys").select("question_id,correct_answer"),
     ]);
     if (questionResult.error || answerResult.error) {
@@ -258,29 +262,45 @@ export default function AdminWorkspace({ session }) {
   async function saveExam(event) {
     event.preventDefault();
     if (!examDraft.title.trim()) return setAlert({ kind: "error", text: "اكتب اسم الامتحان." });
-    setBusy(true); setAlert(null);
-    const values = {
-      title: examDraft.title.trim(),
-      description: examDraft.description.trim(),
-      duration_minutes: Number(examDraft.duration_minutes) || 30,
-      created_by: session.user.id,
-    };
-    const result = examDraft.id
-      ? await supabase.from("exams").update(values).eq("id", examDraft.id).select().single()
-      : await supabase.from("exams").insert(values).select().single();
-    setBusy(false);
-    if (result.error) return setAlert({ kind: "error", text: result.error.message || "تعذر حفظ الامتحان." });
-    setSelectedExam(result.data);
-    setEditingExam(false);
-    setExamDraft({ ...EMPTY_EXAM });
-    await loadQuestions(result.data.id);
-    await loadAll();
-    setAlert({ kind: "success", text: examDraft.id ? "تم تحديث بيانات الامتحان." : "تم إنشاء الامتحان. أضف أسئلته الآن." });
+    setBusy(true);
+    setAlert(null);
+    let uploadedPath = null;
+    try {
+      let coverImageUrl = examDraft.cover_image_url || null;
+      if (examCoverFile) {
+        uploadedPath = await uploadAsset(examCoverFile, "exam-covers");
+        coverImageUrl = publicFileUrl(uploadedPath);
+      }
+      const values = {
+        title: examDraft.title.trim(),
+        description: examDraft.description.trim(),
+        duration_minutes: Number(examDraft.duration_minutes) || 30,
+        cover_image_url: coverImageUrl,
+        created_by: examDraft.id ? undefined : session.user.id,
+      };
+      const result = examDraft.id
+        ? await supabase.from("exams").update(values).eq("id", examDraft.id).select().single()
+        : await supabase.from("exams").insert(values).select().single();
+      if (result.error) throw result.error;
+      setSelectedExam(result.data);
+      setEditingExam(false);
+      setExamDraft({ ...EMPTY_EXAM });
+      setExamCoverFile(null);
+      await loadQuestions(result.data.id);
+      await loadAll();
+      setAlert({ kind: "success", text: examDraft.id ? "تم تحديث بيانات الامتحان." : "تم إنشاء الامتحان. أضف أسئلته الآن." });
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ الامتحان." });
+    } finally {
+      setBusy(false);
+    }
   }
 
   function openExam(exam) {
     setSelectedExam(exam);
-    setExamDraft({ id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes });
+    setExamDraft({ id: exam.id, title: exam.title, description: exam.description || "", duration_minutes: exam.duration_minutes, cover_image_url: exam.cover_image_url || "" });
+    setExamCoverFile(null);
     setEditingExam(false);
     setQuestionDraft(EMPTY_QUESTION);
     setEditingQuestionId(null);
@@ -290,7 +310,8 @@ export default function AdminWorkspace({ session }) {
 
   function editExamDetails() {
     if (!selectedExam) return;
-    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes });
+    setExamDraft({ id: selectedExam.id, title: selectedExam.title, description: selectedExam.description || "", duration_minutes: selectedExam.duration_minutes, cover_image_url: selectedExam.cover_image_url || "" });
+    setExamCoverFile(null);
     setEditingExam(true);
   }
 
@@ -308,43 +329,57 @@ export default function AdminWorkspace({ session }) {
     } else if (questionDraft.question_type === "true_false") {
       options = ["صحيح", "خطأ"];
     }
-    setBusy(true); setAlert(null);
-    const values = {
-      exam_id: selectedExam.id,
-      prompt: questionDraft.prompt.trim(),
-      question_type: questionDraft.question_type,
-      options,
-      points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
-      sort_order: editingQuestionId ? (questions.find(q => q.id === editingQuestionId)?.sort_order ?? questions.length) : questions.length,
-    };
-    let questionId = editingQuestionId;
-    let questionError = null;
-    if (editingQuestionId) {
-      const result = await supabase.from("exam_questions").update(values).eq("id", editingQuestionId);
-      questionError = result.error;
-    } else {
-      const result = await supabase.from("exam_questions").insert(values).select("id").single();
-      questionError = result.error;
-      questionId = result.data?.id;
+
+    setBusy(true);
+    setAlert(null);
+    let uploadedPath = null;
+    try {
+      let imageUrl = questionDraft.image_url || null;
+      if (questionImageFile) {
+        uploadedPath = await uploadAsset(questionImageFile, "exam-questions");
+        imageUrl = publicFileUrl(uploadedPath);
+      }
+      const values = {
+        exam_id: selectedExam.id,
+        prompt: questionDraft.prompt.trim(),
+        question_type: questionDraft.question_type,
+        options,
+        points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
+        image_url: imageUrl,
+        sort_order: editingQuestionId ? (questions.find(q => q.id === editingQuestionId)?.sort_order ?? questions.length) : questions.length,
+      };
+      let questionId = editingQuestionId;
+      let questionError = null;
+      if (editingQuestionId) {
+        const result = await supabase.from("exam_questions").update(values).eq("id", editingQuestionId);
+        questionError = result.error;
+      } else {
+        const result = await supabase.from("exam_questions").insert(values).select("id").single();
+        questionError = result.error;
+        questionId = result.data?.id;
+      }
+      if (!questionError && questionId) {
+        const keyResult = await supabase.from("exam_answer_keys").upsert({
+          question_id: questionId,
+          correct_answer: questionDraft.correct_answer.trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "question_id" });
+        questionError = keyResult.error;
+      }
+      if (questionError) throw questionError;
+
+      setQuestionDraft(EMPTY_QUESTION);
+      setQuestionImageFile(null);
+      setEditingQuestionId(null);
+      await loadQuestions(selectedExam.id);
+      await loadAll();
+      setAlert({ kind: "success", text: editingQuestionId ? "تم تعديل السؤال." : "تمت إضافة السؤال." });
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ السؤال." });
+    } finally {
+      setBusy(false);
     }
-    if (!questionError && questionId) {
-      const keyResult = await supabase.from("exam_answer_keys").upsert({
-        question_id: questionId,
-        correct_answer: questionDraft.correct_answer.trim(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "question_id" });
-      questionError = keyResult.error;
-    }
-    setBusy(false);
-    if (questionError) {
-      setAlert({ kind: "error", text: questionError.message || "تعذر حفظ السؤال." });
-      return;
-    }
-    setQuestionDraft(EMPTY_QUESTION);
-    setEditingQuestionId(null);
-    await loadQuestions(selectedExam.id);
-    await loadAll();
-    setAlert({ kind: "success", text: editingQuestionId ? "تم تعديل السؤال." : "تمت إضافة السؤال." });
   }
 
   function editQuestion(question) {
@@ -356,7 +391,9 @@ export default function AdminWorkspace({ session }) {
       options_text: (question.options || []).join("\n"),
       correct_answer: question.correct_answer,
       points: question.points,
+      image_url: question.image_url || "",
     });
+    setQuestionImageFile(null);
     setAlert(null);
   }
 
@@ -485,6 +522,7 @@ export default function AdminWorkspace({ session }) {
             <div className="hub-panel-heading"><h2>إدارة الامتحانات</h2><button className="hub-small-add" onClick={() => { setExamDraft(EMPTY_EXAM); setSelectedExam(null); setQuestions([]); setEditingExam(true); setQuestionDraft(EMPTY_QUESTION); }}><Plus size={15} />امتحان جديد</button></div>
             {exams.length === 0 ? <div className="hub-empty">لم تنشئ امتحانات بعد.</div> : exams.map(exam => (
               <div className={"hub-exam-row " + (selectedExam?.id === exam.id ? "selected" : "")} key={exam.id}>
+                {exam.cover_image_url && <img className="hub-exam-list-cover" src={exam.cover_image_url} alt="" />}
                 <button className="hub-exam-select" onClick={() => openExam(exam)}><strong>{exam.title}</strong><small>{exam.duration_minutes} دقيقة · {attempts.filter(a => a.exam_id === exam.id).length} محاولة · {exam.is_published ? "منشور" : "مسودة"}</small></button>
                 <div className="hub-row-actions"><button onClick={() => toggleExam(exam)} title={exam.is_published ? "إيقاف النشر" : "نشر"}>{exam.is_published ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => removeExam(exam)} title="حذف"><Trash2 size={16} /></button></div>
               </div>
@@ -498,14 +536,19 @@ export default function AdminWorkspace({ session }) {
                 <label>اسم الامتحان<input required value={examDraft.title} onChange={e => setExamDraft({ ...examDraft, title: e.target.value })} placeholder="امتحان الوحدة الأولى" /></label>
                 <label>تعليمات أو وصف<textarea rows="3" value={examDraft.description} onChange={e => setExamDraft({ ...examDraft, description: e.target.value })} placeholder="اكتب تعليمات الامتحان..." /></label>
                 <label>مدة الامتحان بالدقائق<input type="number" min="1" max="300" required value={examDraft.duration_minutes} onChange={e => setExamDraft({ ...examDraft, duration_minutes: e.target.value })} /></label>
+                {examDraft.cover_image_url && !examCoverFile && <div className="hub-image-preview"><img src={examDraft.cover_image_url} alt="غلاف الامتحان" /><button type="button" className="hub-secondary compact" onClick={() => setExamDraft({ ...examDraft, cover_image_url: "" })}>إزالة الغلاف</button></div>}
+                <FilePicker file={examCoverFile} onChange={setExamCoverFile} accept="image/*" label="إضافة صورة غلاف للامتحان" />
                 <button className="hub-primary" disabled={busy}><Save size={16} />حفظ بيانات الامتحان</button>
               </form>
             ) : selectedExam && (
               <>
+                {selectedExam.cover_image_url && <img className="hub-exam-cover-preview" src={selectedExam.cover_image_url} alt={selectedExam.title} />}
                 <div className="hub-panel-heading"><div><h2>{selectedExam.title}</h2><small>{questions.length} سؤال · {selectedExam.duration_minutes} دقيقة</small></div><button className="hub-secondary compact" onClick={editExamDetails}><Pencil size={15} /> تعديل</button></div>
                 <form className="hub-question-form" onSubmit={saveQuestion}>
                   <h3>{editingQuestionId ? "تعديل السؤال" : "إضافة سؤال"}</h3>
                   <label>نص السؤال<textarea rows="3" required value={questionDraft.prompt} onChange={e => setQuestionDraft({ ...questionDraft, prompt: e.target.value })} placeholder="اكتب السؤال بوضوح..." /></label>
+                  {questionDraft.image_url && !questionImageFile && <div className="hub-image-preview"><img src={questionDraft.image_url} alt="صورة السؤال" /><button type="button" className="hub-secondary compact" onClick={() => setQuestionDraft({ ...questionDraft, image_url: "" })}>إزالة الصورة</button></div>}
+                  <FilePicker file={questionImageFile} onChange={setQuestionImageFile} accept="image/*" label="إضافة صورة للسؤال (اختياري)" />
                   <div className="hub-form-grid">
                     <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option></select></label>
                     <label>الدرجة<input type="number" min="1" max="100" value={questionDraft.points} onChange={e => setQuestionDraft({ ...questionDraft, points: e.target.value })} /></label>
@@ -513,10 +556,10 @@ export default function AdminWorkspace({ session }) {
                   {questionDraft.question_type === "mcq" && <label>الاختيارات (كل اختيار في سطر)<textarea rows="4" required value={questionDraft.options_text} onChange={e => setQuestionDraft({ ...questionDraft, options_text: e.target.value })} placeholder={"الاختيار الأول\nالاختيار الثاني\nالاختيار الثالث\nالاختيار الرابع"} /></label>}
                   {questionDraft.question_type === "true_false" && <label>الإجابة الصحيحة<select value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })}><option value="">اختر الإجابة</option><option value="صحيح">صحيح</option><option value="خطأ">خطأ</option></select></label>}
                   {questionDraft.question_type !== "true_false" && <label>الإجابة الصحيحة<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder={questionDraft.question_type === "mcq" ? "اكتب نص الاختيار الصحيح كما هو" : "الإجابة التي سيصحح النظام بناءً عليها"} /></label>}
-                  <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Plus size={16} />{editingQuestionId ? "حفظ التعديل" : "إضافة السؤال"}</button>{editingQuestionId && <button type="button" className="hub-secondary" onClick={() => { setEditingQuestionId(null); setQuestionDraft(EMPTY_QUESTION); }}>إلغاء</button>}</div>
+                  <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Plus size={16} />{editingQuestionId ? "حفظ التعديل" : "إضافة السؤال"}</button>{editingQuestionId && <button type="button" className="hub-secondary" onClick={() => { setEditingQuestionId(null); setQuestionDraft(EMPTY_QUESTION); setQuestionImageFile(null); }}>إلغاء</button>}</div>
                 </form>
                 <div className="hub-question-list"><h3><ListChecks size={17} /> أسئلة الامتحان</h3>
-                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}><div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
+                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
                 </div>
                 <div className="hub-attempts"><h3>نتائج الطلاب ({selectedAttempts.length})</h3>{selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div key={attempt.id}><span>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</span><strong>{attempt.score} / {attempt.max_score}</strong></div>)}</div>
                 <div className="hub-publish-note"><CheckCircle2 size={16} /> بعد الانتهاء من الأسئلة، استخدم زر النشر بجوار اسم الامتحان ليظهر للطلاب.</div>
@@ -525,6 +568,8 @@ export default function AdminWorkspace({ session }) {
           </section>
         </div>
       )}
+
+      {!loading && tab === "site" && <SiteContentEditor />}
 
       {!loading && tab === "messages" && (
         <section className="hub-panel">
