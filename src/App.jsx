@@ -62,6 +62,13 @@ function Header() {
   );
 }
 
+
+function safeSiteHref(value, fallback = "#") {
+  const href = String(value || "").trim();
+  if (!href || href.startsWith("//")) return fallback;
+  return /^(https?:\\/\\/|mailto:|tel:|\\/|#)/i.test(href) ? href : fallback;
+}
+
 function Home() {
   const { copy } = useSiteCopy();
   const [articles, setArticles] = useState([]);
@@ -123,7 +130,7 @@ function Home() {
             {block.eyebrow && <span>{block.eyebrow}</span>}
             {block.title && <h2>{block.title}</h2>}
             {block.body && <p>{block.body}</p>}
-            {block.buttonText && block.buttonUrl && <a className="button button-primary" href={block.buttonUrl}>{block.buttonText} <ArrowUpLeft size={16} /></a>}
+            {block.buttonText && block.buttonUrl && <a className="button button-primary" href={safeSiteHref(block.buttonUrl)}>{block.buttonText} <ArrowUpLeft size={16} /></a>}
           </div>
         </div>
       </section>
@@ -144,8 +151,8 @@ function Home() {
               <h1>{copy.heroTitleLine1}<br /><em>{copy.heroTitleLine2}</em></h1>
               <p className="hero-lead">{copy.heroDescription}</p>
               <div className="hero-actions">
-                <a className="button button-primary" href={copy.heroPrimaryUrl || "#about"}>{copy.heroPrimaryButton} <ArrowUpLeft size={18} /></a>
-                <a className="button button-ghost" href={copy.heroSecondaryUrl || "#contact"}>{copy.heroSecondaryButton} <ArrowLeft size={17} /></a>
+                <a className="button button-primary" href={safeSiteHref(copy.heroPrimaryUrl, "#about")}>{copy.heroPrimaryButton} <ArrowUpLeft size={18} /></a>
+                <a className="button button-ghost" href={safeSiteHref(copy.heroSecondaryUrl, "#contact")}>{copy.heroSecondaryButton} <ArrowLeft size={17} /></a>
               </div>
               <div className="hero-note"><span className="note-line" /> {copy.heroNote}</div>
             </div>
@@ -179,7 +186,7 @@ function Home() {
               <h2>{copy.aboutTitleLine1}<br /><span>{copy.aboutTitleLine2}</span></h2>
               <div className="intro-bottom">
                 <p>{copy.aboutDescription}</p>
-                <a className="text-link" href={copy.aboutLinkUrl || "#features"}>{copy.aboutLink} <ArrowUpLeft size={18} /></a>
+                <a className="text-link" href={safeSiteHref(copy.aboutLinkUrl, "#features")}>{copy.aboutLink} <ArrowUpLeft size={18} /></a>
               </div>
             </div>
             {copy.aboutImageUrl && <img className="site-section-image about-image" src={copy.aboutImageUrl} alt="" />}
@@ -207,13 +214,13 @@ function Home() {
         {renderCustomBlocks("afterFeatures")}
 
         {renderCustomBlocks("beforeArticles")}
-        {copy.showArticles !== false && (articles.length > 0 || loadingArticles) && (
+        {copy.showArticles !== false && (
           <section className="articles-section section-pad">
             <div className="container">
               <div className="section-kicker">{copy.articlesKicker}</div>
               <div className="articles-heading"><h2>{copy.articlesTitle}</h2><span>{copy.articlesSubtitle}</span></div>
               <div className="article-grid">
-                {loadingArticles ? <p className="muted">جارٍ تحميل المحتوى...</p> : articles.map(article => (
+                {loadingArticles ? <p className="muted">جارٍ تحميل المحتوى...</p> : articles.length === 0 ? <p className="muted">{copy.articlesEmpty}</p> : articles.map(article => (
                   <Link to={"/articles/" + article.slug} className="article-card article-card-link" key={article.id} aria-label={"قراءة المقال: " + article.title}>
                     <span className="article-tag">{copy.articleTag}</span><h3>{article.title}</h3>
                     <p>{article.excerpt || copy.articleFallback}</p>
@@ -238,7 +245,7 @@ function Home() {
             <form className="contact-form" onSubmit={submitMessage}>
               <div className="form-row">
                 <label>{copy.contactNameLabel}<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={copy.contactNamePlaceholder} /></label>
-                <label>{copy.contactEmailLabel}<input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@example.com" dir="ltr" /></label>
+                <label>{copy.contactEmailLabel}<input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={copy.contactEmailPlaceholder} dir="ltr" /></label>
               </div>
               <label>{copy.contactSubjectLabel} <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder={copy.contactSubjectPlaceholder} /></label>
               <label>{copy.contactMessageLabel}<textarea required rows="4" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder={copy.contactMessagePlaceholder} /></label>
