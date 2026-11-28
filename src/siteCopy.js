@@ -80,7 +80,7 @@ export const SITE_COPY_GROUPS = [
       { key: "articlesKicker", label: "العنوان الصغير", value: "03 / آخر الإضافات" },
       { key: "articlesTitle", label: "عنوان القسم", value: "من داخل المساحة" },
       { key: "articlesSubtitle", label: "النص الجانبي", value: "المحتوى المنشور" },
-      { key: "articlesEmpty", label: "رسالة عدم وجود مقالات", value: "لا توجد مقالات منشورة بعد." },
+      
       { key: "articleTag", label: "وسم المقال", value: "مقال · اضغط للقراءة" },
       { key: "articleFallback", label: "الوصف الافتراضي للمقال", value: "اكتشف هذا الموضوع من داخل المساحة." },
       { key: "articleReadMore", label: "رابط قراءة المقال", value: "قراءة المقال" },
@@ -144,7 +144,7 @@ export const SITE_COPY_GROUPS = [
       { key: "accountSessionStartError", label: "تعذر بدء الجلسة", value: "تم تنفيذ الطلب لكن تعذر بدء الجلسة. حاول تسجيل الدخول." },
       { key: "accountUsernameTaken", label: "اسم المستخدم المحجوز", value: "اسم المستخدم مستخدم بالفعل." },
       { key: "accountAuthError", label: "بيانات دخول غير صحيحة", value: "اسم المستخدم أو كلمة المرور غير صحيحة. راجع البيانات وحاول مرة أخرى." },
-      { key: "accountFootnote", label: "ملاحظة أسفل نموذج الحساب", value: "اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. في الحسابات السابقة، استُخدم الجزء السابق لعلامة @ من بريد التسجيل كاسم مستخدم بعد تحويله إلى أحرف صغيرة واستبدال الرموز غير المدعومة بـ _. احتفظ بكلمة المرور؛ لا يتوفر استرداد آلي لها في هذه النسخة.", multiline: true },
+      
     ],
   },
   {
@@ -158,6 +158,7 @@ export const SITE_COPY_GROUPS = [
       { key: "libraryEmpty", label: "حالة المكتبة الفارغة", value: "لا توجد ملفات منشورة تطابق بحثك حاليًا." },
       { key: "libraryOpenFile", label: "فتح/تحميل الملف", value: "فتح أو تحميل الملف" },
       { key: "libraryNavLibrary", label: "رابط المكتبة", value: "المكتبة" },
+      { key: "libraryGeneralCategory", label: "التصنيف العام الافتراضي", value: "عام" },
     ],
   },
   {
@@ -171,6 +172,7 @@ export const SITE_COPY_GROUPS = [
       { key: "examsLoading", label: "حالة تحميل قائمة الامتحانات", value: "جارٍ تحميل الامتحانات..." },
       { key: "examLoading", label: "حالة تحميل الامتحان", value: "جارٍ تحميل الامتحان..." },
       { key: "examDetailFallback", label: "وصف صفحة الامتحان الافتراضي", value: "اقرأ الأسئلة جيدًا ثم أرسل إجاباتك للتصحيح." },
+      { key: "examNoQuestions", label: "رسالة عدم وجود أسئلة", value: "لا يحتوي هذا الامتحان على أسئلة حتى الآن." },
       { key: "examListLoadError", label: "رسالة فشل تحميل الامتحانات", value: "تعذر تحميل قائمة الامتحانات." },
       { key: "examAuthRequired", label: "رسالة ضرورة تسجيل الدخول", value: "سجّل الدخول أولًا لإرسال إجاباتك." },
       { key: "examStartButton", label: "زر بدء الامتحان", value: "ابدأ الامتحان" },
@@ -218,6 +220,7 @@ SITE_COPY_GROUPS.push(
       { key: "examTrainingLabel", label: "عنوان نوع الامتحان", value: "امتحان تدريبي" },
       { key: "examDescriptionFallback", label: "وصف الامتحان الافتراضي", value: "اختبار تدريبي لقياس مدى استيعابك." },
       { key: "examDurationLabel", label: "مدة الامتحان", value: "مدة الامتحان" },
+      { key: "examMinuteUnit", label: "وحدة الدقائق", value: "دقيقة" },
       { key: "examQuestionsCountLabel", label: "عدد الأسئلة", value: "عدد الأسئلة" },
       { key: "examLoginNotice", label: "تنبيه تسجيل الدخول", value: "تحتاج إلى تسجيل الدخول بحساب الطالب قبل بدء الامتحان." },
       { key: "examNoAnswersNotice", label: "تعليمات بدء الامتحان", value: "لن تظهر لك الإجابات الصحيحة أثناء الحل. سيحسب النظام درجتك بعد الإرسال." },
