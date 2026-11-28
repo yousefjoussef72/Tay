@@ -1,16 +1,22 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://tay-space.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Vary": "Origin",
-};
+function corsHeadersFor(origin: string | null) {
+  return {
+    "Access-Control-Allow-Origin": origin || "https://tay-space.vercel.app",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
-function reply(body: Record<string, unknown>, status = 200) {
+function reply(
+  body: Record<string, unknown>,
+  status = 200,
+  headers = corsHeadersFor(null),
+) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...headers, "Content-Type": "application/json" },
   });
 }
 
@@ -32,13 +38,17 @@ async function hashIp(ip: string, secret: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return reply({ error: "method_not_allowed" }, 405);
-
   const origin = req.headers.get("origin");
-  if (origin && origin !== "https://tay-space.vercel.app" && !/^http:\/\/localhost(:\d+)?$/.test(origin)) {
-    return reply({ error: "origin_not_allowed" }, 403);
-  }
+  const originAllowed = !origin
+    || origin === "https://tay-space.vercel.app"
+    || /^https:\/\/tay-space-[a-z0-9-]+-yousefjoussef72\.vercel\.app$/.test(origin)
+    || /^http:\/\/localhost(:\d+)?$/.test(origin);
+  const corsHeaders = corsHeadersFor(originAllowed ? origin : null);
+  const send = (body: Record<string, unknown>, status = 200) => reply(body, status, corsHeaders);
+
+  if (!originAllowed) return send({ error: "origin_not_allowed" }, 403);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return send({ error: "method_not_allowed" }, 405);
 
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
@@ -50,43 +60,45 @@ Deno.serve(async (req: Request) => {
     ? (JSON.parse(publishableKeysRaw).default as string)
     : (Deno.env.get("SUPABASE_ANON_KEY") ?? "");
 
-  if (!url || !serviceKey || !anonKey) return reply({ error: "server_configuration_error" }, 500);
+  if (!url || !serviceKey || !anonKey) return send({ error: "server_configuration_error" }, 500);
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const authClient = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
   let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return reply({ error: "invalid_request" }, 400); }
+  try { body = await req.json(); } catch { return send({ error: "invalid_request" }, 400); }
 
   const action = String(body.action ?? "");
   const username = normalizeUsername(body.username);
   const password = String(body.password ?? "");
 
   if (!validUsername(username)) {
-    return reply({ error: "invalid_username", message: "اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط." }, 400);
+    return send({ error: "invalid_username", message: "اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط." }, 400);
   }
   if (password.length < 8 || password.length > 72) {
-    return reply({ error: "invalid_password", message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." }, 400);
+    return send({ error: "invalid_password", message: "كلمة المرور يجب أن تكون 8 أحرف على الأقل." }, 400);
   }
 
   if (action === "signup") {
     const displayName = String(body.displayName ?? "").trim().slice(0, 80);
-    if (displayName.length < 2) return reply({ error: "invalid_name", message: "اكتب اسمًا من حرفين على الأقل." }, 400);
+    if (displayName.length < 2) return send({ error: "invalid_name", message: "اكتب اسمًا من حرفين على الأقل." }, 400);
 
     const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const ipHash = await hashIp(forwarded, serviceKey);
-    const { count, error: countError } = await admin
-      .from("username_signup_attempts")
-      .select("id", { count: "exact", head: true })
-      .eq("ip_hash", ipHash)
-      .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
-    if (countError) return reply({ error: "rate_check_failed" }, 503);
-    if ((count ?? 0) >= 5) return reply({ error: "signup_rate_limited", message: "محاولات إنشاء الحساب كثيرة. حاول بعد 15 دقيقة." }, 429);
-    const { error: attemptError } = await admin.from("username_signup_attempts").insert({ ip_hash: ipHash });
-    if (attemptError) return reply({ error: "rate_check_failed" }, 503);
+    const { data: signupAllowed, error: rateError } = await admin.rpc(
+      "consume_username_signup_attempt",
+      { p_ip_hash: ipHash },
+    );
+    if (rateError) return send({ error: "rate_check_failed" }, 503);
+    if (!signupAllowed) {
+      return send({
+        error: "signup_rate_limited",
+        message: "محاولات إنشاء الحساب كثيرة. حاول بعد 15 دقيقة.",
+      }, 429);
+    }
 
-    const { data: existing } = await admin.from("profiles").select("id").ilike("username", username).maybeSingle();
-    if (existing) return reply({ error: "username_taken", message: "اسم المستخدم مستخدم بالفعل." }, 409);
+    const { data: existing } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
+    if (existing) return send({ error: "username_taken", message: "اسم المستخدم مستخدم بالفعل." }, 409);
 
     const email = username + "@accounts.tay-space.invalid";
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -96,7 +108,7 @@ Deno.serve(async (req: Request) => {
       user_metadata: { full_name: displayName, username },
     });
     if (createError || !created.user) {
-      return reply({ error: "signup_failed", message: "تعذر إنشاء الحساب. جرّب اسم مستخدم آخر." }, 400);
+      return send({ error: "signup_failed", message: "تعذر إنشاء الحساب. جرّب اسم مستخدم آخر." }, 400);
     }
 
     const { error: profileError } = await admin.from("profiles")
@@ -105,14 +117,14 @@ Deno.serve(async (req: Request) => {
 
     if (profileError) {
       await admin.auth.admin.deleteUser(created.user.id);
-      return reply({ error: "username_claim_failed", message: "تعذر حفظ اسم المستخدم. جرّب اسمًا آخر." }, 409);
+      return send({ error: "username_claim_failed", message: "تعذر حفظ اسم المستخدم. جرّب اسمًا آخر." }, 409);
     }
 
     const { data: signedIn, error: signInError } = await authClient.auth.signInWithPassword({ email, password });
     if (signInError || !signedIn.session) {
-      return reply({ error: "account_created_login_failed", message: "تم إنشاء الحساب. سجّل الدخول باسم المستخدم وكلمة المرور." }, 200);
+      return send({ error: "account_created_login_failed", message: "تم إنشاء الحساب. سجّل الدخول باسم المستخدم وكلمة المرور." }, 200);
     }
-    return reply({
+    return send({
       access_token: signedIn.session.access_token,
       refresh_token: signedIn.session.refresh_token,
       user: { id: signedIn.user.id, username, display_name: displayName },
@@ -121,25 +133,25 @@ Deno.serve(async (req: Request) => {
 
   if (action === "login") {
     const { data: profile, error: lookupError } = await admin
-      .from("profiles").select("id").ilike("username", username).maybeSingle();
-    if (lookupError || !profile) return reply({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
+      .from("profiles").select("id").eq("username", username).maybeSingle();
+    if (lookupError || !profile) return send({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
 
     const { data: authUser, error: userError } = await admin.auth.admin.getUserById(profile.id);
-    if (userError || !authUser.user?.email) return reply({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
+    if (userError || !authUser.user?.email) return send({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
 
     const { data: signedIn, error: signInError } = await authClient.auth.signInWithPassword({
       email: authUser.user.email,
       password,
     });
     if (signInError || !signedIn.session) {
-      return reply({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
+      return send({ error: "invalid_credentials", message: "اسم المستخدم أو كلمة المرور غير صحيحة." }, 401);
     }
-    return reply({
+    return send({
       access_token: signedIn.session.access_token,
       refresh_token: signedIn.session.refresh_token,
       user: { id: signedIn.user.id, username },
     });
   }
 
-  return reply({ error: "unsupported_action" }, 400);
+  return send({ error: "unsupported_action" }, 400);
 });
