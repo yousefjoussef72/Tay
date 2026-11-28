@@ -12,6 +12,7 @@ import LearningStudioAdmin from "./LearningStudioAdmin.jsx";
 
 const BUCKET = "tay-assets";
 const LIBRARY_BUCKET = "tay-library";
+const CONTACT_BUCKET = "tay-contact-attachments";
 const TABS = [
   { id: "articles", label: "المقالات", icon: FileText },
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
@@ -77,6 +78,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [alert, setAlert] = useState(null);
+  const [openingAttachment, setOpeningAttachment] = useState(null);
 
   const [articleDraft, setArticleDraft] = useState(EMPTY_ARTICLE);
   const [articleCover, setArticleCover] = useState(null);
@@ -119,7 +121,7 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       supabase.from("learning_units").select("id,subject_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("learning_lessons").select("id,unit_id,title,sort_order").order("sort_order").order("title"),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
+      supabase.from("messages").select("id,name,email,subject,message,attachments,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
       supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
     ]);
@@ -597,6 +599,31 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
     else await loadAll();
   }
 
+  async function openMessageAttachment(message, attachment) {
+    const path = String(attachment?.path || "");
+    if (!path.startsWith("incoming/")) {
+      setAlert({ kind: "error", text: "مسار المرفق غير صالح." });
+      return;
+    }
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    const loadingKey = message.id + ":" + path;
+    setOpeningAttachment(loadingKey);
+    try {
+      const { data, error } = await supabase.storage
+        .from(CONTACT_BUCKET)
+        .createSignedUrl(path, 10 * 60);
+      if (error || !data?.signedUrl) throw error || new Error("تعذر إنشاء رابط آمن للملف.");
+      if (popup) popup.location.href = data.signedUrl;
+      else window.location.assign(data.signedUrl);
+    } catch (error) {
+      if (popup) popup.close();
+      setAlert({ kind: "error", text: error?.message || "تعذر فتح المرفق." });
+    } finally {
+      setOpeningAttachment(null);
+    }
+  }
+
   async function removeMessage(message) {
     if (!window.confirm("حذف الرسالة؟")) return;
     const { error } = await supabase.from("messages").delete().eq("id", message.id);
@@ -999,7 +1026,32 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
           {messages.length === 0 ? <div className="hub-empty">لا توجد رسائل واردة.</div> : messages.map(message => (
             <article className="hub-message" key={message.id}>
               <div className="hub-message-top"><strong>{message.subject}</strong><small>{new Date(message.created_at).toLocaleString("ar-EG")}</small></div>
-              <p>{message.message}</p>
+              {message.message && <p>{message.message}</p>}
+              {Array.isArray(message.attachments) && message.attachments.length > 0 && (
+                <div className="hub-message-attachments">
+                  <strong>المرفقات ({message.attachments.length})</strong>
+                  <div className="hub-message-attachment-list">
+                    {message.attachments.map((attachment, index) => {
+                      const mime = String(attachment?.mime_type || "");
+                      const AttachmentIcon = mime.startsWith("image/") ? ImageIcon : mime.startsWith("video/") ? Video : FileText;
+                      const key = message.id + ":" + String(attachment?.path || "");
+                      return (
+                        <button
+                          type="button"
+                          className="hub-message-attachment"
+                          key={attachment?.path || index}
+                          onClick={() => openMessageAttachment(message, attachment)}
+                          disabled={openingAttachment === key}
+                        >
+                          <AttachmentIcon size={16} />
+                          <span><b>{attachment?.file_name || "ملف مرفق"}</b><small>{humanSize(attachment?.file_size)}</small></span>
+                          {openingAttachment === key ? <small>جارٍ الفتح...</small> : <ExternalLink size={14} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="hub-message-bottom"><span>{message.name} · {message.email}</span><div><select value={message.status} onChange={e => updateMessage(message,e.target.value)}><option value="new">جديدة</option><option value="read">مقروءة</option><option value="archived">مؤرشفة</option></select><button onClick={() => removeMessage(message)} title="حذف الرسالة"><Trash2 size={15} /></button></div></div>
             </article>
           ))}

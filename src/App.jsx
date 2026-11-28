@@ -3,7 +3,7 @@ import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpLeft, ArrowUpRight, Check, Clock3, FileText,
   Layers3, LayoutDashboard, LockKeyhole, Mail, Menu, MessageSquare,
-  Plus, Send, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
+  Plus, Send, Paperclip, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
 } from "lucide-react";
 import { supabase, supabaseReady } from "./lib/supabase.js";
 const AdminWorkspace = lazy(() => import("./AdminWorkspace.jsx"));
@@ -18,6 +18,38 @@ const features = [
   { icon: ShieldCheck, number: "02", titleKey: "feature2Title", bodyKey: "feature2Body", imageKey: "feature2ImageUrl" },
   { icon: Sparkles, number: "03", titleKey: "feature3Title", bodyKey: "feature3Body", imageKey: "feature3ImageUrl" },
 ];
+
+const CONTACT_ATTACHMENT_BUCKET = "tay-contact-attachments";
+const CONTACT_ATTACHMENT_MIME_BY_EXTENSION = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  ogg: "video/ogg",
+};
+const CONTACT_ATTACHMENT_MAX_FILES = 5;
+const CONTACT_ATTACHMENT_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
+
+function contactAttachmentMime(file) {
+  const extension = String(file?.name || "").split(".").pop().toLowerCase();
+  const byExtension = CONTACT_ATTACHMENT_MIME_BY_EXTENSION[extension];
+  const allowed = Object.values(CONTACT_ATTACHMENT_MIME_BY_EXTENSION);
+  return allowed.includes(file?.type) ? file.type : byExtension || "";
+}
+
+function formatAttachmentSize(bytes) {
+  const size = Number(bytes) || 0;
+  return size < 1024 * 1024
+    ? Math.max(1, Math.round(size / 1024)) + " كيلوبايت"
+    : (size / (1024 * 1024)).toFixed(1) + " ميجابايت";
+}
 
 function Header() {
   const { copy } = useSiteCopy();
@@ -62,6 +94,7 @@ function Home() {
   const [articles, setArticles] = useState([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [attachments, setAttachments] = useState([]);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState(null);
 
@@ -85,26 +118,92 @@ function Home() {
     return () => { active = false; };
   }, []);
 
+  function handleAttachmentSelection(event) {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!selected.length) return;
+
+    const next = [...attachments, ...selected];
+    if (next.length > CONTACT_ATTACHMENT_MAX_FILES) {
+      setNotice({ kind: "error", text: "يمكن إرفاق 5 ملفات بحد أقصى في الرسالة الواحدة." });
+      return;
+    }
+
+    const invalidFile = selected.find(file => !contactAttachmentMime(file));
+    if (invalidFile) {
+      setNotice({ kind: "error", text: "نوع الملف غير مدعوم. استخدم PDF أو صورة JPG/PNG/WEBP/GIF أو فيديو MP4/WEBM/MOV/OGG أو Word." });
+      return;
+    }
+
+    const totalBytes = next.reduce((sum, file) => sum + file.size, 0);
+    if (totalBytes > CONTACT_ATTACHMENT_MAX_TOTAL_BYTES) {
+      setNotice({ kind: "error", text: "إجمالي حجم المرفقات لا يمكن أن يتجاوز 50 ميجابايت." });
+      return;
+    }
+
+    setAttachments(next);
+    setNotice(null);
+  }
+
   async function submitMessage(event) {
     event.preventDefault();
     setNotice(null);
+    if (!form.message.trim() && attachments.length === 0) {
+      setNotice({ kind: "warning", text: "اكتب رسالتك أو أرفق ملفًا واحدًا على الأقل." });
+      return;
+    }
     if (!supabase) {
       setNotice({ kind: "warning", text: "نموذج التواصل جاهز، وسيبدأ حفظ الرسائل بعد ربط قاعدة بيانات Supabase." });
       return;
     }
+
     setSending(true);
-    const { error } = await supabase.from("messages").insert({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      subject: form.subject.trim() || "رسالة من الموقع",
-      message: form.message.trim(),
-    });
-    setSending(false);
-    if (error) {
-      setNotice({ kind: "error", text: copy.contactFailure });
-    } else {
+    try {
+      const randomId = () => window.crypto?.randomUUID?.()
+        || (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
+      const submissionId = randomId();
+      const uploadedAttachments = [];
+
+      for (const file of attachments) {
+        const mimeType = contactAttachmentMime(file);
+        const safeName = file.name.normalize("NFKD")
+          .replace(/[^a-zA-Z0-9._-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(-100) || "attachment";
+        const path = "incoming/" + submissionId + "/" + randomId() + "-" + safeName;
+        const { error: uploadError } = await supabase.storage
+          .from(CONTACT_ATTACHMENT_BUCKET)
+          .upload(path, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: mimeType,
+          });
+        if (uploadError) throw new Error(uploadError.message || "تعذر رفع أحد المرفقات.");
+        uploadedAttachments.push({
+          path,
+          file_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        });
+      }
+
+      const { error } = await supabase.from("messages").insert({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        subject: form.subject.trim() || "رسالة من الموقع",
+        message: form.message.trim(),
+        attachments: uploadedAttachments,
+      });
+      if (error) throw error;
+
       setForm({ name: "", email: "", subject: "", message: "" });
+      setAttachments([]);
       setNotice({ kind: "success", text: copy.contactSuccess });
+    } catch (error) {
+      console.error("Contact message submission failed:", error);
+      setNotice({ kind: "error", text: error?.message || copy.contactFailure });
+    } finally {
+      setSending(false);
     }
   }
 
@@ -236,7 +335,30 @@ function Home() {
                 <label>{copy.contactEmailLabel}<input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={copy.contactEmailPlaceholder} dir="ltr" /></label>
               </div>
               <label>{copy.contactSubjectLabel} <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder={copy.contactSubjectPlaceholder} /></label>
-              <label>{copy.contactMessageLabel}<textarea required rows="4" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder={copy.contactMessagePlaceholder} /></label>
+              <label>{copy.contactMessageLabel}<textarea required={attachments.length === 0} rows="4" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder={copy.contactMessagePlaceholder} /></label>
+              <div className="contact-attachments-field">
+                <label className="contact-attachment-picker">
+                  <Paperclip size={18} />
+                  <span>إرفاق ملفات أو صور أو فيديو</span>
+                  <small>PDF · صور · فيديو · Word، حتى 5 ملفات وبإجمالي 50 ميجابايت</small>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.mp4,.webm,.mov,.ogg,application/pdf,image/jpeg,image/png,image/webp,image/gif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/mp4,video/webm,video/quicktime,video/ogg"
+                    onChange={handleAttachmentSelection}
+                  />
+                </label>
+                {attachments.length > 0 && (
+                  <div className="contact-selected-attachments">
+                    {attachments.map((file, index) => (
+                      <div className="contact-selected-attachment" key={index}>
+                        <span>{file.name}<small>{formatAttachmentSize(file.size)}</small></span>
+                        <button type="button" onClick={() => setAttachments(current => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={"إزالة " + file.name}><X size={15} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
               <button className="button button-accent submit-button" disabled={sending}>{sending ? copy.contactSending : copy.contactSubmit} <Send size={17} /></button>
               {!supabaseReady && <span className="form-hint">الحفظ الفعلي سيتاح بعد ربط Supabase.</span>}
@@ -281,7 +403,7 @@ function AdminPage() {
     if (!staffRole) return;
     const [{ data: posts }, { data: inbox }] = await Promise.all([
       supabase.from("articles").select("id,title,slug,is_published,created_at").order("created_at", { ascending: false }),
-      supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(50),
+      supabase.from("messages").select("id,name,email,subject,message,attachments,status,created_at").order("created_at", { ascending: false }).limit(50),
     ]);
     setArticles(posts ?? []);
     setMessages(inbox ?? []);
