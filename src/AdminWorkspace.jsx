@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
+import SiteContentEditor from "./SiteContentEditor.jsx";
 
 const BUCKET = "tay-assets";
 const TABS = [
@@ -14,6 +15,7 @@ const TABS = [
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
   { id: "exams", label: "الامتحانات", icon: ClipboardList },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
+  { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
 
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
@@ -525,6 +527,8 @@ export default function AdminWorkspace({ session }) {
           </section>
         </div>
       )}
+
+      {!loading && tab === "site" && <SiteContentEditor />}
 
       {!loading && tab === "messages" && (
         <section className="hub-panel">
