@@ -202,7 +202,7 @@ export default function LearningExperimentsPage() {
           {relatedResources.length > 0 && <section className="learning-content-section"><h2><Library size={18}/> ملفات ومصادر الدرس</h2><div className="learning-related-resource-grid">{relatedResources.map(item=><article className="learning-related-resource" key={item.id}>
             <span>{item.category || "مصدر تعليمي"}</span><h3>{item.title}</h3><p>{item.description}</p>
             {item.resource_type === "video" && item.resolved_url && <video controls playsInline preload="metadata" src={item.resolved_url}>متصفحك لا يدعم تشغيل الفيديو.</video>}
-            {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/ >}
+            {item.resource_type === "image" && item.resolved_url && <img src={item.resolved_url} alt={item.title}/>}
             {item.resolved_url ? <a href={item.resolved_url} target="_blank" rel="noreferrer">{item.resource_type === "video" ? "مشاهدة الفيديو" : item.resource_type === "link" ? "فتح المصدر الخارجي" : "فتح أو تنزيل الملف"}</a> : <small>المصدر غير متاح مؤقتًا.</small>}
           </article>)}</div></section>}
           {relatedExperiments.length > 0 && <section className="learning-content-section"><h2><FlaskConical size={18}/> جرّب ما تعلمته</h2><div className="learning-experiment-grid">{relatedExperiments.map(experiment=><ExperimentCard key={experiment.id} experiment={experiment} subject={subject} unit={unit}/>)}</div></section>}
