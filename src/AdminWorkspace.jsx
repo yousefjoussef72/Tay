@@ -796,7 +796,8 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
             <div className="hub-form-grid">
               <label>نوع المورد<select value={resourceDraft.resource_type} onChange={e => setResourceDraft({ ...resourceDraft, resource_type: e.target.value })}><option value="pdf">كتاب أو ملف PDF</option><option value="image">صورة</option><option value="document">مستند Word</option><option value="video">فيديو</option><option value="link">رابط خارجي</option></select></label>
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
-            </div>            <div className="hub-form-grid">
+            </div>
+            <div className="hub-form-grid">
               <label>ربط بالمادة
                 <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
                   <option value="">مورد عام في المكتبة</option>
