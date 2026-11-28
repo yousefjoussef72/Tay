@@ -40,6 +40,11 @@ const subjectKindLabel = kind => ({
   elective:"اختيارية"
 }[kind] || "مادة دراسية");
 
+function isAiExperimentSubject(subject) {
+  const value = [subject?.name, subject?.slug].filter(Boolean).join(" ").toLowerCase();
+  return /فيزياء|physics|رياضيات|mathematics|\bmath\b|كيمياء|chemistry/.test(value);
+}
+
 function PageHeader() {
   return (
     <header className="learning-public-header">
@@ -50,7 +55,7 @@ function PageHeader() {
       <nav aria-label="التنقل الرئيسي">
         <Link to="/">الرئيسية</Link>
         <Link to="/experiments">المواد والتجارب</Link>
-        <Link to="/research">مختبر التجارب</Link>
+        <Link to="/research">المختبر والمساعد الذكي</Link>
         <Link to="/library">المكتبة</Link>
         <Link to="/exams">الامتحانات</Link>
         <Link to="/account" className="learning-account-link">حساب الطالب</Link>
@@ -430,7 +435,7 @@ export default function LearningExperimentsPage() {
             </div>}
           </section>
           {selectedSubject !== "all" && <button type="button" className="learning-all-subjects" onClick={() => {setSelectedSubject("all");setSelectedUnit("all")}}>عرض جميع المواد المحددة</button>}
-          {selectedSubjectInfo && <section className="learning-research-cta"><div><span><Sparkles size={15}/> مساحة مختبر التجارب</span><strong>هل لديك فكرة تجربة في {selectedSubjectInfo.name}؟</strong><p>حوّل فكرتك إلى محاكاة تفاعلية، حتى لو كانت خارج المنهج، واحفظ تجربتك في حسابك.</p></div><Link to={"/research/" + selectedSubjectInfo.slug}>ابدأ تجربة تفاعلية <ChevronLeft size={16}/></Link></section>}
+          {selectedSubjectInfo && <section className="learning-research-cta"><div><span><Sparkles size={15}/> {isAiExperimentSubject(selectedSubjectInfo) ? "مختبر التجارب التفاعلي" : "مساعد المادة الذكي"}</span><strong>{isAiExperimentSubject(selectedSubjectInfo) ? "هل تريد محاكاة تجربة في " + selectedSubjectInfo.name + "؟" : "هل لديك سؤال في " + selectedSubjectInfo.name + "؟"}</strong><p>{isAiExperimentSubject(selectedSubjectInfo) ? "حوّل فكرة التجربة إلى محاكاة تفاعلية، داخل المنهج أو خارجه." : "اسأل أي سؤال داخل منهج البكالوريا واحصل على شرح وحل موجهين لصفك ومسارك."}</p></div><Link to={"/research/" + selectedSubjectInfo.slug}>{isAiExperimentSubject(selectedSubjectInfo) ? "افتح مختبر التجارب" : "اسأل المساعد الذكي"} <ChevronLeft size={16}/></Link></section>}
         </>}
         {error && <div className="learning-error">{error}</div>}
         {loading ? <div className="learning-empty">جارٍ تحميل المواد والدروس والتجارب...</div> : <>

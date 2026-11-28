@@ -50,6 +50,11 @@ const SPECIAL_CONFIGS = {
   },
 };
 
+function isExperimentSubject(subject) {
+  const value = [subject?.name, subject?.slug].filter(Boolean).join(" ").toLowerCase();
+  return /فيزياء|physics|رياضيات|mathematics|\bmath\b|كيمياء|chemistry/.test(value);
+}
+
 function cleanText(value, max = 600) {
   return String(value ?? "").replace(/\u0000/g, "").trim().slice(0, max);
 }
@@ -194,6 +199,14 @@ export default async function handler(req, res) {
       ok: false,
       error: "subject_not_available",
       message: "تعذر تحميل المجال المحدد. ارجع واختر مجالًا آخر.",
+    });
+  }
+
+  if (!isExperimentSubject(subject)) {
+    return res.status(400).json({
+      ok: false,
+      error: "experiment_subject_not_supported",
+      message: "مختبر التجارب التفاعلي مخصص للفيزياء والرياضيات والكيمياء فقط. استخدم مساعد الأسئلة لبقية المواد.",
     });
   }
 
