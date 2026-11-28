@@ -109,11 +109,19 @@ export default function AdminWorkspace({ session }) {
   async function uploadAsset(file, folder, targetBucket = BUCKET) {
     if (!file) return null;
     if (file.size > 50 * 1024 * 1024) throw new Error("حجم الملف أكبر من الحد الأقصى (50 ميجابايت).");
-    const allowed = [
-      "application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif",
-      "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const libraryTypes = [
+      ...imageTypes,
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
-    if (!allowed.includes(file.type)) throw new Error("نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word.");
+    const allowed = targetBucket === LIBRARY_BUCKET ? libraryTypes : imageTypes;
+    if (!allowed.includes(file.type)) {
+      throw new Error(targetBucket === LIBRARY_BUCKET
+        ? "نوع الملف غير مدعوم. استخدم PDF أو صورة أو Word."
+        : "صور الموقع تقبل JPEG أو PNG أو WebP أو GIF فقط.");
+    }
     const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(-100) || "file";
     const path = folder + "/" + Date.now() + "-" + safeName;
     const { error } = await supabase.storage.from(targetBucket).upload(path, file, {
