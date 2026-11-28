@@ -5,8 +5,13 @@ import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
 import { useSiteCopy } from "./siteCopy.js";
 
-const BUCKET = "tay-assets";
-const fileUrl = path => path ? supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : "";
+const LIBRARY_BUCKET = "tay-library";
+
+async function signedLibraryUrl(path) {
+  if (!path) return "";
+  const { data, error } = await supabase.storage.from(LIBRARY_BUCKET).createSignedUrl(path, 60 * 60);
+  return error ? "" : (data?.signedUrl || "");
+}
 
 function safeHubHref(value, fallback = "/") {
   const href = String(value || "").trim();
@@ -36,9 +41,21 @@ export function LibraryPage() {
         .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,created_at")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
+      if (loadError) {
+        if (!active) return;
+        setError("load");
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+      const resolvedItems = await Promise.all((data || []).map(async item => ({
+        ...item,
+        resolved_url: item.resource_type === "link"
+          ? item.external_url
+          : await signedLibraryUrl(item.file_path),
+      })));
       if (!active) return;
-      if (loadError) setError("load");
-      setItems(data || []);
+      setItems(resolvedItems);
       setLoading(false);
     }
     load();
@@ -64,13 +81,13 @@ export function LibraryPage() {
       {error && <p className="hub-alert error">{error === "load" ? copy.libraryLoadError : error}</p>}
       {loading ? <div className="public-hub-empty">{copy.libraryLoading}</div> : filtered.length === 0 ? <div className="public-hub-empty">{copy.libraryEmpty}</div> : <div className="public-resource-grid">
         {filtered.map(item => {
-          const url = item.resource_type === "link" ? item.external_url : fileUrl(item.file_path);
+          const url = item.resolved_url || "";
           return <article className="public-resource-card" key={item.id}>
-            {item.resource_type === "image" ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a> : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : <BookOpen size={24} />}</div>}
+            {item.resource_type === "image" && url ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a> : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : <BookOpen size={24} />}</div>}
             <span className="public-resource-category">{item.category || copy.libraryGeneralCategory}</span>
             <h2>{item.title}</h2>
             <p>{item.description || copy.libraryFileFallback}</p>
-            <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a>
+            {url ? <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a> : <span className="public-resource-open">{copy.libraryFileUnavailable}</span>}
           </article>;
         })}
       </div>}
