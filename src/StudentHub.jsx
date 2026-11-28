@@ -17,7 +17,7 @@ export function LibraryPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("الكل");
+  const [category, setCategory] = useState("ALL");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function LibraryPage() {
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (!active) return;
-      if (loadError) setError("{copy.libraryLoadError}");
+      if (loadError) setError(copy.libraryLoadError);
       setItems(data || []);
       setLoading(false);
     }
@@ -37,9 +37,9 @@ export function LibraryPage() {
     return () => { active = false; };
   }, []);
 
-  const categories = [copy.libraryAllCategories, ...new Set(items.map(item => item.category || "عام"))];
+  const categories = ["ALL", ...new Set(items.map(item => item.category || "عام"))];
   const filtered = items.filter(item =>
-    (category === copy.libraryAllCategories || item.category === category) &&
+    (category === "ALL" || item.category === category) &&
     (item.title + " " + item.description).toLowerCase().includes(query.toLowerCase())
   );
 
@@ -51,7 +51,7 @@ export function LibraryPage() {
       <p className="public-hub-lead">{copy.libraryDescription}</p>
       <div className="library-tools">
         <label><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={copy.librarySearchPlaceholder} /></label>
-        <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select>
+        <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c} value={c}>{c === "ALL" ? copy.libraryAllCategories : c}</option>)}</select>
       </div>
       {error && <p className="hub-alert error">{error}</p>}
       {loading ? <div className="public-hub-empty">{copy.libraryLoading}</div> : filtered.length === 0 ? <div className="public-hub-empty">{copy.libraryEmpty}</div> : <div className="public-resource-grid">
@@ -99,7 +99,7 @@ export function ExamsPage() {
       setUser(sessionData.session?.user || null);
       if (examId) {
         if (examResult.error || !examResult.data) {
-          setError("الامتحان غير موجود أو لم يعد منشورًا.");
+          setError(copy.examUnavailable);
         } else {
           setExam(examResult.data);
           const { data: qs, error: questionsError } = await supabase
@@ -107,7 +107,7 @@ export function ExamsPage() {
             .select("id,prompt,question_type,options,points,sort_order")
             .eq("exam_id", examId)
             .order("sort_order");
-          if (questionsError) setError("تعذر تحميل أسئلة الامتحان.");
+          if (questionsError) setError(copy.examQuestionsLoadError);
           setQuestions(qs || []);
         }
       } else {
@@ -116,7 +116,7 @@ export function ExamsPage() {
           .select("id,title,description,duration_minutes,created_at")
           .eq("is_published", true)
           .order("created_at", { ascending: false });
-        if (examsError) setError("تعذر تحميل قائمة الامتحانات.");
+        if (examsError) setError(copy.examListLoadError);
         setExams(data || []);
       }
       setLoading(false);
@@ -134,7 +134,7 @@ export function ExamsPage() {
     });
     setSubmitting(false);
     if (submitError) {
-      setError(submitError.message === "authentication_required" ? "سجّل الدخول أولًا لإرسال إجاباتك." : "تعذر تصحيح الامتحان. تأكد من اتصالك ثم حاول مرة أخرى.");
+      setError(submitError.message === "authentication_required" ? copy.examAuthRequired : copy.examSubmitError);
       setActive(false);
       return;
     }
@@ -174,16 +174,16 @@ export function ExamsPage() {
         <h1>{copy.examsTitle}</h1>
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
-        {loading ? <div className="public-hub-empty">جارٍ تحميل الامتحانات...</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
-          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} دقيقة</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examStartButton} <ArrowRight size={15} /></Link></article>)}
+        {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
+          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} دقيقة</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
         </div>}
       </> : loading ? <div className="public-hub-empty">جارٍ تحميل الامتحان...</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
         <div className="public-hub-kicker">{copy.examTrainingLabel}</div>
         <h1>{exam.title}</h1>
-        <p className="public-hub-lead">{exam.description || "اقرأ الأسئلة جيدًا ثم أرسل إجاباتك للتصحيح."}</p>
-        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> مدة الامتحان: {exam.duration_minutes} دقيقة</div><div><ClipboardList size={18} /> عدد الأسئلة: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
-        {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> الوقت المتبقي <strong>{formatTime(remaining)}</strong></div>
+        <p className="public-hub-lead">{exam.description || copy.examDetailFallback}</p>
+        {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} دقيقة</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
+        {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
             {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
           </article>)}
