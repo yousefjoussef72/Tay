@@ -9,6 +9,7 @@ import { supabase, supabaseReady } from "./lib/supabase.js";
 import AdminWorkspace from "./AdminWorkspace.jsx";
 import { LibraryPage, ExamsPage } from "./StudentHub.jsx";
 import ArticlePage from "./ArticlePage.jsx";
+import { SiteCopyProvider, useSiteCopy } from "./siteCopy.js";
 
 const features = [
   {
@@ -32,34 +33,36 @@ const features = [
 ];
 
 function Header() {
+  const { copy } = useSiteCopy();
   const [menuOpen, setMenuOpen] = useState(false);
   const close = () => setMenuOpen(false);
   return (
     <header className="site-header">
       <div className="container nav-wrap">
-        <Link to="/" className="brand" onClick={close} aria-label="مساحة - الرئيسية">
+        <Link to="/" className="brand" onClick={close} aria-label={copy.brandName + " - " + copy.navHome}>
           <span className="brand-mark"><span /></span>
-          <span className="brand-name">مساحة<small>بداية تستحق</small></span>
+          <span className="brand-name">{copy.brandName}<small>{copy.brandTagline}</small></span>
         </Link>
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="فتح القائمة">
           {menuOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
         <nav className={menuOpen ? "nav-links open" : "nav-links"}>
-          <a href="/#home" onClick={close}>الرئيسية</a>
-          <a href="/#about" onClick={close}>عن الموقع</a>
-          <a href="/#features" onClick={close}>المميزات</a>
-          <a href="/#contact" onClick={close}>تواصل معنا</a>
-          <Link to="/library" onClick={close}>المكتبة</Link>
-          <Link to="/exams" onClick={close}>الامتحانات</Link>
-          <Link to="/account" onClick={close}>حساب الطالب</Link>
+          <a href="/#home" onClick={close}>{copy.navHome}</a>
+          <a href="/#about" onClick={close}>{copy.navAbout}</a>
+          <a href="/#features" onClick={close}>{copy.navFeatures}</a>
+          <a href="/#contact" onClick={close}>{copy.navContact}</a>
+          <Link to="/library" onClick={close}>{copy.navLibrary}</Link>
+          <Link to="/exams" onClick={close}>{copy.navExams}</Link>
+          <Link to="/account" onClick={close}>{copy.navAccount}</Link>
         </nav>
-        <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> لوحة الإدارة</Link>
+        <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> {copy.navAdmin}</Link>
       </div>
     </header>
   );
 }
 
 function Home() {
+  const { copy } = useSiteCopy();
   const [articles, setArticles] = useState([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -102,10 +105,10 @@ function Home() {
     });
     setSending(false);
     if (error) {
-      setNotice({ kind: "error", text: "تعذر إرسال الرسالة الآن. حاول مرة أخرى لاحقًا." });
+      setNotice({ kind: "error", text: copy.contactFailure });
     } else {
       setForm({ name: "", email: "", subject: "", message: "" });
-      setNotice({ kind: "success", text: "وصلت رسالتك بنجاح. شكرًا لتواصلك!" });
+      setNotice({ kind: "success", text: copy.contactSuccess });
     }
   }
 
@@ -119,14 +122,14 @@ function Home() {
           <div className="hero-orbit orbit-two" />
           <div className="container hero-inner">
             <div className="hero-copy">
-              <div className="eyebrow"><span className="live-dot" /> النسخة التأسيسية للموقع</div>
-              <h1>كل بداية عظيمة<br /><em>تحتاج إلى مساحة.</em></h1>
-              <p className="hero-lead">نضع الآن الأساس لموقعك. الفكرة والاسم والمحتوى سنحددها معًا، أما البنية التقنية فقد بدأت بالفعل.</p>
+              <div className="eyebrow"><span className="live-dot" /> {copy.heroEyebrow}</div>
+              <h1>{copy.heroTitleLine1}<br /><em>{copy.heroTitleLine2}</em></h1>
+              <p className="hero-lead">{copy.heroDescription}</p>
               <div className="hero-actions">
-                <a className="button button-primary" href="#about">اكتشف الموقع <ArrowUpLeft size={18} /></a>
-                <a className="button button-ghost" href="#contact">ابدأ الحديث <ArrowLeft size={17} /></a>
+                <a className="button button-primary" href={copy.heroPrimaryUrl || "#about"}>{copy.heroPrimaryButton} <ArrowUpLeft size={18} /></a>
+                <a className="button button-ghost" href={copy.heroSecondaryUrl || "#contact"}>{copy.heroSecondaryButton} <ArrowLeft size={17} /></a>
               </div>
-              <div className="hero-note"><span className="note-line" /> تصميم مرن · عربي بالكامل · قابل للتطوير</div>
+              <div className="hero-note"><span className="note-line" /> {copy.heroNote}</div>
             </div>
             <div className="hero-art" aria-hidden="true">
               <div className="art-glow" />
@@ -136,7 +139,7 @@ function Home() {
               <div className="art-card card-front">
                 <div className="art-card-top"><span className="mini-mark" /> YOUR NEXT CHAPTER</div>
                 <div className="art-symbol">مـ</div>
-                <div className="art-card-bottom"><span>مساحة جديدة</span><ArrowUpLeft size={17} /></div>
+                <div className="art-card-bottom"><span>{copy.heroCardCaption}</span><ArrowUpLeft size={17} /></div>
               </div>
               <span className="art-star star-a">✳</span>
               <span className="art-star star-b">✳</span>
@@ -144,18 +147,18 @@ function Home() {
             </div>
           </div>
           <div className="hero-bottom container">
-            <span>01 — البداية</span><span className="scroll-cue">مرّر لاكتشاف المزيد <span /></span><span>EST. 2026</span>
+            <span>{copy.heroBottomLeft}</span><span className="scroll-cue">{copy.heroBottomScroll} <span /></span><span>EST. 2026</span>
           </div>
         </section>
 
         <section className="intro-section section-pad" id="about">
           <div className="container intro-layout">
-            <div className="section-kicker"><span>01</span> / الفكرة</div>
+            <div className="section-kicker">{copy.aboutKicker}</div>
             <div className="intro-content">
-              <h2>لسنا هنا لنملأ صفحة فارغة؛<br /><span>بل لنصنع شيئًا له معنى.</span></h2>
+              <h2>{copy.aboutTitleLine1}<br /><span>{copy.aboutTitleLine2}</span></h2>
               <div className="intro-bottom">
-                <p>هذه نسخة أولية أنشأناها لتكون نقطة انطلاق. لا يوجد مجال أو محتوى مفروض مسبقًا؛ سنرسم تجربة الموقع معًا بعد تثبيت الأساس.</p>
-                <a className="text-link" href="#features">تعرف على ما تم تجهيزه <ArrowUpLeft size={18} /></a>
+                <p>{copy.aboutDescription}</p>
+                <a className="text-link" href={copy.aboutLinkUrl || "#features"}>{copy.aboutLink} <ArrowUpLeft size={18} /></a>
               </div>
             </div>
           </div>
@@ -164,14 +167,14 @@ function Home() {
         <section className="features-section section-pad" id="features">
           <div className="container">
             <div className="section-heading">
-              <div><div className="section-kicker"><span>02</span> / ما تم بناؤه</div><h2>أساس قوي،<br /><span>وتفاصيل نضيفها معًا.</span></h2></div>
-              <p>جهزنا ما يحتاجه أي مشروع رقمي حديث قبل إدخال المحتوى النهائي.</p>
+              <div><div className="section-kicker">{copy.featuresKicker}</div><h2>{copy.featuresTitleLine1}<br /><span>{copy.featuresTitleLine2}</span></h2></div>
+              <p>{copy.featuresDescription}</p>
             </div>
             <div className="feature-grid">
-              {features.map(({ icon: Icon, number, title, body }) => (
+              {features.map(({ icon: Icon, number, titleKey, bodyKey }) => (
                 <article className="feature-card" key={number}>
                   <div className="feature-top"><span>{number}</span><Icon size={22} strokeWidth={1.6} /></div>
-                  <h3>{title}</h3><p>{body}</p><div className="feature-rule" />
+                  <h3>{copy[titleKey]}</h3><p>{copy[bodyKey]}</p><div className="feature-rule" />
                 </article>
               ))}
             </div>
@@ -181,14 +184,14 @@ function Home() {
         {(articles.length > 0 || loadingArticles) && (
           <section className="articles-section section-pad">
             <div className="container">
-              <div className="section-kicker"><span>03</span> / آخر الإضافات</div>
-              <div className="articles-heading"><h2>من داخل المساحة</h2><span>المحتوى المنشور</span></div>
+              <div className="section-kicker">{copy.articlesKicker}</div>
+              <div className="articles-heading"><h2>{copy.articlesTitle}</h2><span>{copy.articlesSubtitle}</span></div>
               <div className="article-grid">
                 {loadingArticles ? <p className="muted">جارٍ تحميل المحتوى...</p> : articles.map(article => (
                   <Link to={"/articles/" + article.slug} className="article-card article-card-link" key={article.id} aria-label={"قراءة المقال: " + article.title}>
-                    <span className="article-tag">مقال · اضغط للقراءة</span><h3>{article.title}</h3>
-                    <p>{article.excerpt || "اكتشف هذا الموضوع من داخل المساحة."}</p>
-                    <span className="article-read-more">قراءة المقال <ArrowUpLeft size={15} /></span>
+                    <span className="article-tag">{copy.articleTag}</span><h3>{article.title}</h3>
+                    <p>{article.excerpt || copy.articleFallback}</p>
+                    <span className="article-read-more">{copy.articleReadMore} <ArrowUpLeft size={15} /></span>
                   </Link>
                 ))}
               </div>
@@ -199,20 +202,20 @@ function Home() {
         <section className="contact-section section-pad" id="contact">
           <div className="container contact-layout">
             <div className="contact-copy">
-              <div className="section-kicker light"><span>04</span> / الخطوة التالية</div>
-              <h2>عندك فكرة؟<br /><em>خلّينا نبدأ.</em></h2>
-              <p>أرسل رسالة تجريبية الآن، أو استخدم هذا القسم لاحقًا لاستقبال استفسارات زوار الموقع.</p>
-              <div className="contact-meta"><Mail size={17} /><span>نموذج التواصل — تُحفظ الرسائل مباشرةً في قاعدة البيانات</span></div>
+              <div className="section-kicker light">{copy.contactKicker}</div>
+              <h2>{copy.contactTitleLine1}<br /><em>{copy.contactTitleLine2}</em></h2>
+              <p>{copy.contactDescription}</p>
+              <div className="contact-meta"><Mail size={17} /><span>{copy.contactMeta}</span></div>
             </div>
             <form className="contact-form" onSubmit={submitMessage}>
               <div className="form-row">
-                <label>الاسم<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="اسمك" /></label>
-                <label>البريد الإلكتروني<input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@example.com" dir="ltr" /></label>
+                <label>{copy.contactNameLabel}<input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder={copy.contactNamePlaceholder} /></label>
+                <label>{copy.contactEmailLabel}<input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@example.com" dir="ltr" /></label>
               </div>
-              <label>موضوع الرسالة <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="كيف يمكننا مساعدتك؟" /></label>
-              <label>رسالتك<textarea required rows="4" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="اكتب ما يدور في بالك..." /></label>
+              <label>{copy.contactSubjectLabel} <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder={copy.contactSubjectPlaceholder} /></label>
+              <label>{copy.contactMessageLabel}<textarea required rows="4" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder={copy.contactMessagePlaceholder} /></label>
               {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
-              <button className="button button-accent submit-button" disabled={sending}>{sending ? "جارٍ الإرسال..." : "إرسال الرسالة"} <Send size={17} /></button>
+              <button className="button button-accent submit-button" disabled={sending}>{sending ? copy.contactSending : copy.contactSubmit} <Send size={17} /></button>
               {!supabaseReady && <span className="form-hint">الحفظ الفعلي سيتاح بعد ربط Supabase.</span>}
             </form>
           </div>
@@ -221,8 +224,8 @@ function Home() {
       <footer className="site-footer">
         <div className="container footer-inner">
           <Link to="/" className="brand footer-brand"><span className="brand-mark"><span /></span><span className="brand-name">مساحة<small>بداية تستحق</small></span></Link>
-          <span>© 2026 — نسخة تأسيسية قابلة للتطوير</span>
-          <a href="#home" className="back-top">العودة للأعلى <ArrowUpRight size={16} /></a>
+          <span>{copy.footerText}</span>
+          <a href="#home" className="back-top">{copy.footerBackTop} <ArrowUpRight size={16} /></a>
         </div>
       </footer>
     </>
@@ -345,8 +348,8 @@ function AdminPage() {
         <div className="login-card">
           <div className="admin-icon"><LockKeyhole size={25} /></div><span className="admin-label">منطقة محمية</span><h1>مرحبًا بعودتك.</h1><p>سجّل الدخول بحساب الإدارة للمتابعة.</p>
           <form onSubmit={signIn} className="login-form">
-            <label>اسم المستخدم<input type="text" required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" value={username} onChange={e => setUsername(e.target.value.toLowerCase())} dir="ltr" /></label>
-            <label>كلمة المرور<input type="password" required minLength={8} maxLength={72} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
+            <label>{copy.accountUsername}<input type="text" required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" value={username} onChange={e => setUsername(e.target.value.toLowerCase())} dir="ltr" /></label>
+            <label>{copy.accountPassword}<input type="password" required minLength={8} maxLength={72} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
             {error && <div className="notice error">{error}</div>}
             <button className="button button-primary" type="submit" disabled={authBusy}>{authBusy ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"} <ArrowLeft size={17} /></button>
           </form>
@@ -362,6 +365,7 @@ function AdminPage() {
 
 
 function AccountPage() {
+  const { copy } = useSiteCopy();
   const [mode, setMode] = useState("signup");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -469,16 +473,16 @@ function AccountPage() {
       <main className="account-page">
         <div className="account-wrap">
           <div className="account-intro">
-            <span className="admin-label">مساحة — حساب الطالب</span>
-            <h1>{session ? "أهلًا بعودتك." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
-            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : "استخدم اسم المستخدم وكلمة المرور، من غير رسائل تأكيد بالبريد الإلكتروني."}</p>
+            <span className="admin-label">{copy.accountBrandSubtitle}</span>
+            <h1>{session ? copy.accountWelcomeBack : mode === "signup" ? copy.accountSignupTitle : copy.accountLoginTitle}</h1>
+            <p>{session ? copy.accountProfileDescription : copy.accountDescription}</p>
           </div>
           {loading ? (
-            <div className="account-card"><p className="muted">جارٍ التحقق من حسابك...</p></div>
+            <div className="account-card"><p className="muted">{copy.accountChecking}</p></div>
           ) : session ? (
             <section className="account-card account-profile">
               <div className="account-avatar"><UserRound size={28} /></div>
-              <span className="admin-label">تم تسجيل الدخول</span>
+              <span className="admin-label">{copy.accountLoggedInLabel}</span>
               <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
               <p className="account-email" dir="ltr">@{profile?.username || session.user.user_metadata?.username || "user"}</p>
               <div className="account-role">{profile?.role === "admin" ? "مدير الموقع" : "حساب طالب"}</div>
@@ -491,13 +495,13 @@ function AccountPage() {
           ) : (
             <section className="account-card">
               <div className="account-switch">
-                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
-                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
+                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>{copy.accountSignupTab}</button>
+                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>{copy.accountLoginTab}</button>
               </div>
               <form className="account-form" onSubmit={submitAuth}>
                 {mode === "signup" && (
-                  <label>الاسم الكامل
-                    <input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
+                  <label>{copy.accountFullName}
+                    <input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder={copy.accountFullNamePlaceholder} />
                   </label>
                 )}
                 <label>اسم المستخدم
@@ -510,7 +514,7 @@ function AccountPage() {
                     autoComplete="username"
                     value={username}
                     onChange={e => { setUsername(e.target.value.toLowerCase()); setNotice(null); }}
-                    placeholder="مثال: yousef_123"
+                    placeholder={copy.accountUsernamePlaceholder}
                     dir="ltr"
                   />
                 </label>
@@ -524,7 +528,7 @@ function AccountPage() {
                       autoComplete={mode === "signup" ? "new-password" : "current-password"}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="8 أحرف على الأقل"
+                      placeholder={copy.accountPasswordPlaceholder}
                       dir="ltr"
                     />
                     <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
@@ -532,14 +536,14 @@ function AccountPage() {
                 </label>
                 {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
                 <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
+                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? copy.accountCreateButton : copy.accountLoginButton}
                   {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
                 </button>
               </form>
               <p className="account-footnote">اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. في الحسابات السابقة، استُخدم الجزء السابق لعلامة @ من بريد التسجيل كاسم مستخدم بعد تحويله إلى أحرف صغيرة واستبدال الرموز غير المدعومة بـ _. احتفظ بكلمة المرور؛ لا يتوفر استرداد آلي لها في هذه النسخة.</p>
             </section>
           )}
-          <Link to="/" className="account-home-link"><ArrowLeft size={15} /> العودة إلى الصفحة الرئيسية</Link>
+          <Link to="/" className="account-home-link"><ArrowLeft size={15} /> {copy.accountBackHome}</Link>
         </div>
       </main>
     </>
@@ -565,9 +569,9 @@ function SiteGate() {
 }
 
 function NotFound() {
-  return <div className="not-found"><span>404</span><h1>هذه الصفحة غير موجودة.</h1><Link to="/" className="button button-primary">العودة للرئيسية <ArrowLeft size={17} /></Link></div>;
+  return <NotFound />;
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="/articles/:slug" element={<ArticlePage />} /><Route path="*" element={<NotFound />} /></Routes>;
+  return <SiteCopyProvider><Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="/articles/:slug" element={<ArticlePage />} /><Route path="*" element={<NotFound />} /></Routes></SiteCopyProvider>;
 }
