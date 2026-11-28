@@ -3,8 +3,10 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowRight, CalendarDays, FileText } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./article-page.css";
+import { useSiteCopy } from "./siteCopy.js";
 
 export default function ArticlePage() {
+  const { copy } = useSiteCopy();
   const { slug } = useParams();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,9 +49,9 @@ export default function ArticlePage() {
       <main className="article-page">
         <div className="article-page-card article-not-found">
           <FileText size={30} />
-          <h1>المقال غير متاح</h1>
-          <p>قد يكون المقال حُذف أو لم يعد منشورًا.</p>
-          <Link to="/" className="article-back-link"><ArrowRight size={16} /> العودة إلى الرئيسية</Link>
+          <h1>{copy.articlePageNotFound}</h1>
+          <p>{copy.articlePageNotFoundBody}</p>
+          <Link to="/" className="article-back-link"><ArrowRight size={16} /> {copy.articlePageBack}</Link>
         </div>
       </main>
     );
@@ -59,10 +61,10 @@ export default function ArticlePage() {
     <main className="article-page">
       <div className="article-page-top">
         <Link to="/" className="article-back-link"><ArrowRight size={16} /> العودة إلى الرئيسية</Link>
-        <span className="article-page-brand">مساحة</span>
+        <span className="article-page-brand">{copy.articlePageBrand}</span>
       </div>
       <article className="article-page-card">
-        <span className="article-page-label">مقال من داخل المساحة</span>
+        <span className="article-page-label">{copy.articlePageLabel}</span>
         <h1>{article.title}</h1>
         {article.published_at && (
           <div className="article-page-date">
@@ -74,10 +76,10 @@ export default function ArticlePage() {
         )}
         {article.cover_url && <img className="article-page-cover" src={article.cover_url} alt={article.title} />}
         {article.excerpt && <p className="article-page-excerpt">{article.excerpt}</p>}
-        <div className="article-page-content">{article.content || "لم تتم إضافة محتوى لهذا المقال بعد."}</div>
+        <div className="article-page-content">{article.content || copy.articlePageMissingContent}</div>
       </article>
       <div className="article-page-bottom">
-        <Link to="/" className="article-back-link"><ArrowRight size={16} /> تصفح بقية المساحة</Link>
+        <Link to="/" className="article-back-link"><ArrowRight size={16} /> {copy.articlePageBrowseMore}</Link>
       </div>
     </main>
   );
