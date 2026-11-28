@@ -40,7 +40,7 @@ function Header() {
     <header className="site-header">
       <div className="container nav-wrap">
         <Link to="/" className="brand" onClick={close} aria-label={copy.brandName + " - " + copy.navHome}>
-          <span className="brand-mark"><span /></span>
+          {copy.brandLogoUrl ? <img className="site-brand-image" src={copy.brandLogoUrl} alt={copy.brandName} /> : <span className="brand-mark"><span /></span>}
           <span className="brand-name">{copy.brandName}<small>{copy.brandTagline}</small></span>
         </Link>
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="فتح القائمة">
@@ -112,11 +112,28 @@ function Home() {
     }
   }
 
+  function renderCustomBlocks(placement) {
+    if (copy.showCustomBlocks === false) return null;
+    return (copy.customBlocks || []).filter(block => block.enabled !== false && block.placement === placement).map(block => (
+      <section className="custom-site-section section-pad" key={block.id} id={"custom-" + block.id}>
+        <div className="container custom-site-layout">
+          {block.imageUrl && <img className="custom-site-image" src={block.imageUrl} alt={block.title || "صورة القسم"} />}
+          <div className="custom-site-copy">
+            {block.eyebrow && <span>{block.eyebrow}</span>}
+            {block.title && <h2>{block.title}</h2>}
+            {block.body && <p>{block.body}</p>}
+            {block.buttonText && block.buttonUrl && <a className="button button-primary" href={block.buttonUrl}>{block.buttonText} <ArrowUpLeft size={16} /></a>}
+          </div>
+        </div>
+      </section>
+    ));
+  }
+
   return (
     <>
       <Header />
       <main>
-        <section className="hero" id="home">
+        {copy.showHero !== false && <section className="hero" id="home">
           <div className="hero-grid" />
           <div className="hero-orbit orbit-one" />
           <div className="hero-orbit orbit-two" />
@@ -131,7 +148,9 @@ function Home() {
               </div>
               <div className="hero-note"><span className="note-line" /> {copy.heroNote}</div>
             </div>
-            <div className="hero-art" aria-hidden="true">
+            {copy.heroImageUrl ? (
+              <div className="hero-art hero-art-image"><img src={copy.heroImageUrl} alt="" /></div>
+            ) : <div className="hero-art" aria-hidden="true">
               <div className="art-glow" />
               <div className="art-ring ring-a" />
               <div className="art-ring ring-b" />
@@ -144,14 +163,15 @@ function Home() {
               <span className="art-star star-a">✳</span>
               <span className="art-star star-b">✳</span>
               <span className="art-caption">A PLACE TO BEGIN</span>
-            </div>
+            </div>}
           </div>
           <div className="hero-bottom container">
             <span>{copy.heroBottomLeft}</span><span className="scroll-cue">{copy.heroBottomScroll} <span /></span><span>EST. 2026</span>
           </div>
-        </section>
+        </section>}
+        {renderCustomBlocks("afterHero")}
 
-        <section className="intro-section section-pad" id="about">
+        {copy.showAbout !== false && <section className="intro-section section-pad" id="about">
           <div className="container intro-layout">
             <div className="section-kicker">{copy.aboutKicker}</div>
             <div className="intro-content">
@@ -161,15 +181,18 @@ function Home() {
                 <a className="text-link" href={copy.aboutLinkUrl || "#features"}>{copy.aboutLink} <ArrowUpLeft size={18} /></a>
               </div>
             </div>
+            {copy.aboutImageUrl && <img className="site-section-image about-image" src={copy.aboutImageUrl} alt="" />}
           </div>
-        </section>
+        </section>}
+        {renderCustomBlocks("afterAbout")}
 
-        <section className="features-section section-pad" id="features">
+        {copy.showFeatures !== false && <section className="features-section section-pad" id="features">
           <div className="container">
             <div className="section-heading">
               <div><div className="section-kicker">{copy.featuresKicker}</div><h2>{copy.featuresTitleLine1}<br /><span>{copy.featuresTitleLine2}</span></h2></div>
               <p>{copy.featuresDescription}</p>
             </div>
+            {copy.featuresImageUrl && <img className="site-section-image features-image" src={copy.featuresImageUrl} alt="" />}
             <div className="feature-grid">
               {features.map(({ icon: Icon, number, titleKey, bodyKey }) => (
                 <article className="feature-card" key={number}>
@@ -179,9 +202,10 @@ function Home() {
               ))}
             </div>
           </div>
-        </section>
+        </section>}
+        {renderCustomBlocks("afterFeatures")}
 
-        {(articles.length > 0 || loadingArticles) && (
+        {copy.showArticles !== false && (articles.length > 0 || loadingArticles) && (
           <section className="articles-section section-pad">
             <div className="container">
               <div className="section-kicker">{copy.articlesKicker}</div>
@@ -198,10 +222,13 @@ function Home() {
             </div>
           </section>
         )}
+        {renderCustomBlocks("beforeArticles")}
+        {renderCustomBlocks("beforeContact")}
 
-        <section className="contact-section section-pad" id="contact">
+        {copy.showContact !== false && <section className="contact-section section-pad" id="contact">
           <div className="container contact-layout">
             <div className="contact-copy">
+              {copy.contactImageUrl && <img className="site-section-image contact-image" src={copy.contactImageUrl} alt="" />}
               <div className="section-kicker light">{copy.contactKicker}</div>
               <h2>{copy.contactTitleLine1}<br /><em>{copy.contactTitleLine2}</em></h2>
               <p>{copy.contactDescription}</p>
@@ -223,7 +250,7 @@ function Home() {
       </main>
       <footer className="site-footer">
         <div className="container footer-inner">
-          <Link to="/" className="brand footer-brand"><span className="brand-mark"><span /></span><span className="brand-name">مساحة<small>بداية تستحق</small></span></Link>
+          <Link to="/" className="brand footer-brand">{copy.footerLogoUrl ? <img className="site-brand-image" src={copy.footerLogoUrl} alt={copy.brandName} /> : <span className="brand-mark"><span /></span>}<span className="brand-name">{copy.brandName}<small>{copy.brandTagline}</small></span></Link>
           <span>{copy.footerText}</span>
           <a href="#home" className="back-top">{copy.footerBackTop} <ArrowUpRight size={16} /></a>
         </div>
