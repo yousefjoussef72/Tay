@@ -100,7 +100,7 @@ export function ExamsPage() {
       const [{ data: sessionData }, examResult] = await Promise.all([
         supabase.auth.getSession(),
         examId
-          ? supabase.from("exams").select("id,title,description,duration_minutes").eq("id", examId).eq("is_published", true).maybeSingle()
+          ? supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url").eq("id", examId).eq("is_published", true).maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       if (!alive) return;
@@ -112,7 +112,7 @@ export function ExamsPage() {
           setExam(examResult.data);
           const { data: qs, error: questionsError } = await supabase
             .from("exam_questions")
-            .select("id,prompt,question_type,options,points,sort_order")
+            .select("id,prompt,question_type,options,points,sort_order,image_url")
             .eq("exam_id", examId)
             .order("sort_order");
           if (questionsError) setError(copy.examQuestionsLoadError);
@@ -121,7 +121,7 @@ export function ExamsPage() {
       } else {
         const { data, error: examsError } = await supabase
           .from("exams")
-          .select("id,title,description,duration_minutes,created_at")
+          .select("id,title,description,duration_minutes,cover_image_url,created_at")
           .eq("is_published", true)
           .order("created_at", { ascending: false });
         if (examsError) setError(copy.examListLoadError);
@@ -183,16 +183,18 @@ export function ExamsPage() {
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
         {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
-          {exams.map(item => <article className="public-exam-card" key={item.id}><div className="public-resource-symbol"><ClipboardList size={24} /></div><h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
+          {exams.map(item => <article className="public-exam-card" key={item.id}>{item.cover_image_url ? <img className="public-exam-card-cover" src={item.cover_image_url} alt={item.title} /> : <div className="public-resource-symbol"><ClipboardList size={24} /></div>}<h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
         </div>}
       </> : loading ? <div className="public-hub-empty">{copy.examLoading}</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
         <div className="public-hub-kicker">{copy.examTrainingLabel}</div>
         <h1>{exam.title}</h1>
+        {exam.cover_image_url && <img className="public-exam-detail-cover" src={exam.cover_image_url} alt={exam.title} />}
         <p className="public-hub-lead">{exam.description || copy.examDetailFallback}</p>
         {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} {copy.examMinuteUnit}</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p><button className="hub-primary" onClick={beginExam}>{user ? copy.examStartButton : copy.examLoginButton}</button></section>}
         {active && <section className="public-exam-paper"><div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
+            {q.image_url && <img className="public-question-image" src={q.image_url} alt={"صورة السؤال " + (index + 1)} />}
             {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
           </article>)}
           <button className="hub-primary" disabled={submitting} onClick={() => { if (window.confirm(copy.examSubmitConfirm)) submitExam(); }}>{submitting ? copy.examSubmitting : copy.examSubmitButton}</button>
