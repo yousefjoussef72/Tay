@@ -1,4 +1,4 @@
-import { generateJson, requireUser, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
+import { generateClaudeJson, requireUser, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
 
 const SIMULATORS = {
   harmonic_spring: { mass: [0.1, 2], stiffness: [10, 200], amplitude_cm: [2, 12] },
@@ -383,7 +383,7 @@ export default async function handler(req, res) {
   ].filter(Boolean).join("\n");
 
   try {
-    const result = await generateJson(req, { system, user, maxTokens: 12000 });
+    const result = await generateClaudeJson({ system, user, maxTokens: 12000 });
     const research = normalizeResearch(result.data?.research || result.data, subject, includePractical);
 
     if (
