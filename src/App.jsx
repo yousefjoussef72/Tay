@@ -6,6 +6,8 @@ import {
   Plus, Send, ShieldCheck, Sparkles, X, LogOut, Trash2, Eye, EyeOff, UserRound, LogIn
 } from "lucide-react";
 import { supabase, supabaseReady } from "./lib/supabase.js";
+import AdminWorkspace from "./AdminWorkspace.jsx";
+import { LibraryPage, ExamsPage } from "./StudentHub.jsx";
 
 const features = [
   {
@@ -46,6 +48,8 @@ function Header() {
           <a href="/#about" onClick={close}>عن الموقع</a>
           <a href="/#features" onClick={close}>المميزات</a>
           <a href="/#contact" onClick={close}>تواصل معنا</a>
+          <Link to="/library" onClick={close}>المكتبة</Link>
+          <Link to="/exams" onClick={close}>الامتحانات</Link>
           <Link to="/account" onClick={close}>حساب الطالب</Link>
         </nav>
         <Link to="/admin" className="nav-admin"><LockKeyhole size={15} /> لوحة الإدارة</Link>
@@ -348,16 +352,7 @@ function AdminPage() {
       ) : role !== "admin" ? (
         <div className="admin-message"><div className="admin-icon"><ShieldCheck size={25} /></div><h1>الحساب ليس حساب إدارة.</h1><p>تم تسجيل الدخول، لكن هذا الحساب لا يملك صلاحية إدارة الموقع. اطلب من مالك المشروع تعيين دور admin له من قاعدة البيانات.</p><button className="button button-ghost-dark" onClick={signOut}>تسجيل الخروج</button></div>
       ) : (
-        <div className="dashboard">
-          <div className="dashboard-head"><div><span className="admin-label">مساحة العمل</span><h1>لوحة التحكم</h1><p>إدارة المحتوى والرسائل الواردة.</p></div><button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> خروج</button></div>
-          <div className="stats-grid"><div className="stat-card"><FileText /><span>المقالات</span><strong>{articles.length}</strong></div><div className="stat-card"><MessageSquare /><span>الرسائل</span><strong>{messages.length}</strong></div><div className="stat-card"><Clock3 /><span>مساحة الإدارة</span><strong>نشطة</strong></div></div>
-          <div className="dashboard-tabs"><button className={tab === "articles" ? "active" : ""} onClick={() => setTab("articles")}>المقالات</button><button className={tab === "messages" ? "active" : ""} onClick={() => setTab("messages")}>الرسائل</button></div>
-          {error && <div className="notice error">{error}</div>}
-          {tab === "articles" ? <div className="admin-content">
-            <form className="new-article" onSubmit={createArticle}><h2><Plus size={18} /> إضافة مسودة</h2><input required placeholder="عنوان المقال" value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /><input placeholder="وصف مختصر" value={draft.excerpt} onChange={e => setDraft({ ...draft, excerpt: e.target.value })} /><textarea rows="3" placeholder="المحتوى..." value={draft.content} onChange={e => setDraft({ ...draft, content: e.target.value })} /><button className="button button-primary" disabled={saving}>{saving ? "جارٍ الحفظ..." : "حفظ كمسودة"}</button></form>
-            <div className="admin-list"><h2>كل المقالات</h2>{articles.length === 0 ? <p className="muted">لا توجد مقالات بعد.</p> : articles.map(article => <div className="admin-list-row" key={article.id}><div><strong>{article.title}</strong><small>{article.is_published ? "منشور" : "مسودة"} · {article.slug}</small></div><div className="row-actions"><button title={article.is_published ? "إلغاء النشر" : "نشر"} onClick={() => togglePublish(article)}>{article.is_published ? <EyeOff size={17} /> : <Eye size={17} />}</button><button title="حذف" onClick={() => deleteArticle(article.id)}><Trash2 size={17} /></button></div></div>)}</div>
-          </div> : <div className="admin-list message-list"><h2>صندوق الوارد</h2>{messages.length === 0 ? <p className="muted">لا توجد رسائل بعد.</p> : messages.map(message => <article className="inbox-item" key={message.id}><div className="inbox-head"><strong>{message.subject}</strong><small>{new Date(message.created_at).toLocaleString("ar-EG")}</small></div><p>{message.message}</p><div className="inbox-meta">{message.name} · {message.email}</div></article>)}</div>}
-        </div>
+        <AdminWorkspace session={session} />
       )}
     </div>
   );
@@ -572,5 +567,5 @@ function NotFound() {
 }
 
 export default function App() {
-  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="*" element={<NotFound />} /></Routes>;
+  return <Routes><Route path="/" element={<SiteGate />} /><Route path="/account" element={<AccountPage />} /><Route path="/admin" element={<AdminPage />} /><Route path="/library" element={<LibraryPage />} /><Route path="/exams" element={<ExamsPage />} /><Route path="/exams/:examId" element={<ExamsPage />} /><Route path="*" element={<NotFound />} /></Routes>;
 }
