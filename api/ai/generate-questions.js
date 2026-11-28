@@ -1,4 +1,4 @@
-import { generateJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
+import { generateGroqJson, requireAdmin, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
 
 const TYPES = new Set(["mcq", "true_false", "short_answer", "essay"]);
 const DIFFICULTIES = new Set(["easy", "medium", "hard", "mixed"]);
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
   ].filter(Boolean).join("\n");
 
   try {
-    const result = await generateJson(req, { system, user: prompt, maxTokens: Math.min(12000, count * 700) });
+    const result = await generateGroqJson({ system, user: prompt, maxTokens: Math.min(6500, count * 700) });
     const questions = Array.isArray(result.data?.questions)
       ? result.data.questions.map(normalizeQuestion).filter(Boolean)
       : [];
