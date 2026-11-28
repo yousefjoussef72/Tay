@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { BookOpen, FileText, Image as ImageIcon, ExternalLink, Search, ClipboardList, Clock3, ArrowRight, CheckCircle2, LockKeyhole, Download } from "lucide-react";
+import { BookOpen, FileText, Image as ImageIcon, ExternalLink, Search, ClipboardList, Clock3, ArrowRight, CheckCircle2, LockKeyhole, Download, Video } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
 import { useSiteCopy } from "./siteCopy.js";
@@ -83,11 +83,15 @@ export function LibraryPage() {
         {filtered.map(item => {
           const url = item.resolved_url || "";
           return <article className="public-resource-card" key={item.id}>
-            {item.resource_type === "image" && url ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a> : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : <BookOpen size={24} />}</div>}
+            {item.resource_type === "image" && url
+              ? <a href={url} target="_blank" rel="noreferrer" className="public-resource-image"><img src={url} alt={item.title} /></a>
+              : item.resource_type === "video" && url
+                ? <video className="public-resource-video" controls playsInline preload="metadata" src={url}>متصفحك لا يدعم تشغيل الفيديو.</video>
+                : <div className="public-resource-symbol">{item.resource_type === "link" ? <ExternalLink size={24} /> : item.resource_type === "pdf" ? <FileText size={24} /> : item.resource_type === "video" ? <Video size={24} /> : <BookOpen size={24} />}</div>}
             <span className="public-resource-category">{item.category || copy.libraryGeneralCategory}</span>
             <h2>{item.title}</h2>
             <p>{item.description || copy.libraryFileFallback}</p>
-            {url ? <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a> : <span className="public-resource-open">{copy.libraryFileUnavailable}</span>}
+            {url ? <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "video" ? (copy.libraryVideoOpen || "مشاهدة الفيديو") : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a> : <span className="public-resource-open">{copy.libraryFileUnavailable}</span>}
           </article>;
         })}
       </div>}
