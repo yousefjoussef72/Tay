@@ -1,4 +1,4 @@
-import { generateJson, requireUser, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
+import { generateGroqResearchJson, requireUser, sendApiError, setApiHeaders } from "../../lib/ai-server.js";
 
 const SIMULATORS = {
   harmonic_spring: { mass: [0.1, 2], stiffness: [10, 200], amplitude_cm: [2, 12] },
@@ -288,7 +288,7 @@ export default async function handler(req, res) {
 
   const subjectId = cleanText(req.body?.subject_id, 80);
   const topic = cleanText(req.body?.topic, 240);
-  const detailLevel = req.body?.detail_level === "deep" ? "deep" : "standard";
+  const detailLevel = "deep";
   const includePractical = req.body?.include_practical !== false;
 
   if (!subjectId || topic.length < 3) {
@@ -383,7 +383,7 @@ export default async function handler(req, res) {
   ].filter(Boolean).join("\n");
 
   try {
-    const result = await generateJson(req, { system, user, maxTokens: 12000 });
+    const result = await generateGroqResearchJson({ system, user, maxTokens: 6400 });
     const research = normalizeResearch(result.data?.research || result.data, subject, includePractical);
 
     if (
