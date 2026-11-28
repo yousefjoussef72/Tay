@@ -239,7 +239,7 @@ export function ExamsPage() {
     try {
       const { data, error: resultError } = await supabase
         .from("exam_attempts")
-        .select("id,score,max_score,objective_score,ai_essay_score,ai_feedback,grading_status,ai_graded_at")
+        .select("id,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at")
         .eq("id", result.attempt_id)
         .eq("user_id", user.id)
         .single();
@@ -291,7 +291,8 @@ export function ExamsPage() {
           {result.grading_status === "pending_ai" ? <p>{copy.examEssayPending}</p>
             : result.grading_status === "needs_review" ? <p>{copy.examEssayManualPending}</p>
             : <p>{copy.examResultSaved}</p>}
-          {result.grading_status === "pending_ai" && <button className="hub-secondary" disabled={refreshingResult} onClick={refreshExamResult}>{refreshingResult ? copy.examResultRefreshing : copy.examRefreshResult}</button>}
+          {(result.grading_status === "pending_ai" || result.grading_status === "needs_review") && <button className="hub-secondary" disabled={refreshingResult} onClick={refreshExamResult}>{refreshingResult ? copy.examResultRefreshing : copy.examRefreshResult}</button>}
+          {result.manual_feedback && <p className="public-manual-feedback">{result.manual_feedback}</p>}
           {result.ai_feedback && Object.keys(result.ai_feedback).length > 0 && <div className="public-essay-feedback">
             <h3>{copy.examEssayFeedbackTitle}</h3>
             {Object.values(result.ai_feedback).map((feedback,index) => <article key={index}>
