@@ -286,27 +286,41 @@ const SiteCopyContext = createContext(null);
 export function SiteCopyProvider({ children }) {
   const [copy, setCopy] = useState(DEFAULT_SITE_COPY);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      if (supabase) {
-        const { data } = await supabase
+      setLoaded(false);
+      setLoadError("");
+      try {
+        if (!supabase) throw new Error("خدمة قاعدة البيانات غير متاحة.");
+        const { data, error } = await supabase
           .from("site_settings")
           .select("value")
           .eq("key", "site_copy")
           .maybeSingle();
-        if (active && data?.value && typeof data.value === "object") {
+        if (error) throw error;
+        if (active && data?.value && typeof data.value === "object" && !Array.isArray(data.value)) {
           setCopy({ ...DEFAULT_SITE_COPY, ...data.value });
         }
+      } catch (error) {
+        if (active) setLoadError(error?.message || "تعذر تحميل إعدادات الموقع.");
+      } finally {
+        if (active) setLoaded(true);
       }
-      if (active) setLoaded(true);
     }
     load();
     return () => { active = false; };
-  }, []);
+  }, [loadVersion]);
+
+  function reloadCopy() {
+    setLoadVersion(version => version + 1);
+  }
 
   async function saveCopy(nextCopy) {
+    if (loadError) return { error: new Error("يجب تحميل إعدادات الموقع بنجاح قبل الحفظ.") };
     if (!supabase) return { error: new Error("خدمة قاعدة البيانات غير متاحة.") };
     const { error } = await supabase.from("site_settings").upsert({
       key: "site_copy",
@@ -317,7 +331,7 @@ export function SiteCopyProvider({ children }) {
     return { error };
   }
 
-  const value = useMemo(() => ({ copy, setCopy, loaded, saveCopy }), [copy, loaded]);
+  const value = useMemo(() => ({ copy, setCopy, loaded, loadError, reloadCopy, saveCopy }), [copy, loaded, loadError]);
   return createElement(SiteCopyContext.Provider, { value }, children);
 }
 
