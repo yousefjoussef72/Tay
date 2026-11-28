@@ -80,6 +80,7 @@ export const SITE_COPY_GROUPS = [
       { key: "articlesKicker", label: "العنوان الصغير", value: "03 / آخر الإضافات" },
       { key: "articlesTitle", label: "عنوان القسم", value: "من داخل المساحة" },
       { key: "articlesSubtitle", label: "النص الجانبي", value: "المحتوى المنشور" },
+      { key: "articlesEmpty", label: "رسالة عدم وجود مقالات", value: "لا توجد مقالات منشورة بعد." },
       { key: "articleTag", label: "وسم المقال", value: "مقال · اضغط للقراءة" },
       { key: "articleFallback", label: "الوصف الافتراضي للمقال", value: "اكتشف هذا الموضوع من داخل المساحة." },
       { key: "articleReadMore", label: "رابط قراءة المقال", value: "قراءة المقال" },
