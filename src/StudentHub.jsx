@@ -52,7 +52,9 @@ export function LibraryPage() {
   const [category, setCategory] = useState("ALL");
   const [trackFilter, setTrackFilter] = useState("ALL");
   const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [subjectFilter, setSubjectFilter] = useState("ALL");
   const [tracks, setTracks] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function LibraryPage() {
     async function load() {
       const { data, error: loadError } = await supabase
         .from("learning_resources")
-        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,subject_id,unit_id,lesson_id,created_at")
+        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,track_id,grade_level,curriculum_year,subject_id,unit_id,lesson_id,created_at")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (loadError) {
@@ -80,22 +82,27 @@ export function LibraryPage() {
       const trackMap = new Map((trackResult.data || []).map(item => [item.id, item]));
       if (!active) return;
       setTracks(trackResult.data || []);
+      setSubjects(subjectResult.data || []);
       const unitMap = new Map((unitResult.data || []).map(item => [item.id, item]));
       const lessonMap = new Map((lessonResult.data || []).map(item => [item.id, item]));
-      const resolvedItems = await Promise.all((data || []).map(async item => ({
+      const resolvedItems = await Promise.all((data || []).map(async item => {
+        const subject = subjectMap.get(item.subject_id);
+        const resolvedTrackId = item.track_id || subject?.track_id || null;
+        return {
         ...item,
-        subject_name: subjectMap.get(item.subject_id)?.name || "",
-        track_id: subjectMap.get(item.subject_id)?.track_id || null,
-        track_name: trackMap.get(subjectMap.get(item.subject_id)?.track_id)?.name || "مشترك بين المسارات",
-        grade_level: subjectMap.get(item.subject_id)?.grade_level || "",
-        curriculum_year: subjectMap.get(item.subject_id)?.curriculum_year || null,
+        subject_name: subject?.name || "",
+        track_id: resolvedTrackId,
+        track_name: trackMap.get(resolvedTrackId)?.name || "مشترك بين المسارات",
+        grade_level: item.grade_level || subject?.grade_level || "",
+        curriculum_year: item.curriculum_year || subject?.curriculum_year || null,
         unit_title: unitMap.get(item.unit_id)?.title || "",
         lesson_title: lessonMap.get(item.lesson_id)?.title || "",
         lesson_slug: lessonMap.get(item.lesson_id)?.slug || "",
         resolved_url: item.resource_type === "link"
           ? item.external_url
           : await signedLibraryUrl(item.file_path),
-      })));
+      };
+      }));
       if (!active) return;
       setItems(resolvedItems);
       setLoading(false);
@@ -109,6 +116,7 @@ export function LibraryPage() {
     (category === "ALL" || item.category === category) &&
     (trackFilter === "ALL" || !item.track_id || item.track_id === trackFilter) &&
     (gradeFilter === "ALL" || !item.curriculum_year || String(item.curriculum_year) === gradeFilter) &&
+    (subjectFilter === "ALL" || item.subject_id === subjectFilter) &&
     (item.title + " " + item.description).toLowerCase().includes(query.toLowerCase())
   );
 
@@ -120,8 +128,9 @@ export function LibraryPage() {
       <p className="public-hub-lead">{copy.libraryDescription}</p>
       <div className="library-tools">
         <label><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={copy.librarySearchPlaceholder} /></label>
-        <select value={trackFilter} onChange={e=>setTrackFilter(e.target.value)}><option value="ALL">كل المسارات</option>{tracks.map(track=><option value={track.id} key={track.id}>{track.name}</option>)}</select>
-        <select value={gradeFilter} onChange={e=>setGradeFilter(e.target.value)}><option value="ALL">كل الصفوف</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
+        <select value={trackFilter} onChange={e=>{setTrackFilter(e.target.value);setSubjectFilter("ALL")}}><option value="ALL">كل المسارات</option>{tracks.map(track=><option value={track.id} key={track.id}>{track.name}</option>)}</select>
+        <select value={gradeFilter} onChange={e=>{setGradeFilter(e.target.value);setSubjectFilter("ALL")}}><option value="ALL">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
+        <select value={subjectFilter} onChange={e=>setSubjectFilter(e.target.value)}><option value="ALL">كل المواد</option>{subjects.filter(subject=>(trackFilter==="ALL"||!subject.track_id||subject.track_id===trackFilter)&&(gradeFilter==="ALL"||String(subject.curriculum_year||2)===gradeFilter)).map(subject=><option value={subject.id} key={subject.id}>{subject.name}</option>)}</select>
         <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c} value={c}>{c === "ALL" ? copy.libraryAllCategories : c}</option>)}</select>
       </div>
       {error && <p className="hub-alert error">{error === "load" ? copy.libraryLoadError : error}</p>}
