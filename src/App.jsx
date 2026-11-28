@@ -228,7 +228,8 @@ function AdminPage() {
   const [session, setSession] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [articles, setArticles] = useState([]);
@@ -268,9 +269,27 @@ function AdminPage() {
   async function signIn(event) {
     event.preventDefault();
     setError("");
-    if (!supabase) return;
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) setError("تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور.");
+    if (!supabase || authBusy) return;
+    setAuthBusy(true);
+    try {
+      const { data, error: signInError } = await supabase.functions.invoke("username-auth", {
+        body: { action: "login", username: username.trim().toLowerCase(), password },
+      });
+      if (signInError || !data?.access_token || !data?.refresh_token) {
+        setError(data?.message || "اسم المستخدم أو كلمة المرور غير صحيحة.");
+        return;
+      }
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) setError("تعذر بدء الجلسة. حاول مرة أخرى.");
+    } catch (error) {
+      console.error("Admin sign-in failed:", error);
+      setError("حدث خطأ أثناء تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.");
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   async function createArticle(event) {
@@ -320,10 +339,10 @@ function AdminPage() {
         <div className="login-card">
           <div className="admin-icon"><LockKeyhole size={25} /></div><span className="admin-label">منطقة محمية</span><h1>مرحبًا بعودتك.</h1><p>سجّل الدخول بحساب الإدارة للمتابعة.</p>
           <form onSubmit={signIn} className="login-form">
-            <label>البريد الإلكتروني<input type="email" required value={email} onChange={e => setEmail(e.target.value)} dir="ltr" /></label>
-            <label>كلمة المرور<input type="password" required value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
+            <label>اسم المستخدم<input type="text" required minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" autoComplete="username" value={username} onChange={e => setUsername(e.target.value.toLowerCase())} dir="ltr" /></label>
+            <label>كلمة المرور<input type="password" required minLength={8} maxLength={72} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" /></label>
             {error && <div className="notice error">{error}</div>}
-            <button className="button button-primary" type="submit">تسجيل الدخول <ArrowLeft size={17} /></button>
+            <button className="button button-primary" type="submit" disabled={authBusy}>{authBusy ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"} <ArrowLeft size={17} /></button>
           </form>
         </div>
       ) : role !== "admin" ? (
@@ -352,21 +371,16 @@ function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpPending, setOtpPending] = useState(false);
-  const [otpSending, setOtpSending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [shareTelemetry, setShareTelemetry] = useState(false);
-  const [signupDetails, setSignupDetails] = useState(null);
   const [notice, setNotice] = useState(null);
 
   async function loadProfile(user) {
     if (!supabase || !user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("display_name,role")
+      .select("display_name,username,role")
       .eq("id", user.id)
       .maybeSingle();
     setProfile(data ?? null);
@@ -392,67 +406,6 @@ function AccountPage() {
     };
   }, []);
 
-  function describeEmailError(error) {
-    if (error?.code === "over_email_send_rate_limit") {
-      return "لم يُرسل الرمز لأن المشروع وصل إلى حد البريد المجاني: رسالتان في الساعة فقط. يلزم ربط خدمة SMTP حتى تصل الرموز إلى جميع الطلاب.";
-    }
-    if (error?.code === "email_address_not_authorized" || /email address not authorized/i.test(error?.message || "")) {
-      return "خدمة البريد الحالية لا تسمح بالإرسال إلى هذا العنوان. يلزم ربط خدمة SMTP خارجية في Supabase.";
-    }
-    return "تعذر إرسال رمز التحقق الآن. تحقق من إعدادات البريد وحاول لاحقًا.";
-  }
-
-  async function sendSignupNotice(authSession, userEmail, displayName, consent) {
-    if (!consent || !authSession?.access_token) return { ok: true, skipped: true };
-    try {
-      const response = await fetch("/api/telegram-signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + authSession.access_token,
-        },
-        body: JSON.stringify({
-          consent: true,
-          email: userEmail,
-          displayName,
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-      return { ok: response.ok && result.ok === true, error: result.error || "notification_failed" };
-    } catch {
-      return { ok: false, error: "network_error" };
-    }
-  }
-
-  async function finishVerifiedSignup(authData) {
-    const user = authData?.user;
-    const authSession = authData?.session;
-    setSession(authSession);
-    if (user) await loadProfile(user);
-
-    const details = signupDetails;
-    setOtpPending(false);
-    setOtp("");
-    setPassword("");
-    setSignupDetails(null);
-
-    if (details?.shareTelemetry) {
-      const notification = await sendSignupNotice(
-        authSession,
-        user?.email || email.trim().toLowerCase(),
-        details.name,
-        true
-      );
-      if (notification.ok) {
-        setNotice({ kind: "success", text: "تم تفعيل حسابك وتسجيل دخولك، ووصل إشعار التسجيل إلى إدارة الموقع." });
-      } else {
-        setNotice({ kind: "warning", text: "تم تفعيل حسابك بنجاح، لكن تعذر إرسال إشعار تيليجرام للإدارة. راجع إعدادات البوت في Vercel." });
-      }
-    } else {
-      setNotice({ kind: "success", text: "تم تفعيل حسابك وتسجيل دخولك بنجاح." });
-    }
-  }
-
   async function submitAuth(event) {
     event.preventDefault();
     setNotice(null);
@@ -460,140 +413,49 @@ function AccountPage() {
       setNotice({ kind: "error", text: "خدمة الحسابات غير متاحة الآن. حاول لاحقًا." });
       return;
     }
-
     setBusy(true);
-    const cleanEmail = email.trim().toLowerCase();
     try {
-      if (otpPending) {
-        const cleanOtp = otp.trim();
-        if (!/^\d{6}$/.test(cleanOtp)) {
-          setNotice({ kind: "warning", text: "اكتب رمز التحقق المكوّن من 6 أرقام." });
-          return;
-        }
-        const { data, error: otpError } = await supabase.auth.verifyOtp({
-          email: cleanEmail,
-          token: cleanOtp,
-          type: "email",
+      const cleanUsername = username.trim().toLowerCase();
+      const action = mode === "signup" ? "signup" : "login";
+      const body = action === "signup"
+        ? { action, username: cleanUsername, password, displayName: name.trim() }
+        : { action, username: cleanUsername, password };
+      const { data, error: authError } = await supabase.functions.invoke("username-auth", { body });
+      if (authError || data?.error) {
+        setNotice({
+          kind: "error",
+          text: data?.message || (data?.error === "username_taken"
+            ? "اسم المستخدم مستخدم بالفعل."
+            : "اسم المستخدم أو كلمة المرور غير صحيحة. راجع البيانات وحاول مرة أخرى."),
         });
-        if (otpError) {
-          setNotice({ kind: "error", text: "الرمز غير صحيح أو انتهت صلاحيته. تأكد من الأرقام أو اطلب رمزًا جديدًا." });
-          return;
-        }
-        await finishVerifiedSignup(data);
         return;
       }
-
-      if (mode === "signup") {
-        const cleanName = name.trim();
-        const consentAtSignup = shareTelemetry;
-        const { data, error: authError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: { full_name: cleanName },
-          },
-        });
-        if (authError) {
-          setNotice({
-            kind: "error",
-            text: authError.code === "over_email_send_rate_limit" ||
-              authError.code === "email_address_not_authorized"
-              ? describeEmailError(authError)
-              : "تعذر إنشاء الحساب. راجع البريد الإلكتروني وكلمة المرور أو جرّب بريدًا آخر.",
-          });
-          return;
-        }
-
-        if (data.session) {
-          setSession(data.session);
-          await loadProfile(data.user);
-          const notification = await sendSignupNotice(data.session, cleanEmail, cleanName, consentAtSignup);
-          setNotice({
-            kind: notification.ok
-              ? "success"
-              : consentAtSignup ? "warning" : "success",
-            text: consentAtSignup && !notification.ok
-              ? "تم إنشاء حسابك، لكن تعذر إرسال إشعار تيليجرام للإدارة. راجع إعدادات البوت في Vercel."
-              : "تم إنشاء حسابك وتسجيل دخولك بنجاح.",
-          });
-          setPassword("");
-          return;
-        }
-
-        const existingAccount = Boolean(
-          data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0
-        );
-        setSignupDetails(existingAccount ? null : { name: cleanName, shareTelemetry: consentAtSignup });
-        setOtpPending(true);
-        setOtp("");
+      if (!data?.access_token || !data?.refresh_token) {
+        setNotice({ kind: "success", text: "تم إنشاء الحساب. سجّل الدخول الآن باسم المستخدم وكلمة المرور." });
+        setMode("login");
         setPassword("");
-        setNotice({
-          kind: existingAccount ? "warning" : "success",
-          text: existingAccount
-            ? "هذا البريد مسجّل بالفعل. يمكنك طلب رمز جديد أدناه أو تسجيل الدخول إلى حسابك."
-            : "أرسلنا رمز تحقق مكوّنًا من 6 أرقام إلى بريدك. اكتبه هنا لتفعيل حسابك.",
-        });
         return;
       }
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
       });
-      if (authError) {
-        const notConfirmed = authError.code === "email_not_confirmed" ||
-          /email not confirmed/i.test(authError.message || "");
-        if (notConfirmed) {
-          setSignupDetails(null);
-          setOtpPending(true);
-          setOtp("");
-        }
-        setNotice({
-          kind: notConfirmed ? "warning" : "error",
-          text: notConfirmed
-            ? "هذا الحساب لم يُفعّل بعد. اضغط «إعادة إرسال الرمز»، ثم أدخل الرمز الذي يصلك هنا."
-            : authError.code === "invalid_credentials"
-              ? "البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد من كتابتهما كما استخدمتهما عند إنشاء الحساب."
-              : "تعذر تسجيل الدخول الآن. حاول مرة أخرى بعد قليل.",
-        });
+      if (sessionError) {
+        setNotice({ kind: "error", text: "تم تنفيذ الطلب لكن تعذر بدء الجلسة. حاول تسجيل الدخول." });
         return;
       }
-
-      setSession(data.session);
-      await loadProfile(data.user);
-      setNotice({ kind: "success", text: "تم تسجيل الدخول بنجاح." });
+      setSession(sessionData.session);
+      if (sessionData.user) await loadProfile(sessionData.user);
       setPassword("");
+      setNotice({
+        kind: "success",
+        text: action === "signup" ? "تم إنشاء حسابك وتسجيل دخولك بنجاح." : "تم تسجيل الدخول بنجاح.",
+      });
     } catch (error) {
-      console.error("Authentication request failed:", error);
-      setNotice({ kind: "error", text: "حدث اتصال غير متوقع أثناء تنفيذ الطلب. تحقق من الإنترنت ثم حاول مرة أخرى." });
+      console.error("Username authentication failed:", error);
+      setNotice({ kind: "error", text: "حدثت مشكلة اتصال. تحقق من الإنترنت وحاول مرة أخرى." });
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function resendCode() {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setNotice({ kind: "warning", text: "اكتب بريدك الإلكتروني أولًا." });
-      return;
-    }
-    setOtpSending(true);
-    setNotice(null);
-    try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: "signup",
-        email: cleanEmail,
-      });
-      if (resendError) {
-        setNotice({ kind: "warning", text: describeEmailError(resendError) });
-      } else {
-        setNotice({ kind: "success", text: "تم طلب إرسال رمز جديد. أدخل الرمز الأحدث الذي يصلك." });
-      }
-    } catch (error) {
-      console.error("Resend signup OTP failed:", error);
-      setNotice({ kind: "error", text: "تعذر طلب رمز جديد بسبب مشكلة اتصال. حاول لاحقًا." });
-    } finally {
-      setOtpSending(false);
     }
   }
 
@@ -611,8 +473,8 @@ function AccountPage() {
         <div className="account-wrap">
           <div className="account-intro">
             <span className="admin-label">مساحة — حساب الطالب</span>
-            <h1>{session ? "أهلًا بعودتك." : otpPending ? "أكّد بريدك الإلكتروني." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
-            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : otpPending ? "أدخل رمز التحقق المكوّن من 6 أرقام الذي وصلك في رسالة البريد الإلكتروني." : "أنشئ حسابك بالبريد الإلكتروني وكلمة المرور، أو ادخل إلى حسابك الحالي."}</p>
+            <h1>{session ? "أهلًا بعودتك." : mode === "signup" ? "ابدأ مساحتك الخاصة." : "سجّل دخولك من جديد."}</h1>
+            <p>{session ? "أصبح لديك حساب خاص. يمكنك العودة إلى الموقع ومتابعة المحتوى." : "استخدم اسم المستخدم وكلمة المرور، من غير رسائل تأكيد بالبريد الإلكتروني."}</p>
           </div>
           {loading ? (
             <div className="account-card"><p className="muted">جارٍ التحقق من حسابك...</p></div>
@@ -621,7 +483,7 @@ function AccountPage() {
               <div className="account-avatar"><UserRound size={28} /></div>
               <span className="admin-label">تم تسجيل الدخول</span>
               <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
-              <p className="account-email" dir="ltr">{session.user.email}</p>
+              <p className="account-email" dir="ltr">@{profile?.username || session.user.user_metadata?.username || "user"}</p>
               <div className="account-role">{profile?.role === "admin" ? "مدير الموقع" : "حساب طالب"}</div>
               <div className="account-actions">
                 <Link to="/" className="button button-primary">العودة إلى الموقع <ArrowLeft size={17} /></Link>
@@ -631,74 +493,53 @@ function AccountPage() {
             </section>
           ) : (
             <section className="account-card">
-              {!otpPending && (
-                <div className="account-switch">
-                  <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
-                  <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
-                </div>
-              )}
+              <div className="account-switch">
+                <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => { setMode("signup"); setNotice(null); }}>إنشاء حساب جديد</button>
+                <button type="button" className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setNotice(null); }}>تسجيل الدخول</button>
+              </div>
               <form className="account-form" onSubmit={submitAuth}>
-                {otpPending ? (
-                  <>
-                    <label>البريد الإلكتروني
-                      <input type="email" value={email} readOnly dir="ltr" />
-                    </label>
-                    <label>رمز التحقق المكوّن من 6 أرقام
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        pattern="[0-9]{6}"
-                        maxLength={6}
-                        required
-                        value={otp}
-                        onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                        placeholder="123456"
-                        dir="ltr"
-                      />
-                    </label>
-                    {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
-                    <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                      {busy ? "جارٍ التحقق..." : "تأكيد الرمز وتفعيل الحساب"} <ShieldCheck size={17} />
-                    </button>
-                    <button className="button button-ghost-dark account-submit" type="button" onClick={resendCode} disabled={otpSending}>
-                      {otpSending ? "جارٍ طلب الرمز..." : "إعادة إرسال الرمز"} <Mail size={16} />
-                    </button>
-                    <button className="account-home-link" type="button" onClick={() => { setOtpPending(false); setOtp(""); setSignupDetails(null); setNotice(null); }}>
-                      العودة إلى بيانات الحساب
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {mode === "signup" && (
-                      <label>الاسم الكامل
-                        <input required autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
-                      </label>
-                    )}
-                    <label>البريد الإلكتروني
-                      <input type="email" required autoComplete="email" value={email} onChange={e => { setEmail(e.target.value); setNotice(null); }} placeholder="name@example.com" dir="ltr" />
-                    </label>
-                    <label>كلمة المرور
-                      <span className="password-field">
-                        <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" />
-                        <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
-                      </span>
-                    </label>
-                    {mode === "signup" && (
-                      <label className="telemetry-consent">
-                        <input type="checkbox" checked={shareTelemetry} onChange={e => setShareTelemetry(e.target.checked)} />
-                        <span>أوافق على إرسال اسمي وبريدي ومعلومات جهازي وعنوان IP إلى إدارة الموقع عبر تيليجرام بعد تفعيل الحساب. هذا اختياري ولا يؤثر على التسجيل.</span>
-                      </label>
-                    )}
-                    {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
-                    <button className="button button-primary account-submit" type="submit" disabled={busy}>
-                      {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
-                      {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
-                    </button>
-                  </>
+                {mode === "signup" && (
+                  <label>الاسم الكامل
+                    <input required minLength={2} maxLength={80} autoComplete="name" value={name} onChange={e => setName(e.target.value)} placeholder="اكتب اسمك" />
+                  </label>
                 )}
+                <label>اسم المستخدم
+                  <input
+                    type="text"
+                    required
+                    minLength={3}
+                    maxLength={24}
+                    pattern="[A-Za-z0-9_]{3,24}"
+                    autoComplete="username"
+                    value={username}
+                    onChange={e => { setUsername(e.target.value.toLowerCase()); setNotice(null); }}
+                    placeholder="مثال: yousef_123"
+                    dir="ltr"
+                  />
+                </label>
+                <label>كلمة المرور
+                  <span className="password-field">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={8}
+                      maxLength={72}
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="8 أحرف على الأقل"
+                      dir="ltr"
+                    />
+                    <button type="button" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+                  </span>
+                </label>
+                {notice && <div className={"notice " + notice.kind}>{notice.text}</div>}
+                <button className="button button-primary account-submit" type="submit" disabled={busy}>
+                  {busy ? "جارٍ التنفيذ..." : mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}
+                  {mode === "signup" ? <UserRound size={17} /> : <LogIn size={17} />}
+                </button>
               </form>
-              <p className="account-footnote">لن نطلب منك أي بيانات غير لازمة لإنشاء حسابك.</p>
+              <p className="account-footnote">اسم المستخدم من 3 إلى 24 حرفًا إنجليزيًا أو رقمًا أو _ فقط. في الحسابات السابقة، استُخدم الجزء السابق لعلامة @ من بريد التسجيل كاسم مستخدم بعد تحويله إلى أحرف صغيرة واستبدال الرموز غير المدعومة بـ _. احتفظ بكلمة المرور؛ لا يتوفر استرداد آلي لها في هذه النسخة.</p>
             </section>
           )}
           <Link to="/" className="account-home-link"><ArrowLeft size={15} /> العودة إلى الصفحة الرئيسية</Link>
@@ -707,6 +548,7 @@ function AccountPage() {
     </>
   );
 }
+
 function SiteGate() {
   const [session, setSession] = useState(undefined);
 
