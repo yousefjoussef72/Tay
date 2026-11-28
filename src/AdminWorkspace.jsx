@@ -3,7 +3,7 @@ import {
   FileText, Image as ImageIcon, BookOpen, ClipboardList, MessageSquare,
   Plus, Pencil, Trash2, Eye, EyeOff, Upload, ExternalLink, Save, X,
   Clock3, CheckCircle2, AlertCircle, File, Link as LinkIcon, ArrowRight,
-  RotateCw, ListChecks, Users
+  RotateCw, ListChecks, Users, Sparkles, WandSparkles, Award
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
 import "./admin-content.css";
@@ -15,6 +15,8 @@ const TABS = [
   { id: "articles", label: "المقالات", icon: FileText },
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
   { id: "exams", label: "الامتحانات", icon: ClipboardList },
+  { id: "results", label: "نتائج الطلاب", icon: Award },
+  { id: "moderators", label: "إدارة المشرفين", icon: Users },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
@@ -22,7 +24,7 @@ const TABS = [
 const EMPTY_ARTICLE = { id: null, title: "", excerpt: "", content: "", cover_url: "", is_published: false };
 const EMPTY_RESOURCE = { id: null, title: "", description: "", resource_type: "pdf", category: "عام", external_url: "", file_path: "", file_name: "", is_published: false };
 const EMPTY_EXAM = { id: null, title: "", description: "", duration_minutes: 30, cover_image_url: "" };
-const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", points: 1, image_url: "" };
+const EMPTY_QUESTION = { id: null, prompt: "", question_type: "mcq", options_text: "", correct_answer: "", grading_mode: "ai", grading_rubric: "", points: 1, image_url: "" };
 
 function slugFor(title) {
   const normalized = title.toLowerCase().trim()
@@ -60,7 +62,7 @@ function FilePicker({ file, onChange, accept = ".pdf,.doc,.docx,image/*", label 
   );
 }
 
-export default function AdminWorkspace({ session }) {
+export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [tab, setTab] = useState("articles");
   const [articles, setArticles] = useState([]);
   const [resources, setResources] = useState([]);
@@ -84,27 +86,135 @@ export default function AdminWorkspace({ session }) {
   const [questionImageFile, setQuestionImageFile] = useState(null);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [editingExam, setEditingExam] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiSubject, setAiSubject] = useState("");
+  const [aiLevel, setAiLevel] = useState("");
+  const [aiCount, setAiCount] = useState(8);
+  const [aiDifficulty, setAiDifficulty] = useState("mixed");
+  const [aiQuestionTypes, setAiQuestionTypes] = useState(["mcq", "true_false", "short_answer", "essay"]);
+  const [generatedQuestions, setGeneratedQuestions] = useState([]);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [savingGenerated, setSavingGenerated] = useState(false);
+  const [gradingAttemptId, setGradingAttemptId] = useState(null);
+  const [manualGradeAttemptId, setManualGradeAttemptId] = useState(null);
+  const [manualGradeDraft, setManualGradeDraft] = useState({ score: "", feedback: "" });
+  const [resultsExamFilter, setResultsExamFilter] = useState("all");
+  const [moderators, setModerators] = useState([]);
+  const [moderatorsLoading, setModeratorsLoading] = useState(false);
+  const [moderatorCreating, setModeratorCreating] = useState(false);
+  const [removingModeratorId, setRemovingModeratorId] = useState(null);
+  const [moderatorDraft, setModeratorDraft] = useState({ display_name: "", username: "", password: "" });
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [articleResult, resourceResult, examResult, messageResult, attemptResult] = await Promise.all([
+    const [articleResult, resourceResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
-      supabase.from("exam_attempts").select("id,exam_id,user_id,score,max_score,submitted_at").order("submitted_at", { ascending: false }).limit(200),
+      supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
+      supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
     ]);
-    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error;
+    const attemptRows = attemptResult.data || [];
+    const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
+    const profileResult = userIds.length
+      ? await supabase.from("profiles").select("id,display_name,username").in("id", userIds)
+      : { data: [], error: null };
+    const profileMap = new Map((profileResult.data || []).map(profile => [profile.id, profile]));
+    const examMap = new Map((examResult.data || []).map(exam => [exam.id, exam.title]));
+    const manualMaxByExam = new Map();
+    (manualQuestionResult.data || []).forEach(question => manualMaxByExam.set(
+      question.exam_id,
+      (manualMaxByExam.get(question.exam_id) || 0) + (Number(question.points) || 0)
+    ));
+    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
     if (firstError) setAlert({ kind: "error", text: "تعذر تحميل بعض بيانات اللوحة. حدّث الصفحة، وإذا استمرت المشكلة راجع صلاحيات قاعدة البيانات." });
     setArticles(articleResult.data || []);
     setResources(resourceResult.data || []);
     setExams(examResult.data || []);
     setMessages(messageResult.data || []);
-    setAttempts(attemptResult.data || []);
+    setAttempts(attemptRows.map(attempt => {
+      const profile = profileMap.get(attempt.user_id);
+      return {
+        ...attempt,
+        student_name: profile?.display_name || "اسم غير مسجل",
+        student_username: profile?.username || "بدون اسم مستخدم",
+        exam_title: examMap.get(attempt.exam_id) || "امتحان محذوف",
+        manual_max_score: manualMaxByExam.get(attempt.exam_id) || 0,
+      };
+    }));
     setLoading(false);
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function loadModerators() {
+    if (!isMasterAdmin) return;
+    setModeratorsLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-moderators", {
+      body: { action: "list" },
+    });
+    if (error || !data?.ok) {
+      setAlert({ kind: "error", text: data?.message || "تعذر تحميل قائمة المشرفين." });
+    } else {
+      setModerators(data.moderators || []);
+    }
+    setModeratorsLoading(false);
+  }
+
+  useEffect(() => {
+    if (isMasterAdmin) loadModerators();
+  }, [isMasterAdmin]);
+
+  async function createModerator(event) {
+    event.preventDefault();
+    if (!isMasterAdmin) return;
+    const displayName = moderatorDraft.display_name.trim();
+    const username = moderatorDraft.username.trim().toLowerCase();
+    const password = moderatorDraft.password;
+    if (displayName.length < 2 || !/^[a-z0-9_]{3,24}$/.test(username) || password.length < 8 || password.length > 72) {
+      return setAlert({ kind: "error", text: "راجع الاسم واسم المستخدم وكلمة المرور. اسم المستخدم 3 إلى 24 حرفًا، وكلمة المرور 8 أحرف على الأقل." });
+    }
+    setModeratorCreating(true);
+    setAlert(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-moderators", {
+        body: {
+          action: "create",
+          display_name: displayName,
+          username,
+          password,
+        },
+      });
+      if (error || !data?.ok) throw new Error(data?.message || "تعذر إنشاء حساب المشرف.");
+      setModeratorDraft({ display_name: "", username: "", password: "" });
+      await loadModerators();
+      setAlert({ kind: "success", text: "تم إنشاء حساب المشرف وتعيين صلاحيات لوحة الإدارة له." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر إنشاء المشرف." });
+    } finally {
+      setModeratorCreating(false);
+    }
+  }
+
+  async function removeModerator(moderator) {
+    if (!isMasterAdmin) return;
+    if (!window.confirm("سحب صلاحية الإشراف من @" + moderator.username + "؟ سيظل الحساب موجودًا كحساب طالب، ولن تُحذف بياناته.")) return;
+    setRemovingModeratorId(moderator.id);
+    setAlert(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-moderators", {
+        body: { action: "remove", moderator_id: moderator.id },
+      });
+      if (error || !data?.ok) throw new Error(data?.message || "تعذر سحب صلاحية الإشراف.");
+      await loadModerators();
+      setAlert({ kind: "success", text: "تم سحب صلاحية المشرف. الحساب نفسه لم يُحذف." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر سحب صلاحية الإشراف." });
+    } finally {
+      setRemovingModeratorId(null);
+    }
+  }
 
   async function uploadAsset(file, folder, targetBucket = BUCKET) {
     if (!file) return null;
@@ -267,15 +377,19 @@ export default function AdminWorkspace({ session }) {
 
   async function loadQuestions(examId) {
     const [questionResult, answerResult] = await Promise.all([
-      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url").eq("exam_id", examId).order("sort_order").order("created_at"),
-      supabase.from("exam_answer_keys").select("question_id,correct_answer"),
+      supabase.from("exam_questions").select("id,exam_id,prompt,question_type,options,points,sort_order,image_url,grading_mode").eq("exam_id", examId).order("sort_order").order("created_at"),
+      supabase.from("exam_answer_keys").select("question_id,correct_answer,grading_rubric"),
     ]);
     if (questionResult.error || answerResult.error) {
       setAlert({ kind: "error", text: "تعذر تحميل أسئلة الامتحان." });
       return;
     }
-    const answers = new Map((answerResult.data || []).map(row => [row.question_id, row.correct_answer]));
-    setQuestions((questionResult.data || []).map(q => ({ ...q, correct_answer: answers.get(q.id) || "" })));
+    const answers = new Map((answerResult.data || []).map(row => [row.question_id, row]));
+    setQuestions((questionResult.data || []).map(q => ({
+      ...q,
+      correct_answer: answers.get(q.id)?.correct_answer || "",
+      grading_rubric: answers.get(q.id)?.grading_rubric || "",
+    })));
   }
 
   async function saveExam(event) {
@@ -338,7 +452,10 @@ export default function AdminWorkspace({ session }) {
     event.preventDefault();
     if (!selectedExam) return;
     if (!questionDraft.prompt.trim() || !questionDraft.correct_answer.trim()) {
-      return setAlert({ kind: "error", text: "اكتب نص السؤال والإجابة الصحيحة." });
+      return setAlert({ kind: "error", text: "اكتب نص السؤال والإجابة النموذجية." });
+    }
+    if (questionDraft.question_type === "essay" && questionDraft.grading_mode === "ai" && !questionDraft.grading_rubric.trim()) {
+      return setAlert({ kind: "error", text: "أضف عناصر التصحيح حتى يستطيع الذكاء الاصطناعي توزيع الدرجة بعدل." });
     }
     let options = [];
     if (questionDraft.question_type === "mcq") {
@@ -362,6 +479,7 @@ export default function AdminWorkspace({ session }) {
         exam_id: selectedExam.id,
         prompt: questionDraft.prompt.trim(),
         question_type: questionDraft.question_type,
+        grading_mode: questionDraft.question_type === "essay" ? questionDraft.grading_mode : "auto",
         options,
         points: Math.max(1, Math.min(100, Number(questionDraft.points) || 1)),
         image_url: imageUrl,
@@ -381,6 +499,7 @@ export default function AdminWorkspace({ session }) {
         const keyResult = await supabase.from("exam_answer_keys").upsert({
           question_id: questionId,
           correct_answer: questionDraft.correct_answer.trim(),
+          grading_rubric: questionDraft.grading_rubric.trim(),
           updated_at: new Date().toISOString(),
         }, { onConflict: "question_id" });
         questionError = keyResult.error;
@@ -409,6 +528,8 @@ export default function AdminWorkspace({ session }) {
       question_type: question.question_type,
       options_text: (question.options || []).join("\n"),
       correct_answer: question.correct_answer,
+      grading_mode: question.grading_mode || "ai",
+      grading_rubric: question.grading_rubric || "",
       points: question.points,
       image_url: question.image_url || "",
     });
@@ -457,11 +578,151 @@ export default function AdminWorkspace({ session }) {
   }
 
   const selectedAttempts = selectedExam ? attempts.filter(a => a.exam_id === selectedExam.id) : [];
+  const visibleAttempts = resultsExamFilter === "all" ? attempts : attempts.filter(attempt => attempt.exam_id === resultsExamFilter);
+
+  async function generateExamQuestions() {
+    if (!selectedExam || !aiTopic.trim() || aiQuestionTypes.length === 0) {
+      return setAlert({ kind: "error", text: "اكتب الموضوع واختر نوع سؤال واحدًا على الأقل." });
+    }
+    if (!session?.access_token) return setAlert({ kind: "error", text: "انتهت جلسة الإدارة. سجّل الدخول مرة أخرى." });
+    setGeneratingAI(true);
+    setAlert(null);
+    setGeneratedQuestions([]);
+    try {
+      const response = await fetch("/api/ai/generate-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
+        body: JSON.stringify({
+          topic: aiTopic,
+          subject: aiSubject,
+          level: aiLevel,
+          count: aiCount,
+          difficulty: aiDifficulty,
+          types: aiQuestionTypes,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.message || "تعذر توليد الأسئلة.");
+      setGeneratedQuestions(data.questions || []);
+      setAlert({ kind: "success", text: "تم توليد " + (data.questions || []).length + " سؤالًا. راجعها ثم أضفها للامتحان." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر الاتصال بخدمة الذكاء الاصطناعي." });
+    } finally {
+      setGeneratingAI(false);
+    }
+  }
+
+  function updateGeneratedQuestion(index, field, value) {
+    setGeneratedQuestions(current => current.map((question, i) => i === index ? { ...question, [field]: value } : question));
+  }
+
+  async function saveGeneratedQuestions() {
+    if (!selectedExam || generatedQuestions.length === 0) return;
+    setSavingGenerated(true);
+    setAlert(null);
+    const insertedIds = [];
+    try {
+      for (const [index, question] of generatedQuestions.entries()) {
+        const values = {
+          exam_id: selectedExam.id,
+          prompt: question.prompt.trim(),
+          question_type: question.question_type,
+          grading_mode: question.question_type === "essay" ? "ai" : "auto",
+          options: question.question_type === "mcq"
+            ? (question.options || []).map(value => String(value).trim()).filter(Boolean)
+            : question.question_type === "true_false" ? ["صحيح", "خطأ"] : [],
+          points: Math.max(1, Math.min(100, Number(question.points) || 1)),
+          sort_order: questions.length + index,
+        };
+        if (!values.prompt || !question.correct_answer?.trim()) throw new Error("أحد الأسئلة لا يحتوي على نص أو إجابة نموذجية.");
+        const { data, error } = await supabase.from("exam_questions").insert(values).select("id").single();
+        if (error || !data?.id) throw error || new Error("تعذر حفظ السؤال.");
+        insertedIds.push(data.id);
+        const { error: keyError } = await supabase.from("exam_answer_keys").upsert({
+          question_id: data.id,
+          correct_answer: question.correct_answer.trim(),
+          grading_rubric: String(question.grading_rubric || "").trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "question_id" });
+        if (keyError) throw keyError;
+      }
+      setGeneratedQuestions([]);
+      await loadQuestions(selectedExam.id);
+      await loadAll();
+      setAlert({ kind: "success", text: "تمت إضافة الأسئلة المولدة إلى الامتحان بنجاح." });
+    } catch (error) {
+      if (insertedIds.length) await supabase.from("exam_questions").delete().in("id", insertedIds);
+      setAlert({ kind: "error", text: error.message || "تعذر حفظ الأسئلة المولدة." });
+    } finally {
+      setSavingGenerated(false);
+    }
+  }
+
+  async function gradeAttemptWithAI(attempt) {
+    if (!session?.access_token) return setAlert({ kind: "error", text: "انتهت جلسة الإدارة. سجّل الدخول مرة أخرى." });
+    setGradingAttemptId(attempt.id);
+    setAlert(null);
+    try {
+      const response = await fetch("/api/ai/grade-essay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
+        body: JSON.stringify({ attempt_id: attempt.id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.message || "تعذر تصحيح المقالات.");
+      setAttempts(current => current.map(item => item.id === attempt.id ? {
+        ...item,
+        ...data.attempt,
+        exam_title: item.exam_title,
+        student_name: item.student_name,
+        student_username: item.student_username,
+        manual_max_score: item.manual_max_score,
+      } : item));
+      setAlert({ kind: "success", text: "تم تصحيح المقالات بالذكاء الاصطناعي وحفظ الدرجة الجديدة." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر تصحيح هذه المحاولة." });
+      await loadAll();
+    } finally {
+      setGradingAttemptId(null);
+    }
+  }
+
+  async function saveManualEssayGrade(attempt) {
+    const maxScore = Number(attempt.manual_max_score) || 0;
+    const score = Number(manualGradeDraft.score);
+    if (!maxScore || !Number.isInteger(score) || score < 0 || score > maxScore) {
+      return setAlert({ kind: "error", text: "أدخل درجة صحيحة من صفر إلى " + maxScore + "." });
+    }
+    setBusy(true);
+    setAlert(null);
+    const nextScore = (Number(attempt.objective_score) || 0) + (Number(attempt.ai_essay_score) || 0) + score;
+    const { data, error } = await supabase.from("exam_attempts").update({
+      manual_essay_score: score,
+      manual_feedback: manualGradeDraft.feedback.trim(),
+      score: nextScore,
+      grading_status: "graded",
+    }).eq("id", attempt.id).select("id,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,grading_status").single();
+    if (error || !data) {
+      setAlert({ kind: "error", text: "تعذر حفظ التقييم اليدوي. تحقق من الدرجة وصلاحيات المدير." });
+    } else {
+      setAttempts(current => current.map(item => item.id === attempt.id ? { ...item, ...data } : item));
+      setManualGradeAttemptId(null);
+      setManualGradeDraft({ score: "", feedback: "" });
+      setAlert({ kind: "success", text: "تم حفظ التقييم اليدوي وتحديث الدرجة النهائية." });
+    }
+    setBusy(false);
+  }
 
   return (
     <div className="hub-dashboard">
       <div className="hub-page-heading">
-        <div><span className="admin-label">إدارة Tay Space</span><h1>مركز إدارة المحتوى</h1><p>أضف وعدّل وانشر المحتوى والملفات والاختبارات من مكان واحد.</p></div>
+        <div><span className="admin-label">{isMasterAdmin ? "المدير الرئيسي" : "مشرف Tay Space"}</span><h1>مركز إدارة المحتوى</h1><p>أضف وعدّل وانشر المحتوى والملفات والاختبارات من مكان واحد.</p></div>
         <button className="hub-refresh" onClick={loadAll} title="تحديث البيانات"><RotateCw size={17} /></button>
       </div>
       <div className="hub-stats">
@@ -471,7 +732,7 @@ export default function AdminWorkspace({ session }) {
         <div><Users /><span>محاولات الامتحان</span><strong>{attempts.length}</strong></div>
       </div>
       <nav className="hub-tabs">
-        {TABS.map(item => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => { setTab(item.id); setAlert(null); }}><item.icon size={16} />{item.label}</button>)}
+        {TABS.filter(item => item.id !== "moderators" || isMasterAdmin).map(item => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => { setTab(item.id); setAlert(null); }}><item.icon size={16} />{item.label}</button>)}
       </nav>
       <Alert value={alert} />
 
@@ -563,28 +824,120 @@ export default function AdminWorkspace({ session }) {
               <>
                 {selectedExam.cover_image_url && <img className="hub-exam-cover-preview" src={selectedExam.cover_image_url} alt={selectedExam.title} />}
                 <div className="hub-panel-heading"><div><h2>{selectedExam.title}</h2><small>{questions.length} سؤال · {selectedExam.duration_minutes} دقيقة</small></div><button className="hub-secondary compact" onClick={editExamDetails}><Pencil size={15} /> تعديل</button></div>
+                <section className="hub-panel hub-ai-generator">
+                  <div className="hub-panel-heading"><h3><Sparkles size={18} /> إنشاء أسئلة بالذكاء الاصطناعي</h3><span className="hub-ai-tag">AI</span></div>
+                  <p className="hub-muted">اكتب الموضوع والمستوى، وسيقترح النظام أسئلة متنوعة مع الإجابات النموذجية وعناصر تصحيح المقال. لن تُحفظ الأسئلة قبل مراجعتك.</p>
+                  <label>موضوع الأسئلة<textarea rows="2" value={aiTopic} onChange={e => setAiTopic(e.target.value)} placeholder="مثال: قوانين نيوتن وتطبيقاتها في الحركة..." /></label>
+                  <div className="hub-form-grid">
+                    <label>المادة (اختياري)<input value={aiSubject} onChange={e => setAiSubject(e.target.value)} placeholder="الفيزياء" /></label>
+                    <label>المستوى الدراسي<input value={aiLevel} onChange={e => setAiLevel(e.target.value)} placeholder="الصف أو الوحدة الدراسية" /></label>
+                    <label>عدد الأسئلة<input type="number" min="1" max="20" value={aiCount} onChange={e => setAiCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))} /></label>
+                    <label>مستوى الصعوبة<select value={aiDifficulty} onChange={e => setAiDifficulty(e.target.value)}><option value="easy">سهل</option><option value="medium">متوسط</option><option value="hard">متقدم</option><option value="mixed">متدرج ومتنوع</option></select></label>
+                  </div>
+                  <div className="hub-ai-type-picker">
+                    <strong>أنواع الأسئلة</strong>
+                    <div className="hub-ai-type-options">
+                      {[["mcq","اختيار من متعدد"],["true_false","صح أو خطأ"],["short_answer","إجابة قصيرة"],["essay","مقالي"]].map(([value,label]) => <label className="hub-check" key={value}><input type="checkbox" checked={aiQuestionTypes.includes(value)} onChange={() => setAiQuestionTypes(current => current.includes(value) ? current.filter(type => type !== value) : [...current, value])} />{label}</label>)}
+                    </div>
+                  </div>
+                  <button type="button" className="hub-primary" disabled={generatingAI || savingGenerated || !aiTopic.trim() || aiQuestionTypes.length === 0} onClick={generateExamQuestions}>
+                    <WandSparkles size={16} />{generatingAI ? "جارٍ إعداد الأسئلة..." : "ولّد أسئلة احترافية"}
+                  </button>
+                  {generatedQuestions.length > 0 && <div className="hub-ai-preview">
+                    <div className="hub-panel-heading"><h4>معاينة الأسئلة المولدة ({generatedQuestions.length})</h4><button type="button" className="hub-secondary compact" onClick={() => setGeneratedQuestions([])}>إلغاء المعاينة</button></div>
+                    {generatedQuestions.map((question,index) => <article className="hub-ai-question-preview" key={index}>
+                      <div className="hub-ai-question-preview-title"><strong>السؤال {index+1}</strong><small>{question.question_type === "mcq" ? "اختيار من متعدد" : question.question_type === "true_false" ? "صح أو خطأ" : question.question_type === "essay" ? "مقالي · تصحيح بالذكاء الاصطناعي" : "إجابة قصيرة"} · {question.points} درجة</small></div>
+                      <label>نص السؤال<textarea rows="2" value={question.prompt} onChange={e => updateGeneratedQuestion(index,"prompt",e.target.value)} /></label>
+                      {question.question_type === "mcq" && <label>الاختيارات (كل اختيار في سطر)<textarea rows="4" value={(question.options || []).join("\n")} onChange={e => updateGeneratedQuestion(index,"options",e.target.value.split("\n").map(value => value.trim()).filter(Boolean))} /></label>}
+                      <label>{question.question_type === "essay" ? "الإجابة النموذجية" : "الإجابة الصحيحة"}<textarea rows="2" value={question.correct_answer} onChange={e => updateGeneratedQuestion(index,"correct_answer",e.target.value)} /></label>
+                      {question.question_type === "essay" && <label>عناصر التصحيح<textarea rows="3" value={question.grading_rubric || ""} onChange={e => updateGeneratedQuestion(index,"grading_rubric",e.target.value)} /></label>}
+                      <label className="hub-ai-points">الدرجة<input type="number" min="1" max="100" value={question.points} onChange={e => updateGeneratedQuestion(index,"points",Number(e.target.value) || 1)} /></label>
+                    </article>)}
+                    <button type="button" className="hub-primary" disabled={savingGenerated} onClick={saveGeneratedQuestions}><Save size={16} />{savingGenerated ? "جارٍ حفظ الأسئلة..." : "أضف الأسئلة إلى الامتحان"}</button>
+                  </div>}
+                </section>
                 <form className="hub-question-form" onSubmit={saveQuestion}>
-                  <h3>{editingQuestionId ? "تعديل السؤال" : "إضافة سؤال"}</h3>
+                  <h3>{editingQuestionId ? "تعديل السؤال يدويًا" : "إضافة سؤال يدويًا"}</h3>
                   <label>نص السؤال<textarea rows="3" required value={questionDraft.prompt} onChange={e => setQuestionDraft({ ...questionDraft, prompt: e.target.value })} placeholder="اكتب السؤال بوضوح..." /></label>
                   {questionDraft.image_url && !questionImageFile && <div className="hub-image-preview"><img src={questionDraft.image_url} alt="صورة السؤال" /><button type="button" className="hub-secondary compact" onClick={() => setQuestionDraft({ ...questionDraft, image_url: "" })}>إزالة الصورة</button></div>}
                   <FilePicker file={questionImageFile} onChange={setQuestionImageFile} accept="image/*" label="إضافة صورة للسؤال (اختياري)" />
                   <div className="hub-form-grid">
-                    <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option></select></label>
+                    <label>نوع السؤال<select value={questionDraft.question_type} onChange={e => setQuestionDraft({ ...questionDraft, question_type: e.target.value, grading_mode: e.target.value === "essay" ? "ai" : "auto", options_text: e.target.value === "true_false" ? "صحيح\nخطأ" : "" })}><option value="mcq">اختيار من متعدد</option><option value="true_false">صح أو خطأ</option><option value="short_answer">إجابة قصيرة</option><option value="essay">سؤال مقالي</option></select></label>
                     <label>الدرجة<input type="number" min="1" max="100" value={questionDraft.points} onChange={e => setQuestionDraft({ ...questionDraft, points: e.target.value })} /></label>
                   </div>
                   {questionDraft.question_type === "mcq" && <label>الاختيارات (كل اختيار في سطر)<textarea rows="4" required value={questionDraft.options_text} onChange={e => setQuestionDraft({ ...questionDraft, options_text: e.target.value })} placeholder={"الاختيار الأول\nالاختيار الثاني\nالاختيار الثالث\nالاختيار الرابع"} /></label>}
                   {questionDraft.question_type === "true_false" && <label>الإجابة الصحيحة<select value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })}><option value="">اختر الإجابة</option><option value="صحيح">صحيح</option><option value="خطأ">خطأ</option></select></label>}
-                  {questionDraft.question_type !== "true_false" && <label>الإجابة الصحيحة<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder={questionDraft.question_type === "mcq" ? "اكتب نص الاختيار الصحيح كما هو" : "الإجابة التي سيصحح النظام بناءً عليها"} /></label>}
+                  {questionDraft.question_type === "mcq" && <label>الإجابة الصحيحة<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="اكتب نص الاختيار الصحيح كما هو" /></label>}
+                  {questionDraft.question_type === "short_answer" && <label>الإجابة النموذجية<input required value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="الإجابة التي سيصحح النظام بناءً عليها" /></label>}
+                  {questionDraft.question_type === "essay" && <>
+                    <label>طريقة التصحيح<select value={questionDraft.grading_mode} onChange={e => setQuestionDraft({ ...questionDraft, grading_mode: e.target.value })}><option value="ai">تصحيح بالذكاء الاصطناعي</option><option value="manual">مراجعة يدوية</option></select></label>
+                    <label>الإجابة النموذجية<textarea required rows="3" value={questionDraft.correct_answer} onChange={e => setQuestionDraft({ ...questionDraft, correct_answer: e.target.value })} placeholder="اكتب إجابة نموذجية أو أهم الأفكار التي ينبغي أن تتضمنها الإجابة..." /></label>
+                    <label>عناصر التصحيح وتوزيع الدرجة<textarea rows="4" value={questionDraft.grading_rubric} onChange={e => setQuestionDraft({ ...questionDraft, grading_rubric: e.target.value })} placeholder="مثال: درجتان لشرح الفكرة، درجتان لصحة القانون، درجة للمثال والتطبيق..." /></label>
+                  </>}
                   <div className="hub-form-actions"><button className="hub-primary" disabled={busy}><Plus size={16} />{editingQuestionId ? "حفظ التعديل" : "إضافة السؤال"}</button>{editingQuestionId && <button type="button" className="hub-secondary" onClick={() => { setEditingQuestionId(null); setQuestionDraft(EMPTY_QUESTION); setQuestionImageFile(null); }}>إلغاء</button>}</div>
                 </form>
                 <div className="hub-question-list"><h3><ListChecks size={17} /> أسئلة الامتحان</h3>
-                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
+                  {questions.length === 0 ? <p className="hub-muted">أضف السؤال الأول للبدء.</p> : questions.map((q,index) => <div className="hub-question-row" key={q.id}>{q.image_url && <img className="hub-question-thumb" src={q.image_url} alt="" />}<div><strong>{index+1}. {q.prompt}</strong><small>{q.question_type === "mcq" ? "اختيار من متعدد" : q.question_type === "true_false" ? "صح أو خطأ" : q.question_type === "essay" ? "مقالي · " + (q.grading_mode === "ai" ? "تصحيح AI" : "مراجعة يدوية") : "إجابة قصيرة"} · {q.points} درجة</small></div><div className="hub-row-actions"><button onClick={() => editQuestion(q)} title="تعديل السؤال"><Pencil size={16} /></button><button onClick={() => removeQuestion(q)} title="حذف السؤال"><Trash2 size={16} /></button></div></div>)}
                 </div>
-                <div className="hub-attempts"><h3>نتائج الطلاب ({selectedAttempts.length})</h3>{selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div key={attempt.id}><span>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</span><strong>{attempt.score} / {attempt.max_score}</strong></div>)}</div>
+                <div className="hub-attempts">
+                  <h3>نتائج الطلاب ({selectedAttempts.length})</h3>
+                  {selectedAttempts.length === 0 ? <p className="hub-muted">لا توجد محاولات مسجلة لهذا الامتحان حتى الآن.</p> : selectedAttempts.slice(0,12).map(attempt => <div className="hub-attempt-row" key={attempt.id}>
+                    <div><strong>{attempt.student_name}</strong><small>@{attempt.student_username} · {new Date(attempt.submitted_at).toLocaleString("ar-EG")}</small></div>
+                    <strong>{attempt.score} / {attempt.max_score}</strong>
+                    {attempt.grading_status === "pending_ai" || attempt.grading_status === "failed" ? <button className="hub-secondary compact" disabled={gradingAttemptId === attempt.id} onClick={() => gradeAttemptWithAI(attempt)}>{gradingAttemptId === attempt.id ? "جارٍ التصحيح..." : "صحّح المقالات بالذكاء الاصطناعي"}</button> : <small>{attempt.grading_status === "graded" ? "تم تصحيح المقال" : attempt.grading_status === "needs_review" ? "تحتاج مراجعة يدوية" : "اكتمل التصحيح"}</small>}
+                  </div>)}
+                </div>
                 <div className="hub-publish-note"><CheckCircle2 size={16} /> بعد الانتهاء من الأسئلة، استخدم زر النشر بجوار اسم الامتحان ليظهر للطلاب.</div>
               </>
             )}
           </section>
+        </div>
+      )}
+
+      {!loading && tab === "results" && (
+        <section className="hub-panel hub-results-panel">
+          <div className="hub-panel-heading"><div><h2>نتائج الطلاب</h2><small>{attempts.length} محاولة مسجلة في آخر 500 محاولة</small></div>
+            <label className="hub-results-filter">الامتحان<select value={resultsExamFilter} onChange={e => setResultsExamFilter(e.target.value)}><option value="all">كل الامتحانات</option>{exams.map(exam => <option value={exam.id} key={exam.id}>{exam.title}</option>)}</select></label>
+          </div>
+          {visibleAttempts.length === 0 ? <div className="hub-empty">لا توجد نتائج مطابقة لهذا الاختيار حتى الآن.</div> : <div className="hub-results-list">
+            {visibleAttempts.map(attempt => <article className="hub-result-row" key={attempt.id}>
+              <div className="hub-result-student"><strong>{attempt.student_name}</strong><span dir="ltr">@{attempt.student_username}</span><small>{attempt.exam_title}</small><small>{new Date(attempt.submitted_at).toLocaleString("ar-EG")}</small></div>
+              <div className="hub-result-score"><strong>{attempt.score} / {attempt.max_score}</strong><span>{attempt.max_score > 0 ? Math.round((attempt.score / attempt.max_score) * 1000) / 10 : 0}%</span><small>{attempt.grading_status === "pending_ai" ? "مقالات تنتظر التصحيح" : attempt.grading_status === "processing" ? "جارٍ تصحيح المقال" : attempt.grading_status === "failed" ? "تعذر التصحيح، يمكن إعادة المحاولة" : attempt.grading_status === "needs_review" ? "تحتاج مراجعة يدوية" : attempt.grading_status === "graded" ? "تم تصحيح المقالات" : "تم التصحيح"}</small></div>
+              {attempt.grading_status === "pending_ai" || attempt.grading_status === "failed" ? <button className="hub-primary compact" disabled={gradingAttemptId === attempt.id} onClick={() => gradeAttemptWithAI(attempt)}><Sparkles size={15} />{gradingAttemptId === attempt.id ? "جارٍ التصحيح..." : "صحّح بالذكاء الاصطناعي"}</button> : attempt.grading_status === "needs_review" && attempt.manual_max_score > 0 ? <button className="hub-secondary compact" onClick={() => { setManualGradeAttemptId(attempt.id); setManualGradeDraft({ score: String(attempt.manual_essay_score || ""), feedback: attempt.manual_feedback || "" }); }}>تقييم المقال يدويًا</button> : <span className="hub-result-status"><CheckCircle2 size={15} />{attempt.grading_status === "graded" ? "تم التصحيح" : "مكتمل"}</span>}
+              {manualGradeAttemptId === attempt.id && <div className="hub-manual-grade">
+                <label>درجة المقالات اليدوية (من {attempt.manual_max_score})<input type="number" min="0" max={attempt.manual_max_score} value={manualGradeDraft.score} onChange={e => setManualGradeDraft(current => ({ ...current, score: e.target.value }))} /></label>
+                <label>تعليق للطالب (اختياري)<textarea rows="2" value={manualGradeDraft.feedback} onChange={e => setManualGradeDraft(current => ({ ...current, feedback: e.target.value }))} /></label>
+                <div className="hub-form-actions"><button className="hub-primary compact" disabled={busy} onClick={() => saveManualEssayGrade(attempt)}>{busy ? "جارٍ الحفظ..." : "حفظ التقييم"}</button><button className="hub-secondary compact" onClick={() => setManualGradeAttemptId(null)}>إلغاء</button></div>
+              </div>}
+              {attempt.manual_feedback && <p className="hub-result-manual-feedback">ملاحظة الإدارة: {attempt.manual_feedback}</p>}
+              {attempt.ai_feedback && Object.keys(attempt.ai_feedback).length > 0 && <details className="hub-result-feedback"><summary>عرض ملاحظات التصحيح</summary>{Object.values(attempt.ai_feedback).map((feedback,index) => <div key={index}><strong>{feedback.prompt || "السؤال المقالي"} · {feedback.score} درجة</strong><p>{feedback.feedback}</p>{feedback.strengths?.length > 0 && <small>نقاط القوة: {feedback.strengths.join("، ")}</small>}{feedback.improvements?.length > 0 && <small>ما يحتاج تحسينًا: {feedback.improvements.join("، ")}</small>}</div>)}</details>}
+            </article>)}
+          </div>}
+        </section>
+      )}
+
+      {!loading && isMasterAdmin && tab === "moderators" && (
+        <div className="hub-moderator-layout">
+          <section className="hub-panel hub-moderator-create">
+            <div className="hub-panel-heading"><h2><Users size={18} /> إضافة مشرف جديد</h2><span className="hub-ai-tag">المدير الرئيسي فقط</span></div>
+            <p className="hub-muted">أنشئ حسابًا باسم مستخدم وكلمة مرور. المشرف سيتمكن من إدارة المحتوى والمكتبة والامتحانات والنتائج والرسائل، لكنه لن يرى تبويب إدارة المشرفين ولن يستطيع تعيين مشرفين أو سحب صلاحياتهم.</p>
+            <form className="hub-editor" onSubmit={createModerator}>
+              <label>اسم المشرف<input required minLength="2" maxLength="80" value={moderatorDraft.display_name} onChange={e => setModeratorDraft(current => ({ ...current, display_name: e.target.value }))} placeholder="الاسم الذي سيظهر داخل لوحة الإدارة" /></label>
+              <label>اسم المستخدم<input required minLength="3" maxLength="24" pattern="[A-Za-z0-9_]{3,24}" autoComplete="off" dir="ltr" value={moderatorDraft.username} onChange={e => setModeratorDraft(current => ({ ...current, username: e.target.value.toLowerCase() }))} placeholder="moderator_01" /></label>
+              <label>كلمة المرور<input required type="password" minLength="8" maxLength="72" autoComplete="new-password" dir="ltr" value={moderatorDraft.password} onChange={e => setModeratorDraft(current => ({ ...current, password: e.target.value }))} placeholder="8 أحرف على الأقل" /></label>
+              <button className="hub-primary" disabled={moderatorCreating}><Plus size={16} />{moderatorCreating ? "جارٍ إنشاء الحساب..." : "إنشاء حساب المشرف"}</button>
+            </form>
+          </section>
+          <section className="hub-panel hub-moderator-list">
+            <div className="hub-panel-heading"><div><h2>المشرفون الحاليون</h2><small>{moderators.length} مشرف</small></div><button className="hub-refresh" onClick={loadModerators} title="تحديث قائمة المشرفين"><RotateCw size={16} /></button></div>
+            {moderatorsLoading ? <div className="hub-empty">جارٍ تحميل قائمة المشرفين...</div>
+              : moderators.length === 0 ? <div className="hub-empty">لم تتم إضافة مشرفين بعد.</div>
+              : moderators.map(moderator => <article className="hub-moderator-row" key={moderator.id}>
+                <div><strong>{moderator.display_name || "مشرف"}</strong><span dir="ltr">@{moderator.username}</span><small>أُضيف في {new Date(moderator.created_at).toLocaleDateString("ar-EG")}</small></div>
+                <button className="hub-secondary compact" disabled={removingModeratorId === moderator.id} onClick={() => removeModerator(moderator)}>{removingModeratorId === moderator.id ? "جارٍ السحب..." : "سحب الصلاحية"}</button>
+              </article>)}
+          </section>
+          <div className="hub-moderator-note"><CheckCircle2 size={17} /><div><strong>حدود الصلاحيات</strong><p>الحساب الرئيسي syznstwr وحده يستطيع إنشاء المشرفين أو سحب صلاحياتهم. سحب الصلاحية لا يحذف حساب الشخص أو نتائجه أو المحتوى الذي أنشأه.</p></div></div>
         </div>
       )}
 

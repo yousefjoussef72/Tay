@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.submit-exam]
 verify_jwt = true
+
+[functions.manage-moderators]
+verify_jwt = false

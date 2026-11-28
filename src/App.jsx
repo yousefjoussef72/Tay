@@ -257,6 +257,7 @@ function AdminPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [role, setRole] = useState(null);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [authBusy, setAuthBusy] = useState(false);
   const [username, setUsername] = useState("");
@@ -270,9 +271,12 @@ function AdminPage() {
 
   async function loadDashboard(user) {
     if (!supabase || !user) return;
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("role,username").eq("id", user.id).maybeSingle();
+    const normalizedUsername = String(profile?.username || "").trim().toLowerCase();
+    const staffRole = profile?.role === "admin" || profile?.role === "moderator";
     setRole(profile?.role ?? "member");
-    if (profile?.role !== "admin") return;
+    setIsMasterAdmin(profile?.role === "admin" && normalizedUsername === "syznstwr");
+    if (!staffRole) return;
     const [{ data: posts }, { data: inbox }] = await Promise.all([
       supabase.from("articles").select("id,title,slug,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(50),
@@ -290,7 +294,7 @@ function AdminPage() {
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      if (!nextSession) { setRole(null); setArticles([]); setMessages([]); }
+      if (!nextSession) { setRole(null); setIsMasterAdmin(false); setArticles([]); setMessages([]); }
       else loadDashboard(nextSession.user);
     });
     return () => listener.subscription.unsubscribe();
@@ -375,10 +379,10 @@ function AdminPage() {
             <button className="button button-primary" type="submit" disabled={authBusy}>{authBusy ? "جارٍ تسجيل الدخول..." : "تسجيل الدخول"} <ArrowLeft size={17} /></button>
           </form>
         </div>
-      ) : role !== "admin" ? (
-        <div className="admin-message"><div className="admin-icon"><ShieldCheck size={25} /></div><h1>الحساب ليس حساب إدارة.</h1><p>تم تسجيل الدخول، لكن هذا الحساب لا يملك صلاحية إدارة الموقع. اطلب من مالك المشروع تعيين دور admin له من قاعدة البيانات.</p><button className="button button-ghost-dark" onClick={signOut}>تسجيل الخروج</button></div>
+      ) : role !== "admin" && role !== "moderator" ? (
+        <div className="admin-message"><div className="admin-icon"><ShieldCheck size={25} /></div><h1>الحساب ليس حساب إدارة.</h1><p>تم تسجيل الدخول، لكن هذا الحساب لا يملك صلاحية إدارة الموقع. اطلب من المدير الرئيسي تعيينه مشرفًا.</p><button className="button button-ghost-dark" onClick={signOut}>تسجيل الخروج</button></div>
       ) : (
-        <AdminWorkspace session={session} />
+        <AdminWorkspace session={session} isMasterAdmin={isMasterAdmin} staffRole={role} />
       )}
     </div>
   );
@@ -506,7 +510,7 @@ function AccountPage() {
               <span className="admin-label">{copy.accountLoggedInLabel}</span>
               <h2>{profile?.display_name || session.user.user_metadata?.full_name || "مرحبًا بك"}</h2>
               <p className="account-email" dir="ltr">@{profile?.username || session.user.user_metadata?.username || "user"}</p>
-              <div className="account-role">{profile?.role === "admin" ? copy.accountAdminRole : copy.accountStudentRole}</div>
+              <div className="account-role">{profile?.role === "admin" ? "المدير الرئيسي" : profile?.role === "moderator" ? "مشرف Tay Space" : copy.accountStudentRole}</div>
               <div className="account-actions">
                 <Link to="/" className="button button-primary">{copy.accountReturnToSite} <ArrowLeft size={17} /></Link>
                 <button className="button button-ghost-dark" onClick={signOut}><LogOut size={16} /> {copy.accountSignOut}</button>

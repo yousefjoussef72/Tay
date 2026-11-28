@@ -114,6 +114,7 @@ export function ExamsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
   const [result, setResult] = useState(null);
+  const [refreshingResult, setRefreshingResult] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -232,6 +233,29 @@ export function ExamsPage() {
     }
   }
 
+  async function refreshExamResult() {
+    if (!result?.attempt_id || !user || refreshingResult) return;
+    setRefreshingResult(true);
+    try {
+      const { data, error: resultError } = await supabase
+        .from("exam_attempts")
+        .select("id,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at")
+        .eq("id", result.attempt_id)
+        .eq("user_id", user.id)
+        .single();
+      if (resultError || !data) throw resultError || new Error("تعذر تحديث النتيجة.");
+      setResult(current => ({
+        ...current,
+        ...data,
+        percentage: data.max_score > 0 ? Math.round((data.score / data.max_score) * 1000) / 10 : 0,
+      }));
+    } catch (refreshError) {
+      setSubmissionError(refreshError.message || copy.examResultRefreshError);
+    } finally {
+      setRefreshingResult(false);
+    }
+  }
+
   const formatTime = seconds => String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
 
   return <div className="public-hub-shell">
@@ -255,11 +279,32 @@ export function ExamsPage() {
         {active && <section className="public-exam-paper">{submissionError && <p className="hub-alert error">{submissionError}</p>}<div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
             {q.image_url && <img className="public-question-image" src={q.image_url} alt={"صورة السؤال " + (index + 1)} />}
-            {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
+            {q.question_type === "mcq" || q.question_type === "true_false" ? <div className="public-options">{(q.options || []).map(option => <label key={option}><input type="radio" name={q.id} checked={answers[q.id] === option} onChange={() => setAnswers(prev => ({ ...prev, [q.id]: option }))} />{option}</label>)}</div> : q.question_type === "essay" ? <textarea className="public-essay-answer" rows={6} value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examEssayAnswerPlaceholder} /> : <input className="public-short-answer" value={answers[q.id] || ""} onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} placeholder={copy.examShortAnswerPlaceholder} />}
           </article>)}
           <button className="hub-primary" disabled={submitting} onClick={() => { if (window.confirm(copy.examSubmitConfirm)) submitExam(); }}>{submitting ? copy.examSubmitting : copy.examSubmitButton}</button>
         </section>}
-        {result && <section className="public-result"><CheckCircle2 size={34} /><span>{copy.examResultLabel}</span><strong>{result.score} / {result.max_score}</strong><h2>{result.percentage}%</h2><p>{copy.examResultSaved}</p><Link className="hub-primary" to="/exams">{copy.examBackToList}</Link></section>}
+        {result && <section className="public-result">
+          <CheckCircle2 size={34} />
+          <span>{copy.examResultLabel}</span>
+          <strong>{result.score} / {result.max_score}</strong>
+          <h2>{result.percentage}%</h2>
+          {result.grading_status === "pending_ai" ? <p>{copy.examEssayPending}</p>
+            : result.grading_status === "needs_review" ? <p>{copy.examEssayManualPending}</p>
+            : <p>{copy.examResultSaved}</p>}
+          {(result.grading_status === "pending_ai" || result.grading_status === "needs_review") && <button className="hub-secondary" disabled={refreshingResult} onClick={refreshExamResult}>{refreshingResult ? copy.examResultRefreshing : copy.examRefreshResult}</button>}
+          {result.manual_feedback && <p className="public-manual-feedback">{result.manual_feedback}</p>}
+          {result.ai_feedback && Object.keys(result.ai_feedback).length > 0 && <div className="public-essay-feedback">
+            <h3>{copy.examEssayFeedbackTitle}</h3>
+            {Object.values(result.ai_feedback).map((feedback,index) => <article key={index}>
+              <strong>{feedback.prompt || copy.examEssayFeedbackQuestion}</strong>
+              <span>{feedback.score} {copy.examQuestionPoint}</span>
+              <p>{feedback.feedback}</p>
+              {feedback.strengths?.length > 0 && <small>{copy.examEssayStrengths}: {feedback.strengths.join("، ")}</small>}
+              {feedback.improvements?.length > 0 && <small>{copy.examEssayImprovements}: {feedback.improvements.join("، ")}</small>}
+            </article>)}
+          </div>}
+          <Link className="hub-primary" to="/exams">{copy.examBackToList}</Link>
+        </section>}
       </> : null}
     </main>
   </div>;
