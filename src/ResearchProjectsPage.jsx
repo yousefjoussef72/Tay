@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, ClipboardList, Copy,
+  ArrowRight, BookOpen, CheckCircle2, ChevronLeft, ClipboardList, Copy, Printer,
   FlaskConical, GraduationCap, Lightbulb, Microscope, Search, Sparkles, Target
 } from "lucide-react";
 import { supabase } from "./lib/supabase.js";
@@ -91,7 +91,7 @@ function ResearchDocument({ project, subject }) {
           <h2>{project.title}</h2>
           <p>{subject?.name || "المادة"} · {new Date(project.created_at).toLocaleDateString("ar-EG")}</p>
         </div>
-        <button type="button" className="research-copy-button" onClick={copyResearch}><Copy size={15}/> نسخ البحث</button>
+        <div className="research-document-actions"><button type="button" className="research-copy-button" onClick={copyResearch}><Copy size={15}/> نسخ البحث</button><button type="button" className="research-copy-button" onClick={() => window.print()}><Printer size={15}/> طباعة / حفظ PDF</button></div>
       </div>
       {copyNotice && <p className="research-copy-notice" role="status">{copyNotice}</p>}
 
