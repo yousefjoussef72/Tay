@@ -218,6 +218,8 @@ export default function LearningStudioAdmin({ session }) {
     const config=parseJson(experimentDraft.simulation_config_text,{});
     if(!config||typeof config!=="object"||Array.isArray(config)){setSaving(false);setNotice({kind:"error",text:"إعدادات المحاكاة يجب أن تكون JSON صحيحًا."});return}
     if(!experimentDraft.subject_id){setSaving(false);setNotice({kind:"error",text:"اختر المادة التي تنتمي إليها التجربة."});return}
+    if(experimentDraft.simulator_type==="auto"){setSaving(false);setNotice({kind:"error",text:"اطلب من الذكاء الاصطناعي اختيار نموذج المحاكاة أولًا، ثم راجع المسودة واحفظها."});return}
+    if(["simulation","virtual_lab"].includes(experimentDraft.experience_type)&&!experimentDraft.simulator_type){setSaving(false);setNotice({kind:"error",text:"اختر نموذج محاكاة، أو غيّر نوع التجربة إلى نشاط بدون محاكاة."});return}
     const content={
       intro:experimentDraft.intro.trim(),
       objectives:textLines(experimentDraft.objectives_text),
