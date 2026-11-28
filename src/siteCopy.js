@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "./lib/supabase.js";
 
 export const SITE_COPY_GROUPS = [
@@ -318,7 +318,7 @@ export function SiteCopyProvider({ children }) {
   }
 
   const value = useMemo(() => ({ copy, setCopy, loaded, saveCopy }), [copy, loaded]);
-  return <SiteCopyContext.Provider value={value}>{children}</SiteCopyContext.Provider>;
+  return createElement(SiteCopyContext.Provider, { value }, children);
 }
 
 export function useSiteCopy() {
