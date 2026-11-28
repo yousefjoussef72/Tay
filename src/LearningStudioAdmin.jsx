@@ -325,7 +325,7 @@ export default function LearningStudioAdmin({ session }) {
         <div className="studio-columns">
           <div className="studio-panel studio-editor">
             <div className="studio-panel-head"><h3>اختيار المادة</h3></div>
-            <Field label="المادة"><select value={selectedSubjectId} onChange={e=>{setSelectedSubjectId(e.target.value);setUnitDraft({...UNIT_EMPTY,subject_id:e.target.value});setSelectedUnitId("");setLessonDraft({...LESSON_EMPTY,unit_id:""})}}><option value="">اختر مادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></Field>
+            <Field label="المادة"><select value={selectedSubjectId} onChange={e=>{setSelectedSubjectId(e.target.value);setUnitDraft({...UNIT_EMPTY,subject_id:e.target.value});setSelectedUnitId("");setLessonDraft({...LESSON_EMPTY,unit_id:""})}}><option value="">اختر مادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name} · {s.track || "مشتركة"} · {s.grade_level}</option>)}</select></Field>
             <form className="studio-subform" onSubmit={saveUnit}>
               <div className="studio-panel-head"><h3>{unitDraft.id?"تعديل الوحدة":"إضافة وحدة"}</h3>{unitDraft.id&&<button type="button" onClick={resetUnit}>إلغاء</button>}</div>
               <Field label="اسم الوحدة"><input required value={unitDraft.title} onChange={e=>setUnitDraft({...unitDraft,title:e.target.value})} placeholder="اسم الوحدة"/></Field>
