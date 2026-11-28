@@ -9,14 +9,15 @@ import "./learning-studio-admin.css";
 
 const SUBJECT_EMPTY = {
   id:null,name:"",slug:"",academic_stage:"البكالوريا المصرية",grade_level:"الصف الثاني",
-  track:"مسار الطب وعلوم الحياة",term:"",description:"",icon:"book-open",color:"teal",
+  track_id:"",track:"جميع المسارات",curriculum_year:2,subject_kind:"core",
+  choice_group:"",choice_rule:"none",term:"",description:"",icon:"book-open",color:"teal",
   is_published:false,sort_order:0
 };
 const UNIT_EMPTY = { id:null,subject_id:"",title:"",slug:"",term:"",description:"",is_published:false,sort_order:0 };
 const LESSON_EMPTY = { id:null,unit_id:"",title:"",slug:"",summary:"",content_text:"{}",objectives_text:"",is_published:false,sort_order:0 };
 const EXPERIMENT_EMPTY = {
   id:null,subject_id:"",unit_id:"",lesson_id:"",title:"",slug:"",description:"",
-  experience_type:"simulation",simulator_type:"harmonic_spring",simulation_config_text:"{}",
+  experience_type:"guided_activity",simulator_type:"",simulation_config_text:"{}",
   intro:"",objectives_text:"",steps_text:"",observations_text:"",formulas_text:"",
   questions_text:"",ai_prompt:"",is_ai_generated:false,is_published:false,sort_order:0
 };
@@ -63,6 +64,7 @@ function Notice({ notice }) {
 export default function LearningStudioAdmin({ session }) {
   const [tab,setTab]=useState("subjects");
   const [subjects,setSubjects]=useState([]);
+  const [tracks,setTracks]=useState([]);
   const [units,setUnits]=useState([]);
   const [lessons,setLessons]=useState([]);
   const [experiments,setExperiments]=useState([]);
@@ -81,16 +83,18 @@ export default function LearningStudioAdmin({ session }) {
 
   const loadData=useCallback(async()=>{
     setLoading(true);
-    const [s,u,l,e,a]=await Promise.all([
-      supabase.from("learning_subjects").select("*").order("sort_order").order("name"),
+    const [s,t,u,l,e,a]=await Promise.all([
+      supabase.from("learning_subjects").select("*").order("curriculum_year").order("sort_order").order("name"),
+      supabase.from("learning_tracks").select("*").order("sort_order").order("name"),
       supabase.from("learning_units").select("*").order("sort_order").order("created_at"),
       supabase.from("learning_lessons").select("*").order("sort_order").order("created_at"),
       supabase.from("learning_experiments").select("*").order("sort_order").order("created_at",{ascending:false}),
       supabase.from("learning_experiment_attempts").select("experiment_id,user_id,is_completed,completed_at").order("completed_at",{ascending:false}).limit(1000)
     ]);
-    const failure=s.error||u.error||l.error||e.error||a.error;
+    const failure=s.error||t.error||u.error||l.error||e.error||a.error;
     if(failure) setNotice({kind:"error",text:"تعذر تحميل بعض بيانات الاستوديو. راجع اتصال قاعدة البيانات وصلاحيات الإدارة."});
     setSubjects(s.data||[]);
+    setTracks(t.data||[]);
     setUnits(u.data||[]);
     setLessons(l.data||[]);
     setExperiments(e.data||[]);
@@ -121,7 +125,18 @@ export default function LearningStudioAdmin({ session }) {
 
   async function saveSubject(event){
     event.preventDefault();setSaving(true);setNotice(null);
-    const values={...subjectDraft,name:subjectDraft.name.trim(),slug:subjectDraft.slug.trim()||slugify(subjectDraft.name,"subject"),updated_at:new Date().toISOString()};
+    const selectedTrack=tracks.find(item=>item.id===subjectDraft.track_id);
+    const values={
+      ...subjectDraft,
+      name:subjectDraft.name.trim(),
+      slug:subjectDraft.slug.trim()||slugify(subjectDraft.name,"subject"),
+      track: selectedTrack?.name || "جميع المسارات",
+      track_id: selectedTrack?.id || null,
+      curriculum_year:Number(subjectDraft.curriculum_year)||2,
+      grade_level:subjectDraft.grade_level || (Number(subjectDraft.curriculum_year)===3?"الصف الثالث":"الصف الثاني"),
+      choice_group:subjectDraft.choice_group.trim(),
+      updated_at:new Date().toISOString()
+    };
     const result=values.id
       ? await supabase.from("learning_subjects").update(values).eq("id",values.id).select().single()
       : await supabase.from("learning_subjects").insert({...values,created_by:session?.user?.id}).select().single();
@@ -177,6 +192,9 @@ export default function LearningStudioAdmin({ session }) {
     if(!subject){setNotice({kind:"error",text:"اختر المادة أولًا قبل طلب إنشاء التجربة."});return}
     if(!session?.access_token){setNotice({kind:"error",text:"انتهت جلسة الإدارة. سجّل الدخول مرة أخرى."});return}
     setGenerating(true);setNotice(null);
+    const isPhysics = subject.slug === "physics" || subject.name.includes("فيزياء");
+    const useSimulation = isPhysics && ["simulation","virtual_lab"].includes(experimentDraft.experience_type);
+    const requestedSimulator = useSimulation ? (experimentDraft.simulator_type || "auto") : "none";
     try{
       const response=await fetch("/api/ai/generate-experiment",{
         method:"POST",
@@ -186,7 +204,7 @@ export default function LearningStudioAdmin({ session }) {
           track:subject.track,unit:units.find(item=>item.id===experimentDraft.unit_id)?.title||"",
           lesson:lessons.find(item=>item.id===experimentDraft.lesson_id)?.title||"",
           title:experimentDraft.title,prompt:experimentDraft.ai_prompt,
-          simulator_type:experimentDraft.simulator_type
+          simulator_type:requestedSimulator
         })
       });
       const data=await response.json().catch(()=>({}));
@@ -196,8 +214,8 @@ export default function LearningStudioAdmin({ session }) {
         ...current,title:generated.title||current.title,
         slug:current.slug||slugify(generated.title,"experiment"),
         description:generated.description||current.description,
-        experience_type:generated.experience_type||"simulation",
-        simulator_type:generated.simulator_type||current.simulator_type,
+        experience_type:generated.experience_type||"guided_activity",
+        simulator_type:generated.simulator_type||"",
         simulation_config_text:JSON.stringify(generated.simulation_config||{},null,2),
         intro:generated.content?.intro||"",
         objectives_text:joinLines(generated.content?.objectives),
@@ -208,7 +226,7 @@ export default function LearningStudioAdmin({ session }) {
         is_ai_generated:true
       }));
       setPreviewOpen(true);
-      setNotice({kind:"success",text:"تم إنشاء مسودة التجربة. راجع المحتوى والمحاكاة ثم احفظها أو عدّلها قبل النشر."});
+      setNotice({kind:"success",text:generated.simulator_type?"تم إنشاء مسودة التجربة ومحاكاتها. راجعها ثم احفظها أو عدّلها قبل النشر.":"تم إنشاء مسودة النشاط التعليمي. راجع الأهداف والخطوات والأسئلة ثم احفظها أو عدّلها قبل النشر."});
     }catch(error){setNotice({kind:"error",text:error.message||"حدث خطأ أثناء طلب التجربة."})}
     finally{setGenerating(false)}
   }
@@ -258,7 +276,7 @@ export default function LearningStudioAdmin({ session }) {
   return (
     <div className="studio-dashboard">
       <div className="studio-heading">
-        <div><span className="studio-kicker">منهجك ومحتواك في مكان واحد</span><h2>استوديو المواد والتجارب</h2><p>أنشئ المواد والوحدات والدروس، ثم ابنِ التجارب والمحاكاة وانشرها للطلاب.</p></div>
+        <div><span className="studio-kicker">منهجك ومحتواك في مكان واحد</span><h2>استوديو المواد والتجارب</h2><p>أدر مسارات البكالوريا والصفوف والمواد المشتركة والتخصصية، ثم أضف الوحدات والدروس والأنشطة لكل مادة.</p></div>
         <button type="button" className="studio-refresh" onClick={loadData}>تحديث البيانات</button>
       </div>
       <div className="studio-stat-row">
@@ -282,7 +300,11 @@ export default function LearningStudioAdmin({ session }) {
             <div className="studio-field-grid">
               <Field label="المرحلة"><input value={subjectDraft.academic_stage} onChange={e=>setSubjectDraft({...subjectDraft,academic_stage:e.target.value})}/></Field>
               <Field label="الصف"><input value={subjectDraft.grade_level} onChange={e=>setSubjectDraft({...subjectDraft,grade_level:e.target.value})}/></Field>
-              <Field label="المسار"><input value={subjectDraft.track} onChange={e=>setSubjectDraft({...subjectDraft,track:e.target.value})}/></Field>
+              <Field label="المسار"><select value={subjectDraft.track_id||""} onChange={e=>setSubjectDraft({...subjectDraft,track_id:e.target.value})}><option value="">مشتركة بين جميع المسارات</option>{tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></Field>
+              <Field label="الصف الدراسي"><select value={subjectDraft.curriculum_year||2} onChange={e=>setSubjectDraft({...subjectDraft,curriculum_year:Number(e.target.value),grade_level:Number(e.target.value)===3?"الصف الثالث":"الصف الثاني"})}><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select></Field>
+              <Field label="تصنيف المادة"><select value={subjectDraft.subject_kind||"core"} onChange={e=>setSubjectDraft({...subjectDraft,subject_kind:e.target.value})}><option value="core">مادة أساسية مشتركة</option><option value="specialized">مادة تخصصية</option><option value="non_counting">مادة لا تضاف للمجموع</option><option value="activity">نشاط عملي</option><option value="elective">مادة اختيارية</option></select></Field>
+              <Field label="مجموعة الاختيار (اختياري)"><input value={subjectDraft.choice_group||""} onChange={e=>setSubjectDraft({...subjectDraft,choice_group:e.target.value})} placeholder="مثال: تخصص الصف الثاني"/></Field>
+              <Field label="قاعدة الاختيار"><select value={subjectDraft.choice_rule||"none"} onChange={e=>setSubjectDraft({...subjectDraft,choice_rule:e.target.value})}><option value="none">لا يوجد اختيار خاص</option><option value="choose_one">اختيار مادة واحدة من المجموعة</option><option value="all_required">كل مواد المجموعة مطلوبة</option></select></Field>
               <Field label="الفصل الدراسي"><input value={subjectDraft.term} onChange={e=>setSubjectDraft({...subjectDraft,term:e.target.value})} placeholder="اختياري"/></Field>
             </div>
             <Field label="وصف المادة"><textarea rows="3" value={subjectDraft.description} onChange={e=>setSubjectDraft({...subjectDraft,description:e.target.value})}/></Field>
@@ -292,7 +314,7 @@ export default function LearningStudioAdmin({ session }) {
           <section className="studio-panel">
             <div className="studio-panel-head"><h3>المواد الحالية</h3><span>{subjects.length} مادة</span></div>
             {subjects.length===0?<div className="studio-empty">لم تتم إضافة مواد بعد.</div>:subjects.map(item=><article className={"studio-list-row "+(subjectDraft.id===item.id?"selected":"")} key={item.id}>
-              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{item.grade_level} · {item.track} · {item.is_published?"منشورة":"مسودة"}</small></div>
+              <div className="studio-row-icon"><BookOpen size={18}/></div><div className="studio-row-text"><b>{item.name}</b><small>{item.grade_level} · {item.track || "جميع المسارات"} · {item.subject_kind==="specialized"?"تخصصية":item.subject_kind==="non_counting"?"لا تضاف للمجموع":item.subject_kind==="activity"?"نشاط":"أساسية"} · {units.filter(unit=>unit.subject_id===item.id).length} وحدة · {lessons.filter(lesson=>units.some(unit=>unit.id===lesson.unit_id && unit.subject_id===item.id)).length} درس · {item.is_published?"ظاهرة للطلاب":"مخفية"}</small></div>
               <div className="studio-row-actions"><button type="button" onClick={()=>setSubjectDraft(subjectForm(item))} title="تعديل"><Pencil size={15}/></button><button type="button" onClick={()=>deleteSubject(item)} title="حذف"><Trash2 size={15}/></button></div>
             </article>)}
           </section>
@@ -303,7 +325,7 @@ export default function LearningStudioAdmin({ session }) {
         <div className="studio-columns">
           <div className="studio-panel studio-editor">
             <div className="studio-panel-head"><h3>اختيار المادة</h3></div>
-            <Field label="المادة"><select value={selectedSubjectId} onChange={e=>{setSelectedSubjectId(e.target.value);setUnitDraft({...UNIT_EMPTY,subject_id:e.target.value});setSelectedUnitId("");setLessonDraft({...LESSON_EMPTY,unit_id:""})}}><option value="">اختر مادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></Field>
+            <Field label="المادة"><select value={selectedSubjectId} onChange={e=>{setSelectedSubjectId(e.target.value);setUnitDraft({...UNIT_EMPTY,subject_id:e.target.value});setSelectedUnitId("");setLessonDraft({...LESSON_EMPTY,unit_id:""})}}><option value="">اختر مادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name} · {s.track || "مشتركة"} · {s.grade_level}</option>)}</select></Field>
             <form className="studio-subform" onSubmit={saveUnit}>
               <div className="studio-panel-head"><h3>{unitDraft.id?"تعديل الوحدة":"إضافة وحدة"}</h3>{unitDraft.id&&<button type="button" onClick={resetUnit}>إلغاء</button>}</div>
               <Field label="اسم الوحدة"><input required value={unitDraft.title} onChange={e=>setUnitDraft({...unitDraft,title:e.target.value})} placeholder="اسم الوحدة"/></Field>
@@ -354,18 +376,21 @@ export default function LearningStudioAdmin({ session }) {
             <form className="studio-editor" onSubmit={saveExperiment}>
               <div className="studio-panel-head"><h3>{experimentDraft.id?"تعديل التجربة":"بناء تجربة جديدة"}</h3><span className="studio-ai-badge"><Sparkles size={13}/> مدعوم بالذكاء الاصطناعي</span></div>
               <div className="studio-ai-builder">
-                <div><h4><WandSparkles size={17}/> اطلب تجربة من الذكاء الاصطناعي</h4><p>اكتب الفكرة التعليمية، وسيُنشئ النظام محتوى وإعدادات محاكاة قابلة للتشغيل داخل المنصة.</p></div>
-                <Field label="وصف التجربة المطلوبة"><textarea rows="3" value={experimentDraft.ai_prompt} onChange={e=>setExperimentDraft({...experimentDraft,ai_prompt:e.target.value})} placeholder="مثال: أنشئ تجربة توضح تأثير الكتلة في الزمن الدوري لنابض، مع أسئلة ملاحظة للطالب."/></Field>
+                <div><h4><WandSparkles size={17}/> اطلب تجربة من الذكاء الاصطناعي</h4><p>اكتب الفكرة التعليمية، وسيُنشئ النظام نشاطًا مناسبًا للمادة، أو محاكاة عند اختيار نموذج علمي مدعوم.</p></div>
+                <Field label="وصف التجربة المطلوبة"><textarea rows="3" value={experimentDraft.ai_prompt} onChange={e=>setExperimentDraft({...experimentDraft,ai_prompt:e.target.value})} placeholder="مثال: أنشئ نشاطًا لتحليل مصدر تاريخي، أو تدريبًا على مفردات اللغة، أو تجربة علمية مناسبة للمادة."/></Field>
                 <button type="button" className="studio-ai-button" disabled={generating||!experimentDraft.subject_id} onClick={generateExperiment}><Sparkles size={16}/>{generating?"الذكاء الاصطناعي يبني التجربة...":"أنشئ التجربة بالذكاء الاصطناعي"}</button>
               </div>
               <div className="studio-field-grid">
                 <Field label="عنوان التجربة"><input required value={experimentDraft.title} onChange={e=>setExperimentDraft({...experimentDraft,title:e.target.value})}/></Field>
                 <Field label="الرابط المختصر"><input dir="ltr" value={experimentDraft.slug} onChange={e=>setExperimentDraft({...experimentDraft,slug:e.target.value})}/></Field>
-                <Field label="المادة"><select required value={experimentDraft.subject_id} onChange={e=>setExperimentDraft({...experimentDraft,subject_id:e.target.value,unit_id:"",lesson_id:""})}><option value="">اختر المادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></Field>
+                <Field label="المادة"><select required value={experimentDraft.subject_id} onChange={e=>{
+                  const selected=subjects.find(item=>item.id===e.target.value);
+                  setExperimentDraft({...experimentDraft,subject_id:e.target.value,unit_id:"",lesson_id:"",experience_type:selected?.slug==="physics"?"simulation":"guided_activity",simulator_type:selected?.slug==="physics"?"harmonic_spring":""});
+                }}><option value="">اختر المادة</option>{subjects.map(s=><option value={s.id} key={s.id}>{s.name} · {s.grade_level}</option>)}</select></Field>
                 <Field label="الوحدة"><select value={experimentDraft.unit_id} onChange={e=>setExperimentDraft({...experimentDraft,unit_id:e.target.value,lesson_id:""})}><option value="">بدون ربط بوحدة</option>{expSubjectUnits.map(u=><option value={u.id} key={u.id}>{u.title}</option>)}</select></Field>
                 <Field label="الدرس"><select value={experimentDraft.lesson_id} onChange={e=>setExperimentDraft({...experimentDraft,lesson_id:e.target.value})}><option value="">بدون ربط بدرس</option>{expUnitLessons.map(l=><option value={l.id} key={l.id}>{l.title}</option>)}</select></Field>
-                <Field label="نوع التجربة"><select value={experimentDraft.experience_type} onChange={e=>setExperimentDraft({...experimentDraft,experience_type:e.target.value,simulator_type:["guided_activity","interactive_demo"].includes(e.target.value)?"":experimentDraft.simulator_type||"harmonic_spring"})}><option value="simulation">محاكاة</option><option value="virtual_lab">معمل افتراضي</option><option value="guided_activity">نشاط موجه بدون محاكاة</option><option value="interactive_demo">عرض تفاعلي بدون محاكاة</option></select></Field>
-                {["simulation","virtual_lab"].includes(experimentDraft.experience_type) && <Field label="نموذج المحاكاة"><select value={experimentDraft.simulator_type} onChange={e=>setExperimentDraft({...experimentDraft,simulator_type:e.target.value})}>{SIMULATOR_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>}
+                <Field label="نوع النشاط"><select value={experimentDraft.experience_type} onChange={e=>setExperimentDraft({...experimentDraft,experience_type:e.target.value,simulator_type:["guided_activity","interactive_demo"].includes(e.target.value)?"":experimentDraft.simulator_type||"harmonic_spring"})}><option value="guided_activity">نشاط تعليمي موجه</option><option value="interactive_demo">عرض تعليمي تفاعلي</option>{(subjects.find(item=>item.id===experimentDraft.subject_id)?.slug==="physics")&&<><option value="simulation">محاكاة فيزيائية</option><option value="virtual_lab">معمل فيزياء افتراضي</option></>}</select></Field>
+                {["simulation","virtual_lab"].includes(experimentDraft.experience_type) && <Field label="نموذج المحاكاة الفيزيائية"><select value={experimentDraft.simulator_type} onChange={e=>setExperimentDraft({...experimentDraft,simulator_type:e.target.value})}>{SIMULATOR_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></Field>}
               </div>
               <Field label="وصف يظهر للطلاب"><textarea rows="2" value={experimentDraft.description} onChange={e=>setExperimentDraft({...experimentDraft,description:e.target.value})}/></Field>
               <Field label="مقدمة التجربة"><textarea rows="3" value={experimentDraft.intro} onChange={e=>setExperimentDraft({...experimentDraft,intro:e.target.value})}/></Field>
@@ -376,7 +401,7 @@ export default function LearningStudioAdmin({ session }) {
                 <Field label="القوانين (كل قانون في سطر)"><textarea rows="4" value={experimentDraft.formulas_text} onChange={e=>setExperimentDraft({...experimentDraft,formulas_text:e.target.value})}/></Field>
               </div>
               <Field label="أسئلة التفكير (كل سؤال في سطر)"><textarea rows="3" value={experimentDraft.questions_text} onChange={e=>setExperimentDraft({...experimentDraft,questions_text:e.target.value})}/></Field>
-              <Field label="إعدادات المحاكاة (JSON قابل للتعديل)"><textarea className="studio-code-input" rows="5" dir="ltr" value={experimentDraft.simulation_config_text} onChange={e=>setExperimentDraft({...experimentDraft,simulation_config_text:e.target.value})}/></Field>
+              {experimentDraft.simulator_type && <Field label="إعدادات المحاكاة الفيزيائية (JSON قابل للتعديل)"><textarea className="studio-code-input" rows="5" dir="ltr" value={experimentDraft.simulation_config_text} onChange={e=>setExperimentDraft({...experimentDraft,simulation_config_text:e.target.value})}/></Field>}
               <small className="studio-hint">الذكاء الاصطناعي لا يرسل كودًا للتنفيذ. هو يختار نموذجًا علميًا معتمدًا ويضبط بياناته، والمحاكاة تُشغّل بمحرك آمن داخل Tay Space.</small>
               <label className="studio-check"><input type="checkbox" checked={experimentDraft.is_published} onChange={e=>setExperimentDraft({...experimentDraft,is_published:e.target.checked})}/> نشر التجربة للطلاب بعد الحفظ</label>
               <div className="studio-action-row"><button type="submit" className="studio-primary" disabled={saving}><Save size={15}/>{saving?"جارٍ الحفظ...":"حفظ التجربة"}</button><button type="button" className="studio-secondary" onClick={()=>setPreviewOpen(v=>!v)}><Eye size={15}/>{previewOpen?"إخفاء المعاينة":"معاينة المحاكاة"}</button></div>
