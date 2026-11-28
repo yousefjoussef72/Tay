@@ -58,6 +58,172 @@ function normalizePractical(value) {
   return practical.title && practical.purpose && practical.steps.length >= 2 ? practical : null;
 }
 
+function matchPhysicsSimulator(subject, topic) {
+  const isPhysics = subject.slug === "physics" || /فيزياء|physics/i.test(subject.name || "");
+  if (!isPhysics) return null;
+
+  const normalized = String(topic || "")
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/[ًٌٍَُِّْـ]/g, "");
+
+  if (/بندول|pendulum/.test(normalized)) return "simple_pendulum";
+  if (/زنبرك|نابض|حركة توافقية بسيطة|spring/.test(normalized)) return "harmonic_spring";
+  if (/موجة|الموجات|انتشار الموج|wave/.test(normalized)) return "wave_motion";
+  if (/مقذوف|المقذوفات|القذف|قذيفة|projectile/.test(normalized)) return "projectile_motion";
+  if (/السقوط الحر|سقوط حر|free.?fall|تسارع الجاذبية/.test(normalized)) return "free_fall";
+  return null;
+}
+
+function createSimulatorPractical(simulatorType, topic) {
+  const practicalByType = {
+    simple_pendulum: {
+      title: "دراسة أثر طول البندول في الزمن الدوري",
+      purpose: "استخدام محاكي البندول البسيط لملاحظة كيف يؤثر طول الخيط في الزمن الدوري للاهتزازة.",
+      hypothesis: "عند زيادة طول البندول يزداد الزمن الدوري، مع ثبات العوامل الأخرى.",
+      materials: ["محاكي البندول البسيط التفاعلي داخل Tay Space"],
+      steps: [
+        "افتح المحاكي واترك قيمة الكتلة وزاوية الإزاحة ثابتتين.",
+        "غيّر طول البندول بين أكثر من قيمة ضمن المجال المتاح.",
+        "سجّل الزمن الدوري الذي يعرضه المحاكي لكل طول.",
+        "قارن القيم ولاحظ اتجاه التغير، ثم أجب عن أسئلة التحليل."
+      ],
+      variables: {
+        independent: "طول خيط البندول",
+        dependent: "الزمن الدوري للاهتزازة",
+        controlled: ["كتلة الثقل", "زاوية الإزاحة الصغيرة", "قيمة عجلة الجاذبية"]
+      },
+      expected_observations: [
+        "يزداد الزمن الدوري عند زيادة طول البندول ضمن شروط النموذج.",
+        "تساعد مقارنة القيم على توضيح العلاقة بين طول البندول والزمن الدوري."
+      ],
+      analysis_questions: [
+        "ماذا يحدث للزمن الدوري عندما يزداد طول البندول؟",
+        "لماذا يجب تثبيت الكتلة وزاوية الإزاحة عند المقارنة؟"
+      ],
+      safety_notes: ["هذا نشاط محاكاة رقمية ولا يتطلب أدوات أو تنفيذًا ماديًا."]
+    },
+    harmonic_spring: {
+      title: "دراسة الحركة الاهتزازية لنظام كتلة ونابض",
+      purpose: "ملاحظة كيف يؤثر ثابت النابض والكتلة في خصائص الحركة الاهتزازية باستخدام المحاكي.",
+      hypothesis: "تؤثر الكتلة وثابت النابض في الزمن الدوري للنظام الاهتزازي.",
+      materials: ["محاكي الكتلة والنابض التفاعلي داخل Tay Space"],
+      steps: [
+        "افتح المحاكي وابدأ بالقيم الافتراضية.",
+        "غيّر الكتلة مع إبقاء ثابت النابض ثابتًا.",
+        "سجّل التغير الظاهر في الزمن الدوري والتردد.",
+        "أعد النشاط مع تغيير ثابت النابض ومقارنة النتائج."
+      ],
+      variables: {
+        independent: "الكتلة أو ثابت النابض، مع تغيير متغير واحد في كل مرة",
+        dependent: "الزمن الدوري والتردد",
+        controlled: ["سعة الاهتزاز الابتدائية", "المتغير الآخر الذي لا يجري تغييره"]
+      },
+      expected_observations: ["تتغير خصائص الاهتزاز عند تغيير الكتلة أو ثابت النابض."],
+      analysis_questions: ["كيف أثرت زيادة الكتلة في الزمن الدوري؟", "كيف أثّر تغيير ثابت النابض؟"],
+      safety_notes: ["هذا نشاط محاكاة رقمية ولا يتطلب أدوات أو تنفيذًا ماديًا."]
+    },
+    wave_motion: {
+      title: "استكشاف خصائص الموجة",
+      purpose: "مقارنة شكل الموجة عند تغيير السعة أو التردد في المحاكي.",
+      hypothesis: "تغيير السعة يؤثر في ارتفاع الموجة، وتغيير التردد يؤثر في عدد الاهتزازات خلال الزمن.",
+      materials: ["محاكي الموجات التفاعلي داخل Tay Space"],
+      steps: [
+        "افتح محاكي الموجات وسجّل الشكل الابتدائي.",
+        "غيّر السعة وحدها ولاحظ ارتفاع الموجة.",
+        "أعد الإعداد ثم غيّر التردد وحده.",
+        "قارن الملاحظات وأجب عن أسئلة التحليل."
+      ],
+      variables: {
+        independent: "سعة الموجة أو ترددها",
+        dependent: "شكل الموجة وعدد الاهتزازات",
+        controlled: ["المتغير الذي لا يجري تغييره"]
+      },
+      expected_observations: ["تغيير السعة يغيّر ارتفاع الموجة.", "تغيير التردد يغيّر عدد الاهتزازات في الزمن."],
+      analysis_questions: ["ما الفرق بين السعة والتردد؟", "لماذا نغيّر متغيرًا واحدًا كل مرة؟"],
+      safety_notes: ["هذا نشاط محاكاة رقمية ولا يتطلب أدوات أو تنفيذًا ماديًا."]
+    },
+    projectile_motion: {
+      title: "استكشاف مسار المقذوف",
+      purpose: "ملاحظة أثر سرعة الانطلاق وزاويتها في مسار المقذوف داخل المحاكي.",
+      hypothesis: "تؤثر سرعة الانطلاق وزاويتها في المدى والارتفاع الأقصى للمقذوف.",
+      materials: ["محاكي حركة المقذوفات التفاعلي داخل Tay Space"],
+      steps: [
+        "افتح المحاكي وسجّل المسار الابتدائي.",
+        "غيّر زاوية الإطلاق مع تثبيت السرعة والارتفاع.",
+        "قارن المدى والارتفاع الأقصى.",
+        "أعد النشاط مع تغيير السرعة وحدها."
+      ],
+      variables: {
+        independent: "زاوية الإطلاق أو سرعة الانطلاق",
+        dependent: "المدى الأفقي والارتفاع الأقصى",
+        controlled: ["المتغير الذي لا يجري تغييره", "عجلة الجاذبية"]
+      },
+      expected_observations: ["يتغير مسار المقذوف عند تغيير زاوية الإطلاق أو سرعته."],
+      analysis_questions: ["كيف أثرت زاوية الإطلاق في المدى؟", "كيف أثرت سرعة الانطلاق؟"],
+      safety_notes: ["هذا نشاط محاكاة رقمية ولا يتطلب أدوات أو تنفيذًا ماديًا."]
+    },
+    free_fall: {
+      title: "استكشاف السقوط الحر",
+      purpose: "ملاحظة علاقة ارتفاع السقوط بزمنه في نموذج السقوط الحر.",
+      hypothesis: "يزداد زمن السقوط عند زيادة الارتفاع، بافتراض إهمال مقاومة الهواء.",
+      materials: ["محاكي السقوط الحر التفاعلي داخل Tay Space"],
+      steps: [
+        "افتح المحاكي وسجّل زمن السقوط عند ارتفاع ابتدائي.",
+        "غيّر الارتفاع مع تثبيت قيمة الجاذبية.",
+        "قارن الزمن والسرعة النهائية التي يعرضها النموذج.",
+        "لخّص ما توضحه المقارنة عن السقوط الحر."
+      ],
+      variables: {
+        independent: "ارتفاع السقوط",
+        dependent: "زمن السقوط والسرعة النهائية",
+        controlled: ["عجلة الجاذبية", "إعدادات النموذج"]
+      },
+      expected_observations: ["يزداد زمن السقوط عند زيادة الارتفاع في النموذج."],
+      analysis_questions: ["ما أثر زيادة الارتفاع في زمن السقوط؟", "ما الافتراض الذي يتخذه نموذج السقوط الحر؟"],
+      safety_notes: ["هذا نشاط محاكاة رقمية ولا يتطلب أدوات أو تنفيذًا ماديًا."]
+    }
+  };
+  return practicalByType[simulatorType] || null;
+}
+
+function createGeneralResearchActivity(subjectName, topic) {
+  return {
+    title: "نشاط تحليلي مرتبط بموضوع البحث",
+    purpose: "تطبيق سؤال البحث في مادة " + subjectName + " عبر الملاحظة والمقارنة باستخدام مصادر تعليمية موثوقة.",
+    hypothesis: "اكتب توقعًا مبدئيًا يمكن مراجعته في ضوء المعلومات التي تجمعها.",
+    materials: ["مصدران تعليميان موثوقان على الأقل", "ورقة لتسجيل الملاحظات والمقارنة"],
+    steps: [
+      "حوّل موضوع البحث إلى سؤال محدد يمكن الإجابة عنه.",
+      "اجمع معلومات مرتبطة بالسؤال من مصدرين موثوقين وقارن بينهما.",
+      "نظّم الملاحظات في جدول يوضح أوجه الاتفاق والاختلاف.",
+      "اكتب استنتاجًا يجيب عن سؤال البحث مع ذكر حدود المعلومات التي جمعتها."
+    ],
+    variables: {
+      independent: "الفكرة أو العامل الذي يتناوله البحث: " + topic,
+      dependent: "الملاحظات أو النتائج التي يجمعها الطالب",
+      controlled: ["معايير المقارنة", "نوعية المصادر المستخدمة"]
+    },
+    expected_observations: ["قد تظهر أوجه اتفاق أو اختلاف بين المصادر، ويجب التحقق من أسبابها."],
+    analysis_questions: ["ما أقوى دليل يدعم استنتاجك؟", "ما المعلومات التي ما زالت تحتاج إلى تحقق؟"],
+    safety_notes: ["نشاط بحثي وتحليلي آمن ولا يتطلب تنفيذ تجارب أو استخدام مواد خطرة."]
+  };
+}
+
+async function refundReservation(client, reservation) {
+  if (!reservation?.id) return;
+  try {
+    const { error } = await client.rpc("refund_learning_research_generation", {
+      p_reservation_id: reservation.id
+    });
+    if (error) {
+      console.error("research_quota_refund_failed", { code: error.code || "unknown" });
+    }
+  } catch (error) {
+    console.error("research_quota_refund_failed", { code: error?.code || "network_error" });
+  }
+}
+
 function normalizeResearch(value, subject, includePractical) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -153,6 +319,14 @@ export default async function handler(req, res) {
     });
   }
 
+  let activeReservation = reservation;
+
+  const releaseReservation = async () => {
+    const pending = activeReservation;
+    activeReservation = null;
+    await refundReservation(auth.client, pending);
+  };
+
   const system = [
     "أنت باحث أكاديمي ومشرف مشاريع للمرحلة الثانوية في البكالوريا المصرية.",
     "أنشئ مسودة بحث تعليمية متكاملة، واضحة ومترابطة، تساعد الطالب على التعلم والتوثيق، وليست بديلًا عن مراجعة الطالب أو مصادره الأصلية.",
@@ -201,14 +375,31 @@ export default async function handler(req, res) {
       !research.research_problem ||
       research.objectives.length < 2 ||
       research.sections.length < 4 ||
-      research.conclusion.length < 20 ||
-      (includePractical && !research.practical_experiment)
+      research.conclusion.length < 20
     ) {
+      await releaseReservation();
+      console.error("research_generation_quality_check_failed");
       return res.status(502).json({
         ok: false,
         error: "incomplete_research_project",
-        message: "البحث الناتج لم يجتز فحص الجودة. حاول بصياغة موضوع أكثر تحديدًا.",
+        message: "لم تكتمل عناصر البحث بشكل كافٍ. لم تُخصم المحاولة، ويمكنك إعادة المحاولة أو جعل الموضوع أكثر تحديدًا.",
       });
+    }
+
+    const topicSimulator = includePractical ? matchPhysicsSimulator(subject, topic) : null;
+    research.simulator_type = topicSimulator;
+    research.simulation_config = topicSimulator
+      ? normalizeSimulationConfig({}, topicSimulator)
+      : {};
+
+    if (includePractical) {
+      if (topicSimulator) {
+        research.practical_experiment = createSimulatorPractical(topicSimulator, topic);
+      } else if (!research.practical_experiment) {
+        research.practical_experiment = createGeneralResearchActivity(subject.name, topic);
+      }
+    } else {
+      research.practical_experiment = null;
     }
 
     const { data: savedProject, error: saveError } = await auth.client.rpc(
@@ -225,6 +416,8 @@ export default async function handler(req, res) {
     );
 
     if (saveError || !savedProject) {
+      await releaseReservation();
+      console.error("research_project_save_failed", { code: saveError?.code || "unknown" });
       if (saveError?.message?.includes("research_daily_limit")) {
         return res.status(429).json({
           ok: false,
@@ -235,12 +428,19 @@ export default async function handler(req, res) {
       return res.status(500).json({
         ok: false,
         error: "research_save_failed",
-        message: "تم إعداد البحث لكن تعذر حفظه في حسابك. حاول مرة أخرى.",
+        message: "تم إعداد البحث لكن تعذر حفظه. لم تُخصم المحاولة، ويمكنك إعادة المحاولة.",
       });
     }
 
+    // A successful save consumes the reservation permanently.
+    activeReservation = null;
     return res.status(200).json({ ok: true, project: savedProject, model: result.model });
   } catch (error) {
+    await releaseReservation();
+    console.error("research_ai_generation_failed", {
+      code: error?.code || "unknown",
+      status: error?.status || null
+    });
     return sendApiError(res, error);
   }
 }
