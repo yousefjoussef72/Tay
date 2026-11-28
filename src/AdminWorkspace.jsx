@@ -71,6 +71,9 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
   const [curriculumSubjects, setCurriculumSubjects] = useState([]);
   const [curriculumUnits, setCurriculumUnits] = useState([]);
   const [curriculumLessons, setCurriculumLessons] = useState([]);
+  const [curriculumSubjects, setCurriculumSubjects] = useState([]);
+  const [curriculumUnits, setCurriculumUnits] = useState([]);
+  const [curriculumLessons, setCurriculumLessons] = useState([]);
   const [exams, setExams] = useState([]);
   const [messages, setMessages] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -122,8 +125,14 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
       supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
+      supabase.from("learning_subjects").select("id,name,slug,is_published").order("sort_order"),
+      supabase.from("learning_units").select("id,subject_id,title,slug,is_published").order("sort_order"),
+      supabase.from("learning_lessons").select("id,unit_id,title,slug,is_published").order("sort_order"),
     ]);
     const attemptRows = attemptResult.data || [];
+    setCurriculumSubjects(curriculumSubjectResult.data || []);
+    setCurriculumUnits(curriculumUnitResult.data || []);
+    setCurriculumLessons(curriculumLessonResult.data || []);
     const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
     const profileResult = userIds.length
       ? await supabase.from("profiles").select("id,display_name,username").in("id", userIds)
@@ -364,6 +373,9 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
         mime_type: resourceDraft.resource_type === "link" ? null : (resourceFile?.type || resourceDraft.mime_type),
         file_size: resourceDraft.resource_type === "link" ? null : (resourceFile?.size || resourceDraft.file_size),
         is_published: resourceDraft.is_published,
+        subject_id: resourceDraft.subject_id || null,
+        unit_id: resourceDraft.unit_id || null,
+        lesson_id: resourceDraft.lesson_id || null,
         created_by: resourceDraft.id ? undefined : session.user.id,
       };
       const result = resourceDraft.id
@@ -797,6 +809,27 @@ export default function AdminWorkspace({ session, isMasterAdmin = false }) {
               <label>نوع المورد<select value={resourceDraft.resource_type} onChange={e => setResourceDraft({ ...resourceDraft, resource_type: e.target.value })}><option value="pdf">كتاب أو ملف PDF</option><option value="image">صورة</option><option value="document">مستند Word</option><option value="video">فيديو</option><option value="link">رابط خارجي</option></select></label>
               <label>القسم<input value={resourceDraft.category} onChange={e => setResourceDraft({ ...resourceDraft, category: e.target.value })} placeholder="الفيزياء، الكيمياء..." /></label>
             </div>
+            <div className="hub-form-grid">
+              <label>اربط المورد بمادة (اختياري)
+                <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value || null, unit_id: null, lesson_id: null })}>
+                  <option value="">مورد عام غير مرتبط بمادة</option>
+                  {curriculumSubjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                </select>
+              </label>
+              <label>الوحدة (اختياري)
+                <select value={resourceDraft.unit_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, unit_id: e.target.value || null, lesson_id: null })} disabled={!resourceDraft.subject_id}>
+                  <option value="">كل وحدات المادة</option>
+                  {curriculumUnits.filter(unit => unit.subject_id === resourceDraft.subject_id).map(unit => <option key={unit.id} value={unit.id}>{unit.title}</option>)}
+                </select>
+              </label>
+              <label>الدرس (اختياري)
+                <select value={resourceDraft.lesson_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, lesson_id: e.target.value || null })} disabled={!resourceDraft.unit_id}>
+                  <option value="">كل دروس الوحدة</option>
+                  {curriculumLessons.filter(lesson => lesson.unit_id === resourceDraft.unit_id).map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}
+                </select>
+              </label>
+            </div>
+            <small className="hub-hint">عند ربط الملف بدرس، سيظهر للطلاب داخل صفحة الدرس نفسه، مع بقائه في المكتبة العامة إذا كان منشورًا.</small>
             <div className="hub-form-grid">
               <label>ربط بالمادة
                 <select value={resourceDraft.subject_id || ""} onChange={e => setResourceDraft({ ...resourceDraft, subject_id: e.target.value, unit_id: "", lesson_id: "" })}>
