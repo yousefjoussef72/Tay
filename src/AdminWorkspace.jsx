@@ -16,6 +16,7 @@ const TABS = [
   { id: "library", label: "المكتبة والملفات", icon: BookOpen },
   { id: "exams", label: "الامتحانات", icon: ClipboardList },
   { id: "results", label: "نتائج الطلاب", icon: Award },
+  { id: "moderators", label: "إدارة المشرفين", icon: Users },
   { id: "messages", label: "الرسائل", icon: MessageSquare },
   { id: "site", label: "محرر الموقع", icon: ImageIcon },
 ];
@@ -61,7 +62,7 @@ function FilePicker({ file, onChange, accept = ".pdf,.doc,.docx,image/*", label 
   );
 }
 
-export default function AdminWorkspace({ session }) {
+export default function AdminWorkspace({ session, isMasterAdmin = false, staffRole = "admin" }) {
   const [tab, setTab] = useState("articles");
   const [articles, setArticles] = useState([]);
   const [resources, setResources] = useState([]);
@@ -98,6 +99,11 @@ export default function AdminWorkspace({ session }) {
   const [manualGradeAttemptId, setManualGradeAttemptId] = useState(null);
   const [manualGradeDraft, setManualGradeDraft] = useState({ score: "", feedback: "" });
   const [resultsExamFilter, setResultsExamFilter] = useState("all");
+  const [moderators, setModerators] = useState([]);
+  const [moderatorsLoading, setModeratorsLoading] = useState(false);
+  const [moderatorCreating, setModeratorCreating] = useState(false);
+  const [removingModeratorId, setRemovingModeratorId] = useState(null);
+  const [moderatorDraft, setModeratorDraft] = useState({ display_name: "", username: "", password: "" });
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -141,6 +147,75 @@ export default function AdminWorkspace({ session }) {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function loadModerators() {
+    if (!isMasterAdmin) return;
+    setModeratorsLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-moderators", {
+      body: { action: "list" },
+    });
+    if (error || !data?.ok) {
+      setAlert({ kind: "error", text: data?.message || "تعذر تحميل قائمة المشرفين." });
+    } else {
+      setModerators(data.moderators || []);
+    }
+    setModeratorsLoading(false);
+  }
+
+  useEffect(() => {
+    if (isMasterAdmin) loadModerators();
+    else if (tab === "moderators") setTab("articles");
+  }, [isMasterAdmin]);
+
+  async function createModerator(event) {
+    event.preventDefault();
+    if (!isMasterAdmin) return;
+    const displayName = moderatorDraft.display_name.trim();
+    const username = moderatorDraft.username.trim().toLowerCase();
+    const password = moderatorDraft.password;
+    if (displayName.length < 2 || !/^[a-z0-9_]{3,24}$/.test(username) || password.length < 8 || password.length > 72) {
+      return setAlert({ kind: "error", text: "راجع الاسم واسم المستخدم وكلمة المرور. اسم المستخدم 3 إلى 24 حرفًا، وكلمة المرور 8 أحرف على الأقل." });
+    }
+    setModeratorCreating(true);
+    setAlert(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-moderators", {
+        body: {
+          action: "create",
+          display_name: displayName,
+          username,
+          password,
+        },
+      });
+      if (error || !data?.ok) throw new Error(data?.message || "تعذر إنشاء حساب المشرف.");
+      setModeratorDraft({ display_name: "", username: "", password: "" });
+      await loadModerators();
+      setAlert({ kind: "success", text: "تم إنشاء حساب المشرف وتعيين صلاحيات لوحة الإدارة له." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر إنشاء المشرف." });
+    } finally {
+      setModeratorCreating(false);
+    }
+  }
+
+  async function removeModerator(moderator) {
+    if (!isMasterAdmin) return;
+    if (!window.confirm("سحب صلاحية الإشراف من @" + moderator.username + "؟ سيظل الحساب موجودًا كحساب طالب، ولن تُحذف بياناته.")) return;
+    setRemovingModeratorId(moderator.id);
+    setAlert(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-moderators", {
+        body: { action: "remove", moderator_id: moderator.id },
+      });
+      if (error || !data?.ok) throw new Error(data?.message || "تعذر سحب صلاحية الإشراف.");
+      await loadModerators();
+      setAlert({ kind: "success", text: "تم سحب صلاحية المشرف. الحساب نفسه لم يُحذف." });
+    } catch (error) {
+      setAlert({ kind: "error", text: error.message || "تعذر سحب صلاحية الإشراف." });
+    } finally {
+      setRemovingModeratorId(null);
+    }
+  }
 
   async function uploadAsset(file, folder, targetBucket = BUCKET) {
     if (!file) return null;
@@ -658,7 +733,7 @@ export default function AdminWorkspace({ session }) {
         <div><Users /><span>محاولات الامتحان</span><strong>{attempts.length}</strong></div>
       </div>
       <nav className="hub-tabs">
-        {TABS.map(item => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => { setTab(item.id); setAlert(null); }}><item.icon size={16} />{item.label}</button>)}
+        {TABS.filter(item => item.id !== "moderators" || isMasterAdmin).map(item => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => { setTab(item.id); setAlert(null); }}><item.icon size={16} />{item.label}</button>)}
       </nav>
       <Alert value={alert} />
 
@@ -840,6 +915,31 @@ export default function AdminWorkspace({ session }) {
             </article>)}
           </div>}
         </section>
+      )}
+
+      {!loading && isMasterAdmin && tab === "moderators" && (
+        <div className="hub-moderator-layout">
+          <section className="hub-panel hub-moderator-create">
+            <div className="hub-panel-heading"><h2><Users size={18} /> إضافة مشرف جديد</h2><span className="hub-ai-tag">المدير الرئيسي فقط</span></div>
+            <p className="hub-muted">أنشئ حسابًا باسم مستخدم وكلمة مرور. المشرف سيتمكن من إدارة المحتوى والمكتبة والامتحانات والنتائج والرسائل، لكنه لن يرى تبويب إدارة المشرفين ولن يستطيع تعيين مشرفين أو سحب صلاحياتهم.</p>
+            <form className="hub-editor" onSubmit={createModerator}>
+              <label>اسم المشرف<input required minLength="2" maxLength="80" value={moderatorDraft.display_name} onChange={e => setModeratorDraft(current => ({ ...current, display_name: e.target.value }))} placeholder="الاسم الذي سيظهر داخل لوحة الإدارة" /></label>
+              <label>اسم المستخدم<input required minLength="3" maxLength="24" pattern="[A-Za-z0-9_]{3,24}" autoComplete="off" dir="ltr" value={moderatorDraft.username} onChange={e => setModeratorDraft(current => ({ ...current, username: e.target.value.toLowerCase() }))} placeholder="moderator_01" /></label>
+              <label>كلمة المرور<input required type="password" minLength="8" maxLength="72" autoComplete="new-password" dir="ltr" value={moderatorDraft.password} onChange={e => setModeratorDraft(current => ({ ...current, password: e.target.value }))} placeholder="8 أحرف على الأقل" /></label>
+              <button className="hub-primary" disabled={moderatorCreating}><Plus size={16} />{moderatorCreating ? "جارٍ إنشاء الحساب..." : "إنشاء حساب المشرف"}</button>
+            </form>
+          </section>
+          <section className="hub-panel hub-moderator-list">
+            <div className="hub-panel-heading"><div><h2>المشرفون الحاليون</h2><small>{moderators.length} مشرف</small></div><button className="hub-refresh" onClick={loadModerators} title="تحديث قائمة المشرفين"><RotateCw size={16} /></button></div>
+            {moderatorsLoading ? <div className="hub-empty">جارٍ تحميل قائمة المشرفين...</div>
+              : moderators.length === 0 ? <div className="hub-empty">لم تتم إضافة مشرفين بعد.</div>
+              : moderators.map(moderator => <article className="hub-moderator-row" key={moderator.id}>
+                <div><strong>{moderator.display_name || "مشرف"}</strong><span dir="ltr">@{moderator.username}</span><small>أُضيف في {new Date(moderator.created_at).toLocaleDateString("ar-EG")}</small></div>
+                <button className="hub-secondary compact" disabled={removingModeratorId === moderator.id} onClick={() => removeModerator(moderator)}>{removingModeratorId === moderator.id ? "جارٍ السحب..." : "سحب الصلاحية"}</button>
+              </article>)}
+          </section>
+          <div className="hub-moderator-note"><CheckCircle2 size={17} /><div><strong>حدود الصلاحيات</strong><p>الحساب الرئيسي syznstwr وحده يستطيع إنشاء المشرفين أو سحب صلاحياتهم. سحب الصلاحية لا يحذف حساب الشخص أو نتائجه أو المحتوى الذي أنشأه.</p></div></div>
+        </div>
       )}
 
       {!loading && tab === "site" && <SiteContentEditor />}
