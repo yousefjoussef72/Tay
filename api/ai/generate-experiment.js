@@ -54,13 +54,16 @@ function normalizeConfig(value, simulatorType) {
 
 function normalizeExperiment(value, requestedSimulator) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const experienceType = EXPERIENCE_TYPES.has(value.experience_type)
-    ? value.experience_type
-    : "simulation";
-  const simulatorType = requestedSimulator === "auto"
+  const contentOnly = requestedSimulator === "none";
+  const experienceType = contentOnly
+    ? "guided_activity"
+    : EXPERIENCE_TYPES.has(value.experience_type)
+      ? value.experience_type
+      : "simulation";
+  const simulatorType = contentOnly ? null : requestedSimulator === "auto"
     ? cleanText(value.simulator_type, 60)
     : requestedSimulator;
-  if (!SIMULATORS[simulatorType]) return null;
+  if (!contentOnly && !SIMULATORS[simulatorType]) return null;
 
   const content = value.content && typeof value.content === "object" && !Array.isArray(value.content)
     ? value.content
@@ -69,11 +72,9 @@ function normalizeExperiment(value, requestedSimulator) {
   return {
     title: cleanText(value.title, 180),
     description: cleanText(value.description, 1000),
-    experience_type: experienceType === "guided_activity" || experienceType === "interactive_demo"
-      ? "simulation"
-      : experienceType,
+    experience_type: contentOnly ? "guided_activity" : experienceType,
     simulator_type: simulatorType,
-    simulation_config: normalizeConfig(value.simulation_config, simulatorType),
+    simulation_config: contentOnly ? {} : normalizeConfig(value.simulation_config, simulatorType),
     content: {
       intro: cleanText(content.intro, 2200),
       objectives: cleanArray(content.objectives, 8, 400),
@@ -108,7 +109,7 @@ export default async function handler(req, res) {
   const userPrompt = cleanText(req.body?.prompt, 3500);
   const requestedSimulator = cleanText(req.body?.simulator_type, 60);
 
-  if (!subject || !userPrompt || userPrompt.length < 8 || (!SIMULATORS[requestedSimulator] && requestedSimulator !== "auto")) {
+  if (!subject || !userPrompt || userPrompt.length < 8 || (!SIMULATORS[requestedSimulator] && !["auto","none"].includes(requestedSimulator))) {
     return res.status(400).json({
       ok: false,
       error: "invalid_experiment_request",
@@ -116,9 +117,28 @@ export default async function handler(req, res) {
     });
   }
 
+  const contentOnly = requestedSimulator === "none";
+  const isEnglishSubject = /اللغة الإنجليزية|english/i.test(subject);
+  const isLanguageSubject = /لغة|english|language/i.test(subject);
   const simulator = SIMULATORS[requestedSimulator] || null;
   const simulatorList = Object.entries(SIMULATORS).map(([key, value]) => ({ type: key, label: value.label, config: value.config }));
-  const system = [
+  const system = contentOnly ? [
+    "أنت مصمم مناهج وأنشطة تعليمية للمرحلة الثانوية في مصر.",
+    "أنشئ نشاطًا تعليميًا منظمًا في المادة المطلوبة، وليس محاكاة فيزيائية.",
+    "أنشئ محتوى باللغة العربية الواضحة ومناسبًا للمرحلة والصف والمسار والمادة والوحدة والدرس المحدد.",
+    "أخرج JSON صالحًا فقط دون Markdown أو أي نص خارجه.",
+    "لا تنشئ أي JavaScript أو HTML أو CSS أو كود قابل للتنفيذ مطلقًا.",
+    "لا تخترع حقائق أو مواد من المنهج الرسمي أو أرقام صفحات أو نتائج تعلم غير مؤكدة. إذا كان هناك تفصيل غير متحقق، صغه كنشاط عام ولا تنسبه إلى كتاب رسمي.",
+    "اجعل النشاط مناسبًا لطبيعة المادة: قراءة وتحليل واستماع ومحادثة ومفردات للغات، مصادر وتسلسل زمني وتحليل أدلة للتاريخ، مفاهيم ومسائل للمواد العلمية، وتطبيقات وحالات عملية للأعمال.",
+    isEnglishSubject
+      ? "بما أن المادة هي اللغة الإنجليزية، اجعل نصوص القراءة والمفردات والجمل وأسئلة التدريب باللغة الإنجليزية، واجعل تعليمات المعلم وإرشادات الطالب بالعربية عند الحاجة."
+      : isLanguageSubject
+        ? "بما أن المادة لغة أجنبية، استخدم اللغة المستهدفة في نصوص القراءة والمفردات والتدريبات، واجعل تعليمات المعلم بالعربية عند الحاجة."
+        : "استخدم لغة المادة ومصطلحاتها الصحيحة، ولا تفرض مفردات أو تدريبات لغة أجنبية على المواد غير اللغوية.",
+    "أعد أهدافًا وخطوات تنفيذ وملاحظات وأسئلة تفكير، واستخدم القوانين فقط إذا كانت المادة تستلزم ذلك.",
+    "أعد كائنًا بالبنية: {title, description, experience_type:'guided_activity', simulator_type:null, simulation_config:{}, content:{intro,objectives:[],steps:[],observations:[],formulas:[],reflection_questions:[]}}.",
+    "أضف من 3 إلى 5 أسئلة تفكير مرتبطة بالنشاط، ولا تضع الإجابات داخل الأسئلة."
+  ].join("\n") : [
     "أنت مصمم تجارب تعليمية علمية للمرحلة الثانوية.",
     "أنشئ تجربة تفاعلية باللغة العربية الفصحى الواضحة، مناسبة لمستوى الطالب المحدد.",
     "أخرج JSON صالحًا فقط دون Markdown أو أي نص خارجه.",
@@ -134,7 +154,7 @@ export default async function handler(req, res) {
     "النماذج المعتمدة وإعدادات كل نموذج وحدودها: " + JSON.stringify(simulatorList) + ".",
     "استخدم مفاتيح النموذج الذي اخترته فقط، والتزم بحدود قيمه حرفيًا.",
     "لا تضع أي مفاتيح إضافية أو إعدادات غير معروفة في simulation_config.",
-    "يجب أن يكون experience_type إما simulation أو virtual_lab.",
+    "يجب أن يكون experience_type إما simulation أو virtual_lab."
   ].join("\n");
 
   const user = [
@@ -145,10 +165,12 @@ export default async function handler(req, res) {
     unit ? "الوحدة: " + unit : "",
     lesson ? "الدرس المرتبط: " + lesson : "",
     title ? "العنوان المقترح: " + title : "",
-    "نموذج المحاكاة المطلوب: " + (simulator?.label ? simulator.label + " (" + requestedSimulator + ")" : "اختَر النموذج الأنسب من قائمة النماذج المعتمدة") ,
+    contentOnly ? "نوع النشاط: نشاط تعليمي دون محاكاة" : "نموذج المحاكاة المطلوب: " + (simulator?.label ? simulator.label + " (" + requestedSimulator + ")" : "اختَر النموذج الأنسب من قائمة النماذج المعتمدة"),
     "طلب المعلم: " + userPrompt,
-    "اكتب تجربة عملية يمكن للطالب تنفيذها على المحاكاة داخل الصفحة، مع خطوات واضحة وقوانين وملاحظات وأسئلة تفكير.",
-    "أعد JSON فقط.",
+    contentOnly
+      ? "صمّم نشاطًا ملائمًا لطبيعة المادة يتضمن تمهيدًا وأهدافًا وخطوات واضحة وملاحظات أو نواتج متوقعة وأسئلة تفكير."
+      : "اكتب تجربة عملية يمكن للطالب تنفيذها على المحاكاة داخل الصفحة، مع خطوات واضحة وقوانين وملاحظات وأسئلة تفكير.",
+    "أعد JSON فقط."
   ].filter(Boolean).join("\n");
 
   try {

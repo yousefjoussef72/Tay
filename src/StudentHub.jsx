@@ -50,6 +50,11 @@ export function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("ALL");
+  const [trackFilter, setTrackFilter] = useState("ALL");
+  const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [subjectFilter, setSubjectFilter] = useState("ALL");
+  const [tracks, setTracks] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -57,7 +62,7 @@ export function LibraryPage() {
     async function load() {
       const { data, error: loadError } = await supabase
         .from("learning_resources")
-        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,subject_id,unit_id,lesson_id,created_at")
+        .select("id,title,description,resource_type,file_path,file_name,external_url,category,file_size,track_id,grade_level,curriculum_year,subject_id,unit_id,lesson_id,created_at")
         .eq("is_published", true)
         .order("created_at", { ascending: false });
       if (loadError) {
@@ -67,24 +72,37 @@ export function LibraryPage() {
         setLoading(false);
         return;
       }
-      const [subjectResult, unitResult, lessonResult] = await Promise.all([
-        supabase.from("learning_subjects").select("id,name,slug"),
+      const [subjectResult, unitResult, lessonResult, trackResult] = await Promise.all([
+        supabase.from("learning_subjects").select("id,name,slug,track_id,curriculum_year,grade_level"),
         supabase.from("learning_units").select("id,title,slug"),
-        supabase.from("learning_lessons").select("id,title,slug")
+        supabase.from("learning_lessons").select("id,title,slug"),
+        supabase.from("learning_tracks").select("id,name,slug")
       ]);
       const subjectMap = new Map((subjectResult.data || []).map(item => [item.id, item]));
+      const trackMap = new Map((trackResult.data || []).map(item => [item.id, item]));
+      if (!active) return;
+      setTracks(trackResult.data || []);
+      setSubjects(subjectResult.data || []);
       const unitMap = new Map((unitResult.data || []).map(item => [item.id, item]));
       const lessonMap = new Map((lessonResult.data || []).map(item => [item.id, item]));
-      const resolvedItems = await Promise.all((data || []).map(async item => ({
+      const resolvedItems = await Promise.all((data || []).map(async item => {
+        const subject = subjectMap.get(item.subject_id);
+        const resolvedTrackId = item.track_id || subject?.track_id || null;
+        return {
         ...item,
-        subject_name: subjectMap.get(item.subject_id)?.name || "",
+        subject_name: subject?.name || "",
+        track_id: resolvedTrackId,
+        track_name: trackMap.get(resolvedTrackId)?.name || "مشترك بين المسارات",
+        grade_level: item.grade_level || subject?.grade_level || "",
+        curriculum_year: item.curriculum_year || subject?.curriculum_year || null,
         unit_title: unitMap.get(item.unit_id)?.title || "",
         lesson_title: lessonMap.get(item.lesson_id)?.title || "",
         lesson_slug: lessonMap.get(item.lesson_id)?.slug || "",
         resolved_url: item.resource_type === "link"
           ? item.external_url
           : await signedLibraryUrl(item.file_path),
-      })));
+      };
+      }));
       if (!active) return;
       setItems(resolvedItems);
       setLoading(false);
@@ -96,6 +114,9 @@ export function LibraryPage() {
   const categories = ["ALL", ...new Set(items.map(item => item.category || copy.libraryGeneralCategory))];
   const filtered = items.filter(item =>
     (category === "ALL" || item.category === category) &&
+    (trackFilter === "ALL" || !item.track_id || item.track_id === trackFilter) &&
+    (gradeFilter === "ALL" || !item.curriculum_year || String(item.curriculum_year) === gradeFilter) &&
+    (subjectFilter === "ALL" || item.subject_id === subjectFilter) &&
     (item.title + " " + item.description).toLowerCase().includes(query.toLowerCase())
   );
 
@@ -107,6 +128,9 @@ export function LibraryPage() {
       <p className="public-hub-lead">{copy.libraryDescription}</p>
       <div className="library-tools">
         <label><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={copy.librarySearchPlaceholder} /></label>
+        <select value={trackFilter} onChange={e=>{setTrackFilter(e.target.value);setSubjectFilter("ALL")}}><option value="ALL">كل المسارات</option>{tracks.map(track=><option value={track.id} key={track.id}>{track.name}</option>)}</select>
+        <select value={gradeFilter} onChange={e=>{setGradeFilter(e.target.value);setSubjectFilter("ALL")}}><option value="ALL">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option></select>
+        <select value={subjectFilter} onChange={e=>setSubjectFilter(e.target.value)}><option value="ALL">كل المواد</option>{subjects.filter(subject=>(trackFilter==="ALL"||!subject.track_id||subject.track_id===trackFilter)&&(gradeFilter==="ALL"||String(subject.curriculum_year||2)===gradeFilter)).map(subject=><option value={subject.id} key={subject.id}>{subject.name}</option>)}</select>
         <select value={category} onChange={e => setCategory(e.target.value)}>{categories.map(c => <option key={c} value={c}>{c === "ALL" ? copy.libraryAllCategories : c}</option>)}</select>
       </div>
       {error && <p className="hub-alert error">{error === "load" ? copy.libraryLoadError : error}</p>}
@@ -122,7 +146,7 @@ export function LibraryPage() {
             <span className="public-resource-category">{item.category || copy.libraryGeneralCategory}</span>
             <h2>{item.title}</h2>
             <p>{item.description || copy.libraryFileFallback}</p>
-            {(item.subject_name || item.unit_title) && <p className="public-resource-curriculum">{[item.subject_name, item.unit_title].filter(Boolean).join(" · ")}</p>}
+            {(item.subject_name || item.unit_title || item.track_name) && <p className="public-resource-curriculum">{[item.track_name, item.grade_level, item.subject_name, item.unit_title].filter(Boolean).join(" · ")}</p>}
             {item.lesson_slug && <Link className="public-resource-related" to={"/lessons/" + item.lesson_slug}>افتح الدرس المرتبط: {item.lesson_title} <ArrowRight size={13}/></Link>}
             {url ? <a className="public-resource-open" href={url} target="_blank" rel="noreferrer">{item.resource_type === "image" ? copy.libraryImageOpen : item.resource_type === "video" ? (copy.libraryVideoOpen || "مشاهدة الفيديو") : item.resource_type === "link" ? copy.libraryLinkOpen : copy.libraryOpenFile} <Download size={15} /></a> : <span className="public-resource-open">{copy.libraryFileUnavailable}</span>}
           </article>;
@@ -137,6 +161,11 @@ export function ExamsPage() {
   const { examId } = useParams();
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
+  const [tracks, setTracks] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [trackFilter, setTrackFilter] = useState("ALL");
+  const [gradeFilter, setGradeFilter] = useState("ALL");
+  const [subjectFilter, setSubjectFilter] = useState("ALL");
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -157,14 +186,18 @@ export function ExamsPage() {
   useEffect(() => {
     let alive = true;
     async function load() {
-      const [{ data: sessionData }, examResult] = await Promise.all([
+      const [{ data: sessionData }, examResult, trackResult, subjectResult] = await Promise.all([
         supabase.auth.getSession(),
         examId
-          ? supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url").eq("id", examId).eq("is_published", true).maybeSingle()
+          ? supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,track_id,subject_id,grade_level,curriculum_year").eq("id", examId).eq("is_published", true).maybeSingle()
           : Promise.resolve({ data: null }),
+        supabase.from("learning_tracks").select("id,name,slug").eq("is_published", true).order("sort_order"),
+        supabase.from("learning_subjects").select("id,name,track_id,curriculum_year,grade_level").eq("is_published", true).order("curriculum_year").order("sort_order"),
       ]);
       if (!alive) return;
       setUser(sessionData.session?.user || null);
+      setTracks(trackResult.data || []);
+      setSubjects(subjectResult.data || []);
       if (examId) {
         if (examResult.error || !examResult.data) {
           setError(copy.examUnavailable);
@@ -181,7 +214,7 @@ export function ExamsPage() {
       } else {
         const { data, error: examsError } = await supabase
           .from("exams")
-          .select("id,title,description,duration_minutes,cover_image_url,created_at")
+          .select("id,title,description,duration_minutes,cover_image_url,track_id,subject_id,grade_level,curriculum_year,created_at")
           .eq("is_published", true)
           .order("created_at", { ascending: false });
         if (examsError) setError(copy.examListLoadError);
@@ -192,6 +225,14 @@ export function ExamsPage() {
     load();
     return () => { alive = false; };
   }, [examId, copy.examUnavailable, copy.examQuestionsLoadError, copy.examListLoadError]);
+
+  const trackMap = new Map(tracks.map(item => [item.id, item]));
+  const subjectMap = new Map(subjects.map(item => [item.id, item]));
+  const visibleExams = exams.filter(item =>
+    (trackFilter === "ALL" || !item.track_id || item.track_id === trackFilter) &&
+    (gradeFilter === "ALL" || !item.curriculum_year || String(item.curriculum_year) === gradeFilter) &&
+    (subjectFilter === "ALL" || item.subject_id === subjectFilter)
+  );
 
   async function submitExam() {
     if (!exam || !attemptSessionId || submitting || result) return;
@@ -303,8 +344,27 @@ export function ExamsPage() {
         <h1>{copy.examsTitle}</h1>
         <p className="public-hub-lead">{copy.examsDescription}</p>
         {error && <p className="hub-alert error">{error}</p>}
-        {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : <div className="public-exam-grid">
-          {exams.map(item => <article className="public-exam-card" key={item.id}>{item.cover_image_url ? <img className="public-exam-card-cover" src={item.cover_image_url} alt={item.title} /> : <div className="public-resource-symbol"><ClipboardList size={24} /></div>}<h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p><div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div><Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link></article>)}
+        <div className="library-tools exam-curriculum-filters">
+          <select value={trackFilter} onChange={e=>{setTrackFilter(e.target.value);setSubjectFilter("ALL")}}>
+            <option value="ALL">كل المسارات</option>
+            {tracks.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}
+          </select>
+          <select value={gradeFilter} onChange={e=>{setGradeFilter(e.target.value);setSubjectFilter("ALL")}}>
+            <option value="ALL">كل الصفوف</option><option value="1">الصف الأول</option><option value="2">الصف الثاني</option><option value="3">الصف الثالث</option>
+          </select>
+          <select value={subjectFilter} onChange={e=>setSubjectFilter(e.target.value)}>
+            <option value="ALL">كل المواد</option>
+            {subjects.filter(subject=>(trackFilter==="ALL"||!subject.track_id||subject.track_id===trackFilter)&&(gradeFilter==="ALL"||String(subject.curriculum_year||2)===gradeFilter)).map(subject=><option key={subject.id} value={subject.id}>{subject.name}</option>)}
+          </select>
+        </div>
+        {loading ? <div className="public-hub-empty">{copy.examsLoading}</div> : exams.length === 0 ? <div className="public-hub-empty">{copy.examsEmpty}</div> : visibleExams.length === 0 ? <div className="public-hub-empty">لا توجد اختبارات منشورة لهذا المسار أو الصف بعد.</div> : <div className="public-exam-grid">
+          {visibleExams.map(item => <article className="public-exam-card" key={item.id}>
+            {item.cover_image_url ? <img className="public-exam-card-cover" src={item.cover_image_url} alt={item.title} /> : <div className="public-resource-symbol"><ClipboardList size={24} /></div>}
+            {(trackMap.get(item.track_id)?.name || subjectMap.get(item.subject_id)?.name || item.grade_level) && <div className="public-exam-curriculum">{[trackMap.get(item.track_id)?.name,subjectMap.get(item.subject_id)?.name,item.grade_level].filter(Boolean).join(" · ")}</div>}
+            <h2>{item.title}</h2><p>{item.description || copy.examDescriptionFallback}</p>
+            <div className="public-exam-meta"><span><Clock3 size={14} /> {item.duration_minutes} {copy.examMinuteUnit}</span></div>
+            <Link className="public-resource-open" to={"/exams/" + item.id}>{copy.examViewButton} <ArrowRight size={15} /></Link>
+          </article>)}
         </div>}
       </> : loading ? <div className="public-hub-empty">{copy.examLoading}</div> : error ? <div className="public-hub-empty">{error}</div> : exam ? <>
         <Link className="public-back-link" to="/exams">← {copy.examBackLabel}</Link>
@@ -312,6 +372,7 @@ export function ExamsPage() {
         <h1>{exam.title}</h1>
         {exam.cover_image_url && <img className="public-exam-detail-cover" src={exam.cover_image_url} alt={exam.title} />}
         <p className="public-hub-lead">{exam.description || copy.examDetailFallback}</p>
+        {(trackMap.get(exam.track_id)?.name || subjectMap.get(exam.subject_id)?.name || exam.grade_level) && <div className="public-exam-meta">{[trackMap.get(exam.track_id)?.name,subjectMap.get(exam.subject_id)?.name,exam.grade_level].filter(Boolean).join(" · ")}</div>}
         {!active && !result && <section className="public-exam-start"><div><Clock3 size={18} /> {copy.examDurationLabel}: {exam.duration_minutes} {copy.examMinuteUnit}</div><div><ClipboardList size={18} /> {copy.examQuestionsCountLabel}: {questions.length}</div><p>{user ? copy.examNoAnswersNotice : copy.examLoginNotice}</p>{submissionError && <p className="hub-alert error">{submissionError}</p>}<button className="hub-primary" disabled={starting || submitting} onClick={attemptSessionId && submissionError ? submitExam : beginExam}>{starting ? copy.examStarting : submitting ? copy.examSubmitting : user ? (attemptSessionId && submissionError ? copy.examRetrySubmitButton : copy.examStartButton) : copy.examLoginButton}</button></section>}
         {active && <section className="public-exam-paper">{submissionError && <p className="hub-alert error">{submissionError}</p>}<div className="public-exam-timer"><Clock3 size={17} /> {copy.examTimerLabel} <strong>{formatTime(remaining)}</strong></div>
           {questions.map((q,index) => <article className="public-question" key={q.id}><div className="public-question-title"><strong>{index+1}. {q.prompt}</strong><span>{q.points} {copy.examQuestionPoint}</span></div>
