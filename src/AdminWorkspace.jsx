@@ -95,16 +95,19 @@ export default function AdminWorkspace({ session }) {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [savingGenerated, setSavingGenerated] = useState(false);
   const [gradingAttemptId, setGradingAttemptId] = useState(null);
+  const [manualGradeAttemptId, setManualGradeAttemptId] = useState(null);
+  const [manualGradeDraft, setManualGradeDraft] = useState({ score: "", feedback: "" });
   const [resultsExamFilter, setResultsExamFilter] = useState("all");
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [articleResult, resourceResult, examResult, messageResult, attemptResult] = await Promise.all([
+    const [articleResult, resourceResult, examResult, messageResult, attemptResult, manualQuestionResult] = await Promise.all([
       supabase.from("articles").select("id,title,slug,excerpt,content,cover_url,is_published,published_at,created_at").order("created_at", { ascending: false }),
       supabase.from("learning_resources").select("id,title,description,resource_type,file_path,file_name,mime_type,file_size,external_url,category,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("exams").select("id,title,description,duration_minutes,cover_image_url,is_published,created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("id,name,email,subject,message,status,created_at").order("created_at", { ascending: false }).limit(100),
-      supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
+      supabase.from("exam_attempts").select("id,exam_id,user_id,answers,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,ai_feedback,grading_status,ai_graded_at,ai_model,submitted_at").order("submitted_at", { ascending: false }).limit(500),
+      supabase.from("exam_questions").select("exam_id,points").eq("question_type", "essay").eq("grading_mode", "manual"),
     ]);
     const attemptRows = attemptResult.data || [];
     const userIds = [...new Set(attemptRows.map(attempt => attempt.user_id).filter(Boolean))];
@@ -113,7 +116,12 @@ export default function AdminWorkspace({ session }) {
       : { data: [], error: null };
     const profileMap = new Map((profileResult.data || []).map(profile => [profile.id, profile]));
     const examMap = new Map((examResult.data || []).map(exam => [exam.id, exam.title]));
-    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error;
+    const manualMaxByExam = new Map();
+    (manualQuestionResult.data || []).forEach(question => manualMaxByExam.set(
+      question.exam_id,
+      (manualMaxByExam.get(question.exam_id) || 0) + (Number(question.points) || 0)
+    ));
+    const firstError = articleResult.error || resourceResult.error || examResult.error || messageResult.error || attemptResult.error || profileResult.error || manualQuestionResult.error;
     if (firstError) setAlert({ kind: "error", text: "تعذر تحميل بعض بيانات اللوحة. حدّث الصفحة، وإذا استمرت المشكلة راجع صلاحيات قاعدة البيانات." });
     setArticles(articleResult.data || []);
     setResources(resourceResult.data || []);
@@ -126,6 +134,7 @@ export default function AdminWorkspace({ session }) {
         student_name: profile?.display_name || "اسم غير مسجل",
         student_username: profile?.username || "بدون اسم مستخدم",
         exam_title: examMap.get(attempt.exam_id) || "امتحان محذوف",
+        manual_max_score: manualMaxByExam.get(attempt.exam_id) || 0,
       };
     }));
     setLoading(false);
@@ -599,6 +608,7 @@ export default function AdminWorkspace({ session }) {
         exam_title: item.exam_title,
         student_name: item.student_name,
         student_username: item.student_username,
+        manual_max_score: item.manual_max_score,
       } : item));
       setAlert({ kind: "success", text: "تم تصحيح المقالات بالذكاء الاصطناعي وحفظ الدرجة الجديدة." });
     } catch (error) {
@@ -607,6 +617,32 @@ export default function AdminWorkspace({ session }) {
     } finally {
       setGradingAttemptId(null);
     }
+  }
+
+  async function saveManualEssayGrade(attempt) {
+    const maxScore = Number(attempt.manual_max_score) || 0;
+    const score = Number(manualGradeDraft.score);
+    if (!maxScore || !Number.isInteger(score) || score < 0 || score > maxScore) {
+      return setAlert({ kind: "error", text: "أدخل درجة صحيحة من صفر إلى " + maxScore + "." });
+    }
+    setBusy(true);
+    setAlert(null);
+    const nextScore = (Number(attempt.objective_score) || 0) + (Number(attempt.ai_essay_score) || 0) + score;
+    const { data, error } = await supabase.from("exam_attempts").update({
+      manual_essay_score: score,
+      manual_feedback: manualGradeDraft.feedback.trim(),
+      score: nextScore,
+      grading_status: "graded",
+    }).eq("id", attempt.id).select("id,score,max_score,objective_score,ai_essay_score,manual_essay_score,manual_feedback,grading_status").single();
+    if (error || !data) {
+      setAlert({ kind: "error", text: "تعذر حفظ التقييم اليدوي. تحقق من الدرجة وصلاحيات المدير." });
+    } else {
+      setAttempts(current => current.map(item => item.id === attempt.id ? { ...item, ...data } : item));
+      setManualGradeAttemptId(null);
+      setManualGradeDraft({ score: "", feedback: "" });
+      setAlert({ kind: "success", text: "تم حفظ التقييم اليدوي وتحديث الدرجة النهائية." });
+    }
+    setBusy(false);
   }
 
   return (
